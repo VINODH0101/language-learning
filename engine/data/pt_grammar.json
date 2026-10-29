@@ -1,0 +1,92 @@
+[
+  {
+    "id": "pt-gram-c1-01",
+    "rule_code": "PT_INF_PESSOAL_01",
+    "language": "pt",
+    "cefr_level": "C1",
+    "title": "Infinitivo Pessoal Flexionado em Orações Reduzidas",
+    "category": "verb_syntax",
+    "explanation_markdown": "O **infinitivo pessoal** (ou flexionado) é uma das marcas sintáticas mais distintas da língua portuguesa. Ao contrário do espanhol (que recorre a orações subordinadas com subjuntivo), o português permite flexionar o infinitivo com desinências próprias de pessoa: `-es` (tu), `-(zero)` (ele/ela/você), `-mos` (nós), `-des` (vós) e `-em` (eles/elas/vocês).\n\n### Quando é obrigatório ou preferível flexionar?\n1. **Sujeito próprio e explícito diferente da oração principal**: Ex.: *Para os deputados aprovarem o projeto, foi preciso consenso.*\n2. **Após preposições que introduzem finalidade, tempo ou concessão**: Ex.: *Apesar de termos chegado cedo, a palestra já começara.*\n3. **Com sujeito indeterminado na 3ª pessoa do plural**: Ex.: *Ouvi dizerem que o mercado recuou.*",
+    "structural_formula": "Preposição (para / por / ao / apesar de) + [Sujeito] + Verbo no Infinitivo Pessoal (-es, -mos, -em)",
+    "examples": [
+      {
+        "target": "Para compreendermos a dimensão da crise, cumpre examinar os relatórios fiscais.",
+        "en": "In order for us to understand the scale of the crisis, it is necessary to examine the fiscal reports.",
+        "note": "Flexão em -mos deixando evidente o sujeito 'nós' sem necessidade de pronome explícito."
+      },
+      {
+        "target": "Ao saírem do plenário, os senadores concederam uma entrevista coletiva.",
+        "en": "Upon leaving the plenary hall, the senators held a press conference.",
+        "note": "Oração reduzida temporal com 'ao + infinitivo flexionado em -em'."
+      }
+    ],
+    "common_errors": [
+      {
+        "incorrect": "Para nós compreender a situação...",
+        "correct": "Para nós compreendermos a situação... (ou 'Para compreendermos...')",
+        "reason": "Omissão da desinência de pessoa (-mos) quando o sujeito da oração reduzida é nós."
+      },
+      {
+        "incorrect": "Eles foram impedidos de entrarem.",
+        "correct": "Eles foram impedidos de entrar.",
+        "reason": "Com verbos de ligação ou locuções verbais com o mesmo sujeito, o infinitivo tende a não se flexionar para evitar redundância viciosa."
+      }
+    ],
+    "regional_notes": {
+      "pt-BR": "No Brasil formal, o infinitivo pessoal é amplamente empregado na escrita culta, embora no registro informal oral os falantes frequentemente recorram ao subjuntivo analítico ('para que a gente compreenda').",
+      "pt-PT": "Em Portugal, o infinitivo pessoal é extremamente produtivo tanto na escrita quanto na oralidade padrão e culta."
+    },
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original comparative linguistic synthesis prepared for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "pt-gram-c1-02",
+    "rule_code": "PT_SUBJ_FUT_01",
+    "language": "pt",
+    "cefr_level": "C1",
+    "title": "Futuro do Subjuntivo e Correlação Temporal",
+    "category": "subjunctive_mood",
+    "explanation_markdown": "O **futuro do subjuntivo** expressa uma ação eventual, hipotética ou temporal localizada no futuro. É altamente vivo em português contemporâneo (diferentemente do espanhol moderno, onde caiu em desuso exceto na linguagem jurídica arcaica).\n\n### Marcadores típicos\n- Conjunções temporais: *quando*, *assim que*, *logo que*, *enquanto*.\n- Conjunções condicionais: *se*, *caso* (caso rege presente do subjuntivo, ao passo que *se* rege futuro do subjuntivo).\n- Pronomes relativos de indefinição: *quem*, *o que*, *tudo o que* (*Quem chegar primeiro receberá o prêmio*).",
+    "structural_formula": "Quando / Se / Assim que + Futuro do Subjuntivo (-r, -res, -r, -rmos, -rdes, -rem)",
+    "examples": [
+      {
+        "target": "Quando você vir o documento oficial, compreenderá as cláusulas de confidencialidade.",
+        "en": "When you see the official document, you will understand the confidentiality clauses.",
+        "note": "Atenção ao verbo 'ver' no futuro do subjuntivo: 'vir', 'vires', 'vir', 'virmos', 'virdes', 'virem'."
+      },
+      {
+        "target": "Se nós pusermos as exigências na mesa, a contraparte será forçada a negociar.",
+        "en": "If we put the demands on the table, the counterparty will be forced to negotiate.",
+        "note": "Verbo 'pôr' no futuro do subjuntivo: 'puser', 'pusermos', 'puserem'."
+      }
+    ],
+    "common_errors": [
+      {
+        "incorrect": "Quando você ver o contrato...",
+        "correct": "Quando você vir o contrato...",
+        "reason": "Confusão comum entre 'ver' (futuro do subjuntivo: vir) e 'vir' (futuro do subjuntivo: vier)."
+      },
+      {
+        "incorrect": "Se você saber a verdade...",
+        "correct": "Se você souber a verdade...",
+        "reason": "Radical irregular do verbo 'saber': souber."
+      }
+    ],
+    "regional_notes": {
+      "pt-BR": "Comum a alternância com pronome 'você' + verbo em 3ª pessoa ('quando você vier').",
+      "pt-PT": "Frequentíssimo o uso da 2ª pessoa do singular com flexão explícita ('quando tu vieres')."
+    },
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Pedagogical synthesis prepared for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  }
+]

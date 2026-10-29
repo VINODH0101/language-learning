@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="12" fill="#090d16"/>
+  <rect x="2" y="2" width="44" height="44" rx="10" stroke="#4f46e5" stroke-width="1.5" stroke-opacity="0.4"/>
+  <circle cx="24" cy="22" r="16" fill="url(#lex-glow)" opacity="0.35"/>
+  <path d="M24 8L27 15M24 8L21 15M24 8V16" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+  <path d="M16 13V33C16 33.55 16.45 34 17 34H32C32.55 34 33 33.55 33 33V31C33 30.45 32.55 30 32 30H22V13C22 12.45 21.55 12 21 12H17C16.45 12 16 12.45 16 13Z" fill="url(#lex-l)"/>
+  <circle cx="24" cy="8" r="2.5" fill="#38bdf8"/>
+  <circle cx="24" cy="8" r="1.2" fill="#ffffff"/>
+  <defs>
+    <linearGradient id="lex-l" x1="16" y1="12" x2="33" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#e0e7ff"/>
+      <stop offset="1" stop-color="#818cf8"/>
+    </linearGradient>
+    <radialGradient id="lex-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" transform="translate(24 22) rotate(90) scale(16)">
+      <stop stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#4f46e5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

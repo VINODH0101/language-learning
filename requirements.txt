@@ -1,0 +1,5 @@
+# Polyglot C1 Daily — Runtime & Testing Dependencies
+# Designed for lightweight, zero-cost execution on GitHub Actions runners
+
+pydantic>=2.7.0
+pytest>=8.0.0

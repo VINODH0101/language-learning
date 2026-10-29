@@ -1,0 +1,147 @@
+[
+  {
+    "id": "pt-mat-read-01",
+    "language": "pt",
+    "material_type": "reading_passage",
+    "title": "A Transição Ecológica e os Desafios Regulatórios Contemporâneos",
+    "cefr_level": "C1",
+    "regional_variety": "all",
+    "content_target": "A transição energética global impõe um reexame minucioso dos quadros jurídicos e fiscais internacionais. Conquanto os compromissos multilaterais tenham avançado de modo expressivo na última década, persistem assimetrias notáveis entre economias industrializadas e países emergentes. Para os governos viabilizarem a descarbonização sem asfixiar o crescimento industrial, cumpre implementar mecanismos de incentivo que harmonizem a sustentabilidade ambiental com a competitividade produtiva. Não se trata meramente de substituir matrizes fósseis, mas de redesenhar a infraestrutura logística e capacitar a força laboral para as novas exigências da bioeconomia.",
+    "content_en": "The global energy transition imposes a meticulous review of international legal and fiscal frameworks. Although multilateral commitments have advanced significantly in the past decade, notable asymmetries persist between industrialized economies and emerging nations. In order for governments to enable decarbonization without stifling industrial growth, it is essential to implement incentive mechanisms that harmonize environmental sustainability with productive competitiveness. It is not merely a matter of replacing fossil matrices, but of redesigning logistical infrastructure and upskilling the workforce for the new demands of the bioeconomy.",
+    "glossary": {
+      "reexame": "ação de examinar novamente com minúcia",
+      "asfixiar": "sufocar, estrangular economicamente",
+      "assimetrias": "desigualdades, falta de proporção harmoniosa"
+    },
+    "comprehension_questions": [
+      {
+        "question": "De acordo com o texto, qual é o duplo objetivo que os governos devem harmonizar?",
+        "options": [
+          "Sustentabilidade ambiental e competitividade produtiva.",
+          "Redução salarial e atração de investimento estrangeiro.",
+          "Manutenção exclusiva de matrizes fósseis e equilíbrio fiscal."
+        ],
+        "correct_option_index": 0,
+        "explanation": "O texto afirma expressamente a necessidade de 'harmonizar a sustentabilidade ambiental com a competitividade produtiva'."
+      },
+      {
+        "question": "Qual é a função da oração que se inicia com 'Conquanto' no segundo período?",
+        "options": [
+          "Introduzir uma concessão, ressalvando que persistem assimetrias apesar dos avanços.",
+          "Apresentar uma causa determinante para a crise energética.",
+          "Concluir uma hipótese formulada no período anterior."
+        ],
+        "correct_option_index": 0,
+        "explanation": "'Conquanto' é uma conjunção concessiva formal equivalente a 'embora'."
+      }
+    ],
+    "speaking_prompt": "Discuta como seu país equilibra o rigor ecológico com o desenvolvimento econômico.",
+    "writing_prompt": "Redija uma proposta de diretriz governamental sobre descarbonização industrial sustentável.",
+    "audio_url": "https://tatoeba.org/audio/pt/ecologia_c1.mp3",
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original C1 reading comprehension text created for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "pt-mat-conv-01",
+    "language": "pt",
+    "material_type": "conversation_script",
+    "title": "Negociação de Cláusulas Contratuais em Assembleia",
+    "cefr_level": "C1",
+    "regional_variety": "all",
+    "content_target": "Dra. Helena: Bom dia a todos. Conforme estipulado na pauta, precisamos deliberar sobre a cláusula de confidencialidade.\nDr. Eduardo: Perfeito, Dra. Helena. No entanto, por mais que compreendamos a prudência da diretoria, consideramos o prazo de cinco anos desproporcional.\nDra. Helena: Entendo a vossa apreensão. Mas para que possamos mitigar os riscos de espionagem corporativa, é mister resguardar os dados do algoritmo.\nDr. Eduardo: Se estabelecermos uma compensação proporcional caso haja rescisão imotivada, estamos dispostos a aceitar a vigência solicitada.\nDra. Helena: Excelente. Parece-me um compromisso equitativo que atende a ambas as partes.",
+    "content_en": null,
+    "glossary": {
+      "deliberar": "debater para tomar uma decisão formal",
+      "apreensão": "receio, cautela, preocupação justificada",
+      "equitativo": "justo, balanceado, imparcial"
+    },
+    "comprehension_questions": [],
+    "speaking_prompt": null,
+    "writing_prompt": null,
+    "audio_url": null,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original C1 dialogue script created for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "es-mat-read-01",
+    "language": "es",
+    "material_type": "reading_passage",
+    "title": "Ética, Inteligencia Artificial y Responsabilidad Jurídica",
+    "cefr_level": "C1",
+    "regional_variety": "all",
+    "content_target": "La acelerada penetración de modelos algorítmicos en la toma de decisiones judiciales y crediticias ha suscitado un debate deontológico de primer orden. Por mucho que los desarrolladores insistan en la supuesta neutralidad matemática del código, los sesgos implícitos en los datos históricos tienden a perpetuar desigualdades estructurales preexistentes. A tenor de los principios constitucionales que garantizan la tutela judicial efectiva, resulta inadmisible delegar la discrecionalidad valorativa en sistemas opacos que carecen de explicabilidad causal. Por ende, la comunidad regulatoria internacional aboga por un marco normativo vinculante que supedite la innovación tecnológica a la salvaguarda de la dignidad humana.",
+    "content_en": "The rapid penetration of algorithmic models into judicial and credit decision-making has sparked a first-rate deontological debate. However much developers insist on the supposed mathematical neutrality of code, the biases implicit in historical data tend to perpetuate pre-existing structural inequalities. In accordance with the constitutional principles that guarantee effective judicial protection, it is inadmissible to delegate discretionary judgment to opaque systems that lack causal explainability. Therefore, the international regulatory community advocates for a binding regulatory framework that subordinates technological innovation to the safeguarding of human dignity.",
+    "glossary": {
+      "deontológico": "relativo a los deberes éticos y principios morales de una profesión",
+      "sesgos": "inclinaciones, desviaciones sistemáticas o prejuicios de cálculo",
+      "supedite": "subordine o condicione algo al cumplimiento de otra premisa"
+    },
+    "comprehension_questions": [
+      {
+        "question": "¿Por qué el autor descarta la pretendida 'neutralidad matemática' de los algoritmos?",
+        "options": [
+          "Porque los sesgos de los datos históricos reproducen desigualdades previas.",
+          "Porque los modelos informáticos consumen demasiada energía computacional.",
+          "Porque los jueces prefieren prescindir totalmente de computadoras."
+        ],
+        "correct_option_index": 0,
+        "explanation": "El texto explicita que 'los sesgos implícitos en los datos históricos tienden a perpetuar desigualdades estructurales'."
+      },
+      {
+        "question": "¿Qué conector introduce la conclusión argumentativa del párrafo?",
+        "options": [
+          "Por ende",
+          "Por mucho que",
+          "A tenor de"
+        ],
+        "correct_option_index": 0,
+        "explanation": "'Por ende' funciona como conector consecutivo formal que introduce la deducción final."
+      }
+    ],
+    "speaking_prompt": "¿Hasta qué punto deberían los sistemas automatizados intervenir en juicios penales?",
+    "writing_prompt": "Redacte un dictamen valorativo sobre la transparencia algorítmica en la contratación pública.",
+    "audio_url": "https://tatoeba.org/audio/es/etica_ai_c1.mp3",
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original C1 reading comprehension text created for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "es-mat-conv-01",
+    "language": "es",
+    "material_type": "conversation_script",
+    "title": "Deliberación Académica en un Tribunal de Tesis",
+    "cefr_level": "C1",
+    "regional_variety": "all",
+    "content_target": "Prof. Castillo: Estimados colegas, tras escuchar la defensa del doctorando, procede emitir nuestra calificación.\nProf. Morales: Si me permiten una observación preliminar, considero que la metodología cuantitativa adolece de cierta rigidez.\nProf. Castillo: No obstante, reconozcamos que el marco teórico resulta impecable. Si hubiera soslayado esas fuentes primarias, habríamos tenido motivos de reparo, pero las analizó con rigor.\nProf. Morales: En efecto, concedo ese punto. A condición de que el autor incorpore una adenda bibliográfica en la versión final, votaré a favor de la máxima calificación con mención de honor.",
+    "content_en": null,
+    "glossary": {
+      "adolece de": "padece o sufre de un defecto o carencia",
+      "adenda": "apéndice o conjunto de notas añadidas al final de una obra"
+    },
+    "comprehension_questions": [],
+    "speaking_prompt": null,
+    "writing_prompt": null,
+    "audio_url": null,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original C1 dialogue script created for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  }
+]

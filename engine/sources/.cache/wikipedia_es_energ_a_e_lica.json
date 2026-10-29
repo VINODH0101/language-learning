@@ -1,0 +1,49 @@
+{
+  "type": "standard",
+  "title": "Energía eólica",
+  "displaytitle": "<span lang=\"es\" dir=\"ltr\"><span class=\"mw-page-title-main\">Energía eólica</span></span>",
+  "namespace": {
+    "id": 0,
+    "text": ""
+  },
+  "wikibase_item": "Q43302",
+  "titles": {
+    "canonical": "Energía_eólica",
+    "normalized": "Energía eólica",
+    "display": "<span lang=\"es\" dir=\"ltr\"><span class=\"mw-page-title-main\">Energía eólica</span></span>"
+  },
+  "pageid": 3359,
+  "thumbnail": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8b/GreenMountainWindFarm_Fluvanna_2004.jpg/330px-GreenMountainWindFarm_Fluvanna_2004.jpg?utm_source=es.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 330,
+    "height": 219
+  },
+  "originalimage": {
+    "source": "https://upload.wikimedia.org/wikipedia/commons/8/8b/GreenMountainWindFarm_Fluvanna_2004.jpg?utm_source=es.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "width": 2048,
+    "height": 1360
+  },
+  "lang": "es",
+  "dir": "ltr",
+  "revision": "175814738",
+  "tid": "582680da-c75d-11f1-99e2-c575ff65c58d",
+  "timestamp": "2026-10-13T23:25:15Z",
+  "description": "tipo de energía renovable",
+  "description_source": "central",
+  "content_urls": {
+    "desktop": {
+      "page": "https://es.wikipedia.org/wiki/Energ%C3%ADa_e%C3%B3lica",
+      "revisions": "https://es.wikipedia.org/wiki/Energ%C3%ADa_e%C3%B3lica?action=history",
+      "edit": "https://es.wikipedia.org/wiki/Energ%C3%ADa_e%C3%B3lica?action=edit",
+      "talk": "https://es.wikipedia.org/wiki/Discusi%C3%B3n:Energ%C3%ADa_e%C3%B3lica"
+    },
+    "mobile": {
+      "page": "https://es.wikipedia.org/wiki/Energ%C3%ADa_e%C3%B3lica",
+      "revisions": "https://es.wikipedia.org/wiki/Special:History/Energ%C3%ADa_e%C3%B3lica",
+      "edit": "https://es.wikipedia.org/wiki/Energ%C3%ADa_e%C3%B3lica?action=edit",
+      "talk": "https://es.wikipedia.org/wiki/Discusi%C3%B3n:Energ%C3%ADa_e%C3%B3lica"
+    }
+  },
+  "extract": "La energía eólica es una forma de energía renovable que se obtiene a partir del viento, mediante el aprovechamiento de la energía cinética generada por el movimiento de masas de aire. Históricamente, la energía eólica fue utilizada para moler granos o extraer agua, pero actualmente su uso principal es la generación de energía eléctrica. La transformación de la energía eólica a energía eléctrica se realiza a través de aerogeneradores.",
+  "extract_html": "<p>La <b>energía eólica</b> es una forma de energía renovable que se obtiene a partir del viento, mediante el aprovechamiento de la energía cinética generada por el movimiento de masas de aire. Históricamente, la energía eólica fue utilizada para moler granos o extraer agua, pero actualmente su uso principal es la generación de energía eléctrica. La transformación de la energía eólica a energía eléctrica se realiza a través de aerogeneradores.</p>"
+}

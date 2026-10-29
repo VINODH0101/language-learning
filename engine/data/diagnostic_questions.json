@@ -1,0 +1,100 @@
+[
+  {
+    "id": "diag-pt-a1-01",
+    "language": "pt",
+    "cefr_level": "A1",
+    "skill": "grammar",
+    "prompt": "Complete a frase: 'Olá, eu _____ brasileiro e moro em São Paulo.'",
+    "options": ["sou", "estou", "tem", "faço"],
+    "correct_option_index": 0,
+    "explanation": "Usa-se o verbo 'ser' ('sou') para indicar nacionalidade e identidade permanente.",
+    "grammatical_focus": "Verbos ser vs estar no presente do indicativo"
+  },
+  {
+    "id": "diag-pt-a2-01",
+    "language": "pt",
+    "cefr_level": "A2",
+    "skill": "grammar",
+    "prompt": "Ontem eu _____ o trabalho muito tarde, mas antigamente eu _____ sempre cedo.",
+    "options": [
+      "terminei / saía",
+      "terminava / saí",
+      "terminei / saí",
+      "terminava / saía"
+    ],
+    "correct_option_index": 0,
+    "explanation": "'Ontem' pede pretérito perfeito pontual ('terminei'); 'antigamente' pede pretérito imperfeito habitual ('saía').",
+    "grammatical_focus": "Pretérito perfeito vs pretérito imperfeito"
+  },
+  {
+    "id": "diag-pt-b1-01",
+    "language": "pt",
+    "cefr_level": "B1",
+    "skill": "grammar",
+    "prompt": "Duvido muito que a diretoria _____ a proposta nesta semana.",
+    "options": ["aceite", "aceita", "aceitou", "aceitará"],
+    "correct_option_index": 0,
+    "explanation": "Verbos de dúvida ('duvidar que') regem obrigatoriamente o presente do subjuntivo ('aceite').",
+    "grammatical_focus": "Regência do presente do subjuntivo após dúvida"
+  },
+  {
+    "id": "diag-pt-b2-01",
+    "language": "pt",
+    "cefr_level": "B2",
+    "skill": "grammar",
+    "prompt": "Se nós _____ mais tempo hábil, teríamos viajado para Lisboa.",
+    "options": ["tivéssemos", "temos", "teríamos", "tínhamos"],
+    "correct_option_index": 0,
+    "explanation": "Na oração condicional contrafactual com apódose no condicional composto, a prótase exige o pretérito imperfeito do subjuntivo ('tivéssemos').",
+    "grammatical_focus": "Condicionais irreais com se + imperfeito do subjuntivo"
+  },
+  {
+    "id": "diag-es-a1-01",
+    "language": "es",
+    "cefr_level": "A1",
+    "skill": "grammar",
+    "prompt": "Complete: 'Nosotros _____ dos hermanos y vivimos en Valencia.'",
+    "options": ["tenemos", "somos", "estamos", "hacemos"],
+    "correct_option_index": 0,
+    "explanation": "Para expresar parentesco o posesión se utiliza el verbo 'tener' ('tenemos').",
+    "grammatical_focus": "Verbo tener en presente de indicativo"
+  },
+  {
+    "id": "diag-es-a2-01",
+    "language": "es",
+    "cefr_level": "A2",
+    "skill": "grammar",
+    "prompt": "El año pasado _____ a Buenos Aires; durante el vuelo _____ una película clásica.",
+    "options": [
+      "viajé / vi",
+      "viajaba / vi",
+      "viajé / veía",
+      "viajaba / veía"
+    ],
+    "correct_option_index": 0,
+    "explanation": "Ambas acciones son hechos puntuales terminados en el pasado ('viajé' y 'vi').",
+    "grammatical_focus": "Pretérito indefinido puntual"
+  },
+  {
+    "id": "diag-es-b1-01",
+    "language": "es",
+    "cefr_level": "B1",
+    "skill": "grammar",
+    "prompt": "No creo que el equipo _____ el partido de mañana.",
+    "options": ["pierda", "pierde", "perdió", "perderá"],
+    "correct_option_index": 0,
+    "explanation": "La matriz negativa de opinión ('no creo que') rige obligatoriamente subjuntivo ('pierda').",
+    "grammatical_focus": "Subjuntivo tras negación de verbos de opinión"
+  },
+  {
+    "id": "diag-es-b2-01",
+    "language": "es",
+    "cefr_level": "B2",
+    "skill": "grammar",
+    "prompt": "Si ellos _____ llegado a la hora fijada, no habrían perdido el tren.",
+    "options": ["hubieran", "habrían", "tuvieran", "hayan"],
+    "correct_option_index": 0,
+    "explanation": "En las condicionales del pasado, la prótasis con 'si' exige pluscuamperfecto de subjuntivo ('hubieran' o 'hubiesen').",
+    "grammatical_focus": "Condicionales en el pasado con pluscuamperfecto de subjuntivo"
+  }
+]

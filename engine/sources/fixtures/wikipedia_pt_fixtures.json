@@ -1,0 +1,107 @@
+{
+  "articles": [
+    {
+      "pageid": "61245",
+      "title": "Energia solar",
+      "language": "pt",
+      "topic_category": "Science",
+      "cefr_level": "B2",
+      "description": "energia obtida a partir da luz e do calor do Sol",
+      "extract": "A energia solar é uma energia renovável obtida pela luz do sol, utilizada principalmente para geração de eletricidade e aquecimento de água. Os métodos de captura da energia solar podem ser classificados em diretos ou indiretos. Os sistemas fotovoltaicos convertem a radiação solar diretamente em energia elétrica através do efeito fotoelétrico em células de silício. A energia solar é considerada inesgotável e sustentável, desempenhando um papel crucial na transição energética global e na redução das emissões de gases de efeito estufa.",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Solar_panels_on_a_roof.jpg/320px-Solar_panels_on_a_roof.jpg",
+      "content_url": "https://pt.wikipedia.org/wiki/Energia_solar",
+      "revision_id": "67329104",
+      "timestamp": "2024-01-15T12:00:00Z",
+      "key_vocabulary": [
+        {"term": "inesgotável", "definition_pt": "Que não se pode esgotar ou acabar; infindo.", "definition_en": "inexhaustible"},
+        {"term": "radiação", "definition_pt": "Propagação de energia sob a forma de ondas ou partículas.", "definition_en": "radiation"},
+        {"term": "transição energética", "definition_pt": "Mudança estrutural no fornecimento e consumo de energia.", "definition_en": "energy transition"}
+      ],
+      "comprehension_questions": [
+        {
+          "question": "Como os sistemas fotovoltaicos geram energia elétrica segundo o texto?",
+          "options": [
+            "Através do efeito fotoelétrico diretamente da radiação solar",
+            "Pelo aquecimento mecânico de turbinas a vapor",
+            "Mediante a queima de compostos químicos fotoativos",
+            "Através de processos indiretos de fissão nuclear"
+          ],
+          "correct_option_index": 0,
+          "explanation": "O texto afirma explicitamente que 'os sistemas fotovoltaicos convertem a radiação solar diretamente em energia elétrica através do efeito fotoelétrico'."
+        },
+        {
+          "question": "Qual é a relevância primordial da energia solar citada no encerramento?",
+          "options": [
+            "Substituição exclusiva de combustíveis espaciais",
+            "Transição energética global e mitigação de emissões de efeito estufa",
+            "Redução imediata do consumo residencial de água",
+            "Eliminação total do silício na indústria industrial"
+          ],
+          "correct_option_index": 1,
+          "explanation": "O texto destaca que ela desempenha um papel crucial 'na transição energética global e na redução das emissões de gases de efeito estufa'."
+        }
+      ]
+    },
+    {
+      "pageid": "1488",
+      "title": "Floresta Amazônica",
+      "language": "pt",
+      "topic_category": "Nature",
+      "cefr_level": "C1",
+      "description": "maior floresta tropical do mundo",
+      "extract": "A Floresta Amazônica é uma floresta latifoliada úmida que cobre a maior parte da bacia amazônica da América do Sul. Esta bacia abrange sete milhões de quilômetros quadrados, dos quais cinco milhões e meio de quilômetros quadrados são cobertos pela floresta tropical. A Amazônia representa mais da metade das florestas tropicais remanescentes no planeta e compreende a maior e mais biodiversa extensão de floresta tropical úmida do mundo, com estimados 390 bilhões de árvores individuais divididas em cerca de 16 mil espécies.",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Amazon_rainforest.jpg/320px-Amazon_rainforest.jpg",
+      "content_url": "https://pt.wikipedia.org/wiki/Floresta_Amaz%C3%B4nica",
+      "revision_id": "67412099",
+      "timestamp": "2024-02-10T14:30:00Z",
+      "key_vocabulary": [
+        {"term": "latifoliada", "definition_pt": "Vegetação cujas árvores possuem folhas largas.", "definition_en": "broadleaf"},
+        {"term": "remanescente", "definition_pt": "Que sobra, que resta de um todo.", "definition_en": "remaining / remnant"},
+        {"term": "biodiversidade", "definition_pt": "Variedade de formas de vida em um ecossistema.", "definition_en": "biodiversity"}
+      ],
+      "comprehension_questions": [
+        {
+          "question": "Qual fração das florestas tropicais remanescentes no planeta a Amazônia representa?",
+          "options": [
+            "Exatamente um terço da cobertura global",
+            "Mais da metade das florestas tropicais remanescentes",
+            "Menos de um quarto do total continental",
+            "A totalidade das florestas tropicais do hemisfério sul"
+          ],
+          "correct_option_index": 1,
+          "explanation": "O texto atesta que 'a Amazônia representa mais da metade das florestas tropicais remanescentes no planeta'."
+        }
+      ]
+    },
+    {
+      "pageid": "42801",
+      "title": "Arquitetura barroca em Portugal",
+      "language": "pt",
+      "topic_category": "Culture",
+      "cefr_level": "B1",
+      "description": "estilo arquitetônico em Portugal nos séculos XVII e XVIII",
+      "extract": "A arquitetura barroca em Portugal desenvolveu-se entre o final do século XVII e o final do século XVIII, coincidindo com a descoberta do ouro e dos diamantes no Brasil. O barroco português caracteriza-se pelo uso exuberante da talha dourada no interior das igrejas e pela azulejaria tradicional. Edifícios notáveis como o Palácio Nacional de Mafra e a Igreja dos Clérigos no Porto testemunham a grandiosidade e a singularidade artística desse período na história lusitana.",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Palacio_de_Mafra_geral.jpg/320px-Palacio_de_Mafra_geral.jpg",
+      "content_url": "https://pt.wikipedia.org/wiki/Arquitetura_barroca_em_Portugal",
+      "revision_id": "67290111",
+      "timestamp": "2024-01-08T09:15:00Z",
+      "key_vocabulary": [
+        {"term": "talha dourada", "definition_pt": "Técnica escultórica em madeira revestida por folha de ouro.", "definition_en": "gilded wood carving"},
+        {"term": "singularidade", "definition_pt": "Qualidade do que é único ou particular.", "definition_en": "uniqueness"}
+      ],
+      "comprehension_questions": [
+        {
+          "question": "Que elemento histórico coincidiu com o florescimento do barroco em Portugal?",
+          "options": [
+            "A descoberta de ouro e diamantes no Brasil",
+            "A fundação da primeira universidade em Coimbra",
+            "A assinatura do Tratado de Tordesilhas",
+            "A revolução industrial nas manufaturas do norte"
+          ],
+          "correct_option_index": 0,
+          "explanation": "O artigo cita expressamente que o período coincidiu 'com a descoberta do ouro e dos diamantes no Brasil'."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "articles": [
+    {
+      "pageid": "31920",
+      "title": "Energía eólica",
+      "language": "es",
+      "topic_category": "Science",
+      "cefr_level": "B2",
+      "description": "energía que se obtiene a partir del viento",
+      "extract": "La energía eólica es la energía que se obtiene a partir del viento, es decir, mediante el aprovechamiento de la energía cinética de las masas de aire. El término «eólico» proviene del latín Aeolicus, que a su vez deriva de Eolo, el dios de los vientos en la mitología griega. En la actualidad, los aerogeneradores modernos convierten la energía cinética del viento en electricidad para ser inyectada en la red eléctrica. Es una de las fuentes de energía renovable más maduras, limpias y competitivas del mundo contemporáneo.",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Windmills_in_La_Mancha.jpg/320px-Windmills_in_La_Mancha.jpg",
+      "content_url": "https://es.wikipedia.org/wiki/Energ%C3%ADa_e%C3%B3lica",
+      "revision_id": "15891234",
+      "timestamp": "2024-01-20T10:45:00Z",
+      "key_vocabulary": [
+        {"term": "cinética", "definition_es": "Perteneciente o relativo al movimiento.", "definition_en": "kinetic"},
+        {"term": "aerogenerador", "definition_es": "Generador eléctrico movido por una turbina accionada por el viento.", "definition_en": "wind turbine"},
+        {"term": "aprovechamiento", "definition_es": "Acción de obtener provecho o rendimiento de algo.", "definition_en": "utilization / harnessing"}
+      ],
+      "comprehension_questions": [
+        {
+          "question": "¿De qué fenómeno físico obtiene la energía eólica su potencial energético?",
+          "options": [
+            "De la energía cinética de las masas de aire en movimiento",
+            "Del calentamiento solar de paneles semiconductores",
+            "De la presión osmótica en aguas subterráneas",
+            "De la evaporación súbita de corrientes marinas"
+          ],
+          "correct_option_index": 0,
+          "explanation": "El texto explica claramente que 'se obtiene a partir del viento, es decir, mediante el aprovechamiento de la energía cinética de las masas de aire'."
+        },
+        {
+          "question": "¿Cuál es el origen etimológico del término «eólico» mencionado?",
+          "options": [
+            "Deriva de Eolo, dios de los vientos en la mitología griega",
+            "Proviene de un vocablo árabe para 'molino de piedra'",
+            "Fue acuñado por físicos franceses en el siglo XIX",
+            "Procede de una raíz celta que alude a las tormentas"
+          ],
+          "correct_option_index": 0,
+          "explanation": "El artículo indica que 'proviene del latín Aeolicus, que a su vez deriva de Eolo, el dios de los vientos en la mitología griega'."
+        }
+      ]
+    },
+    {
+      "pageid": "28114",
+      "title": "Alhambra",
+      "language": "es",
+      "topic_category": "Culture",
+      "cefr_level": "C1",
+      "description": "complejo monumental palaciego en Granada, España",
+      "extract": "La Alhambra es un complejo monumental sobre una colina en Granada, España. Consiste en un conjunto de antiguos palacios, jardines y fortaleza que albergaba una verdadera ciudadela dentro de la propia ciudad de Granada, que servía como residencia real al sultán y a la corte del Reino nazarí de Granada. Su arquitectura islámica nazarí se distingue por la armoniosa proporción de sus patios, la profusa decoración en yesería policromada, los mocárabes y el magistral manejo hidráulico del agua en fuentes y acequias.",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Dawn_Charles_V_Palace_Alhambra_Granada_Andalusia_Spain.jpg/320px-Dawn_Charles_V_Palace_Alhambra_Granada_Andalusia_Spain.jpg",
+      "content_url": "https://es.wikipedia.org/wiki/Alhambra",
+      "revision_id": "15934521",
+      "timestamp": "2024-02-15T18:10:00Z",
+      "key_vocabulary": [
+        {"term": "ciudadela", "definition_es": "Recinto fortificado en el interior de una plaza o ciudad.", "definition_en": "citadel"},
+        {"term": "mocárabes", "definition_es": "Elemento decorativo formado por prismas yuxtapuestos y colgantes.", "definition_en": "muqarnas / stalactite vaulting"},
+        {"term": "acequia", "definition_es": "Zanja o canal por donde se conducen las aguas para regar.", "definition_en": "irrigation canal / acequia"}
+      ],
+      "comprehension_questions": [
+        {
+          "question": "¿Qué función principal desempeñaba originalmente la Alhambra durante el periodo nazarí?",
+          "options": [
+            "Residencia real del sultán y sede de la corte nazarí",
+            "Monasterio religioso exclusivo para peregrinos andalusíes",
+            "Aduana comercial para mercancías del Mediterráneo",
+            "Archivo histórico central de la corona de Castilla"
+          ],
+          "correct_option_index": 0,
+          "explanation": "El texto explicita que 'servía como residencia real al sultán y a la corte del Reino nazarí de Granada'."
+        }
+      ]
+    },
+    {
+      "pageid": "19402",
+      "title": "Glaciar Perito Moreno",
+      "language": "es",
+      "topic_category": "Nature",
+      "cefr_level": "B1",
+      "description": "glaciar en la provincia de Santa Cruz, Argentina",
+      "extract": "El glaciar Perito Moreno es una imponente masa de hielo ubicada en el departamento Lago Argentino de la provincia de Santa Cruz, en el sudoeste de la Argentina, en la región de la Patagonia. Se encuentra integrado en el Parque Nacional Los Glaciares. Este glaciar se origina en el campo de hielo patagónico sur y desemboca en el brazo Rico del lago Argentino, presentando un frente de cinco kilómetros de ancho y una altura de más de sesenta metros sobre el nivel del agua.",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Perito_Moreno_Glacier_Patagonia_Argentina_Luca_Galuzzi_2005.JPG/320px-Perito_Moreno_Glacier_Patagonia_Argentina_Luca_Galuzzi_2005.JPG",
+      "content_url": "https://es.wikipedia.org/wiki/Glaciar_Perito_Moreno",
+      "revision_id": "15881023",
+      "timestamp": "2024-01-12T11:20:00Z",
+      "key_vocabulary": [
+        {"term": "imponente", "definition_es": "Que impone, grandioso o majestuoso.", "definition_en": "imposing / awe-inspiring"},
+        {"term": "desembocar", "definition_es": "Dicho de una corriente de agua o masa, llegar a otro lugar mayor.", "definition_en": "to flow into / discharge"}
+      ],
+      "comprehension_questions": [
+        {
+          "question": "¿En qué parque nacional se encuentra situado el glaciar Perito Moreno?",
+          "options": [
+            "Parque Nacional Los Glaciares",
+            "Parque Nacional Nahuel Huapi",
+            "Parque Nacional Torres del Paine",
+            "Parque Nacional Tierra del Fuego"
+          ],
+          "correct_option_index": 0,
+          "explanation": "El texto señala que 'se encuentra integrado en el Parque Nacional Los Glaciares'."
+        }
+      ]
+    }
+  ]
+}

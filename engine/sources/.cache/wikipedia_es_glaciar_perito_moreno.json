@@ -1,0 +1,53 @@
+{
+  "type": "standard",
+  "title": "Glaciar Perito Moreno",
+  "displaytitle": "<span lang=\"es\" dir=\"ltr\"><span class=\"mw-page-title-main\">Glaciar Perito Moreno</span></span>",
+  "namespace": {
+    "id": 0,
+    "text": ""
+  },
+  "wikibase_item": "Q367943",
+  "titles": {
+    "canonical": "Glaciar_Perito_Moreno",
+    "normalized": "Glaciar Perito Moreno",
+    "display": "<span lang=\"es\" dir=\"ltr\"><span class=\"mw-page-title-main\">Glaciar Perito Moreno</span></span>"
+  },
+  "pageid": 60942,
+  "thumbnail": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Perito_Moreno_Glacier_2023.jpg/330px-Perito_Moreno_Glacier_2023.jpg?utm_source=es.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 330,
+    "height": 141
+  },
+  "originalimage": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Perito_Moreno_Glacier_2023.jpg/3840px-Perito_Moreno_Glacier_2023.jpg?utm_source=es.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 13117,
+    "height": 5621
+  },
+  "lang": "es",
+  "dir": "ltr",
+  "revision": "175815721",
+  "tid": "00424792-c76a-11f1-b8cb-b0159f832f22",
+  "timestamp": "2026-10-14T00:55:51Z",
+  "description": "glaciar en el campo de hielo patagónico sur, Argentina y Chile",
+  "description_source": "central",
+  "coordinates": {
+    "lat": -50.49321939,
+    "lon": -73.12798245
+  },
+  "content_urls": {
+    "desktop": {
+      "page": "https://es.wikipedia.org/wiki/Glaciar_Perito_Moreno",
+      "revisions": "https://es.wikipedia.org/wiki/Glaciar_Perito_Moreno?action=history",
+      "edit": "https://es.wikipedia.org/wiki/Glaciar_Perito_Moreno?action=edit",
+      "talk": "https://es.wikipedia.org/wiki/Discusi%C3%B3n:Glaciar_Perito_Moreno"
+    },
+    "mobile": {
+      "page": "https://es.wikipedia.org/wiki/Glaciar_Perito_Moreno",
+      "revisions": "https://es.wikipedia.org/wiki/Special:History/Glaciar_Perito_Moreno",
+      "edit": "https://es.wikipedia.org/wiki/Glaciar_Perito_Moreno?action=edit",
+      "talk": "https://es.wikipedia.org/wiki/Discusi%C3%B3n:Glaciar_Perito_Moreno"
+    }
+  },
+  "extract": "El glaciar Perito Moreno, glaciar Bismarck o glaciar Francisco Gormaz es un glaciar ubicado en su mayoría el departamento Lago Argentino de la provincia de Santa Cruz, en el sudoeste de la Argentina, en la región de la Patagonia, con una parte de su superficie ubicada en Natales, Chile. Se integra dentro del parque nacional Los Glaciares en su parte argentina y el parque nacional Bernardo O'Higgins en su parte chilena.",
+  "extract_html": "<p>El <b>glaciar Perito Moreno</b>, <b>glaciar Bismarck</b> o <b>glaciar Francisco Gormaz</b> es un glaciar ubicado en su mayoría el departamento Lago Argentino de la provincia de Santa Cruz, en el sudoeste de la Argentina, en la región de la Patagonia, con una parte de su superficie ubicada en Natales, Chile. Se integra dentro del parque nacional Los Glaciares en su parte argentina y el parque nacional Bernardo O'Higgins en su parte chilena.</p>"
+}

@@ -1,0 +1,23 @@
+{
+  "tatoeba_cc_by": {
+    "source_name": "Tatoeba Project",
+    "source_url": "https://tatoeba.org",
+    "license_type": "CC-BY-2.0-FR",
+    "attribution_text": "Content released under Creative Commons Attribution 2.0 France (CC-BY 2.0 FR) by Tatoeba community contributors.",
+    "terms_url": "https://tatoeba.org/en/terms_of_use"
+  },
+  "wiktionary_cc_by_sa": {
+    "source_name": "Wiktionary",
+    "source_url": "https://www.wiktionary.org",
+    "license_type": "CC-BY-SA-3.0",
+    "attribution_text": "Text available under the Creative Commons Attribution-ShareAlike License 3.0 (CC-BY-SA 3.0).",
+    "terms_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights"
+  },
+  "original_curated": {
+    "source_name": "Polyglot C1 Daily Open Curriculum",
+    "source_url": "https://github.com/polyglot-c1-daily",
+    "license_type": "Original-Curated",
+    "attribution_text": "Original educational exercise templates and linguistic notes created for Polyglot C1 Daily (CC-BY 4.0).",
+    "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+  }
+}

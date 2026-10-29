@@ -1,0 +1,49 @@
+{
+  "type": "standard",
+  "title": "Energia solar",
+  "displaytitle": "<span lang=\"pt\" dir=\"ltr\"><span class=\"mw-page-title-main\">Energia solar</span></span>",
+  "namespace": {
+    "id": 0,
+    "text": ""
+  },
+  "wikibase_item": "Q40015",
+  "titles": {
+    "canonical": "Energia_solar",
+    "normalized": "Energia solar",
+    "display": "<span lang=\"pt\" dir=\"ltr\"><span class=\"mw-page-title-main\">Energia solar</span></span>"
+  },
+  "pageid": 18599,
+  "thumbnail": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Solar-share-energy.svg/langpt-330px-Solar-share-energy.svg.png?utm_source=pt.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 330,
+    "height": 233
+  },
+  "originalimage": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Solar-share-energy.svg/langpt-960px-Solar-share-energy.svg.png?utm_source=pt.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 850,
+    "height": 600
+  },
+  "lang": "pt",
+  "dir": "ltr",
+  "revision": "73127973",
+  "tid": "25c6b51d-c0c7-11f1-b981-188aa5ac5c1d",
+  "timestamp": "2026-10-05T14:14:59Z",
+  "description": "energia proveniente do calor e luz do Sol",
+  "description_source": "central",
+  "content_urls": {
+    "desktop": {
+      "page": "https://pt.wikipedia.org/wiki/Energia_solar",
+      "revisions": "https://pt.wikipedia.org/wiki/Energia_solar?action=history",
+      "edit": "https://pt.wikipedia.org/wiki/Energia_solar?action=edit",
+      "talk": "https://pt.wikipedia.org/wiki/Discuss%C3%A3o:Energia_solar"
+    },
+    "mobile": {
+      "page": "https://pt.wikipedia.org/wiki/Energia_solar",
+      "revisions": "https://pt.wikipedia.org/wiki/Special:History/Energia_solar",
+      "edit": "https://pt.wikipedia.org/wiki/Energia_solar?action=edit",
+      "talk": "https://pt.wikipedia.org/wiki/Discuss%C3%A3o:Energia_solar"
+    }
+  },
+  "extract": "Energia solar é o termo que se refere à energia proveniente da luz e do calor do Sol. Ela é aproveitada por meio de diferentes tecnologias em constante evolução, como o aquecimento solar, a energia solar fotovoltaica, a energia heliotérmica, a arquitetura solar e a fotossíntese artificial. As tecnologias solares são amplamente caracterizadas como ativas ou passivas, dependendo da forma como capturam, convertem e distribuem a energia solar. Entre as técnicas solares ativas estão o uso de painéis fotovoltaicos, os coletores das usinas heliotérmica e os aquecedores solares. Entre as técnicas solares passivas estão a orientação de um edifício para o Sol, a seleção de materiais com massa térmica favorável ou propriedades translúcidas e projetar espaços que façam o ar circular naturalmente.",
+  "extract_html": "<p><b>Energia solar</b> é o termo que se refere à energia proveniente da luz e do calor do Sol. Ela é aproveitada por meio de diferentes tecnologias em constante evolução, como o aquecimento solar, a energia solar fotovoltaica, a energia heliotérmica, a arquitetura solar e a fotossíntese artificial. As tecnologias solares são amplamente caracterizadas como ativas ou passivas, dependendo da forma como capturam, convertem e distribuem a energia solar. Entre as técnicas solares ativas estão o uso de painéis fotovoltaicos, os coletores das usinas heliotérmica e os aquecedores solares. Entre as técnicas solares passivas estão a orientação de um edifício para o Sol, a seleção de materiais com massa térmica favorável ou propriedades translúcidas e projetar espaços que façam o ar circular naturalmente.</p>"
+}

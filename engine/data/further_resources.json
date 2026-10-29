@@ -1,0 +1,32 @@
+[
+  {
+    "title": "RTP Ensina — Língua Portuguesa",
+    "resource_type": "article",
+    "url": "https://ensina.rtp.pt/temas/lingua-portuguesa/",
+    "description": "Repositório público educacional da Rádio e Televisão de Portugal com artigos e análises linguísticas para níveis avançados."
+  },
+  {
+    "title": "Instituto Camões — Centro Virtual Camões",
+    "resource_type": "literature",
+    "url": "https://cvc.instituto-camoes.pt/",
+    "description": "Recursos abertos, literatura clássica e dicionários de língua portuguesa mantidos pelo Instituto Camões."
+  },
+  {
+    "title": "Centro Virtual Cervantes — Rinconete y El Trujamán",
+    "resource_type": "article",
+    "url": "https://cvc.cervantes.es/",
+    "description": "Publicaciones lingüísticas, glosarios y artículos de reflexión estilística del Instituto Cervantes para estudiantes de nivel C1/C2."
+  },
+  {
+    "title": "RTVE Play — Radio Nacional de España Podcasts",
+    "resource_type": "podcast",
+    "url": "https://www.rtve.es/play/audios/",
+    "description": "Podcasts y emisiones culturales en español peninsular estándar sobre debate filosófico, ciencia y literatura contemporánea."
+  },
+  {
+    "title": "Tatoeba Bilingual Corpus",
+    "resource_type": "audio",
+    "url": "https://tatoeba.org",
+    "description": "Base de dados colaborativa aberta com milhares de frases nativas gravadas com áudio sob licença Creative Commons."
+  }
+]

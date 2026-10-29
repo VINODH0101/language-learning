@@ -1,0 +1,26 @@
+{
+  "language": "es",
+  "examples": [
+    {
+      "id": "tat-es-201",
+      "sentence_target": "Los resultados financieros fueron modestos; no obstante, la solvencia patrimonial se mantuvo intacta.",
+      "sentence_translation": "The financial results were modest; nonetheless, corporate solvency remained intact.",
+      "audio_url": "https://audio.tatoeba.org/sentences/spa/201.mp3",
+      "lemma_tags": ["no obstante", "solvencia", "financiero"]
+    },
+    {
+      "id": "tat-es-202",
+      "sentence_target": "El sindicato aceptará el acuerdo a condición de que la patronal respete las cláusulas salariales.",
+      "sentence_translation": "The trade union will accept the agreement provided that management respects the wage clauses.",
+      "audio_url": "https://audio.tatoeba.org/sentences/spa/202.mp3",
+      "lemma_tags": ["a condición de que", "sindicato", "acuerdo"]
+    },
+    {
+      "id": "tat-es-203",
+      "sentence_target": "Por más que los desarrolladores insistan en su neutralidad, los sesgos algorítmicos persisten.",
+      "sentence_translation": "However much developers insist on their neutrality, algorithmic biases persist.",
+      "audio_url": "https://audio.tatoeba.org/sentences/spa/203.mp3",
+      "lemma_tags": ["por más que", "sesgo", "algorítmico"]
+    }
+  ]
+}

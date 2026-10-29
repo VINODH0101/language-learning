@@ -1,0 +1,49 @@
+{
+  "type": "standard",
+  "title": "Amazônia",
+  "displaytitle": "<span lang=\"pt\" dir=\"ltr\"><span class=\"mw-page-title-main\">Amazônia</span></span>",
+  "namespace": {
+    "id": 0,
+    "text": ""
+  },
+  "wikibase_item": "Q177567",
+  "titles": {
+    "canonical": "Amazônia",
+    "normalized": "Amazônia",
+    "display": "<span lang=\"pt\" dir=\"ltr\"><span class=\"mw-page-title-main\">Amazônia</span></span>"
+  },
+  "pageid": 12693,
+  "thumbnail": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Amazon_CIAT_%285%29.jpg/330px-Amazon_CIAT_%285%29.jpg?utm_source=pt.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 330,
+    "height": 219
+  },
+  "originalimage": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Amazon_CIAT_%285%29.jpg/3840px-Amazon_CIAT_%285%29.jpg?utm_source=pt.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 4288,
+    "height": 2848
+  },
+  "lang": "pt",
+  "dir": "ltr",
+  "revision": "73168597",
+  "tid": "ae857d09-c444-11f1-81e3-7dbb28582349",
+  "timestamp": "2026-10-10T00:51:09Z",
+  "description": "floresta latifoliada úmida",
+  "description_source": "central",
+  "content_urls": {
+    "desktop": {
+      "page": "https://pt.wikipedia.org/wiki/Amaz%C3%B4nia",
+      "revisions": "https://pt.wikipedia.org/wiki/Amaz%C3%B4nia?action=history",
+      "edit": "https://pt.wikipedia.org/wiki/Amaz%C3%B4nia?action=edit",
+      "talk": "https://pt.wikipedia.org/wiki/Discuss%C3%A3o:Amaz%C3%B4nia"
+    },
+    "mobile": {
+      "page": "https://pt.wikipedia.org/wiki/Amaz%C3%B4nia",
+      "revisions": "https://pt.wikipedia.org/wiki/Special:History/Amaz%C3%B4nia",
+      "edit": "https://pt.wikipedia.org/wiki/Amaz%C3%B4nia?action=edit",
+      "talk": "https://pt.wikipedia.org/wiki/Discuss%C3%A3o:Amaz%C3%B4nia"
+    }
+  },
+  "extract": "Amazônia(pt-BR) ou Amazónia(pt-PT?) é uma floresta latifoliada tropical úmida que cobre a maior parte da Bacia Amazônica na América do Sul. Esta bacia abrange 7 milhões de quilômetros quadrados distribuído por nove países: Brasil, Bolívia, Peru, Colômbia, Equador, Venezuela, Guiana, Guiana Francesa e Suriname, dos quais 5 milhões e meio de quilômetros quadrados são cobertos pela esta floresta tropical. Também existem regiões de quatro nações vizinhas ao Brasil com este nome: o departamento colombiano Amazonas, o estado venezuelano Amazonas e, a região peruana do Amazonas.",
+  "extract_html": "<p><span class=\"no-conversion\"><span><b>Amazônia</b></span><sup>(<span><abbr>pt-BR</abbr></span>)</sup> ou <span><b>Amazónia</b></span><sup>(<span><abbr>pt-PT</abbr></span><span><span style=\"color:#7CFC00\">?</span></span>)</sup></span> é uma floresta latifoliada tropical úmida que cobre a maior parte da Bacia Amazônica na América do Sul. Esta bacia abrange 7 milhões de quilômetros quadrados distribuído por nove países: Brasil, Bolívia, Peru, Colômbia, Equador, Venezuela, Guiana, Guiana Francesa e Suriname, dos quais 5 milhões e meio de quilômetros quadrados são cobertos pela esta floresta tropical. Também existem regiões de quatro nações vizinhas ao Brasil com este nome: o departamento colombiano Amazonas, o estado venezuelano Amazonas e, a região peruana do Amazonas.</p>"
+}

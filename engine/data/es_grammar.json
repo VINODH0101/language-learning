@@ -1,0 +1,87 @@
+[
+  {
+    "id": "es-gram-c1-01",
+    "rule_code": "ES_SUBJ_CONCESSIVE_01",
+    "language": "es",
+    "cefr_level": "C1",
+    "title": "Subjuntivo en Oraciones Concesivas Complejas",
+    "category": "subjunctive_mood",
+    "explanation_markdown": "En español C1, las **oraciones concesivas** exigen una selección modal muy precisa entre indicativo y subjuntivo según el grado de certidumbre o pertinencia que el hablante otorga al obstáculo.\n\n### Matices modales:\n1. **Aunque + Indicativo**: El hablante afirma un hecho real conocido. (*Aunque llueve, saldré* = Sé que llueve y lo constato).\n2. **Aunque + Subjuntivo**: El obstáculo se presenta como hipotético, irrelevante o ya conocido por el interlocutor sin que altere la decisión. (*Aunque llueva, saldré* = Tanto si llueve como si no, saldré).\n3. **Nexos que exigen SIEMPRE subjuntivo**: *por más que*, *por mucho que*, *aun a riesgo de que*, *a sabiendas de que* (este último con indicativo), *mal que le pese a*.",
+    "structural_formula": "Por mucho/más que + Subjuntivo (Presente o Imperfecto) + Oración Principal",
+    "examples": [
+      {
+        "target": "Por mucho que insistan los portavoces, el comité no alterará los plazos de entrega.",
+        "en": "However much the spokespersons insist, the committee will not alter the delivery deadlines.",
+        "note": "'Por mucho que' seguido obligatoriamente de presente de subjuntivo ('insistan')."
+      },
+      {
+        "target": "Aun cuando surgieran discrepancias metodológicas, mantendríamos la colaboración.",
+        "en": "Even if methodological discrepancies were to arise, we would maintain the collaboration.",
+        "note": "'Aun cuando' con imperfecto de subjuntivo (-ra) para formular una concesión hipotética."
+      }
+    ],
+    "common_errors": [
+      {
+        "incorrect": "Por mucho que insisten los portavoces...",
+        "correct": "Por mucho que insistan los portavoces...",
+        "reason": "La locución 'por mucho que' en contextos de obstáculo potencial rige siempre el modo subjuntivo."
+      },
+      {
+        "incorrect": "A pesar de que ellos vinieron mañana...",
+        "correct": "A pesar de que ellos vengan mañana...",
+        "reason": "Discordancia temporal: con referencia al futuro tras concesivas, debe usarse presente de subjuntivo."
+      }
+    ],
+    "regional_notes": {
+      "es-ES": "En España se utiliza ampliamente la alternancia entre las desinencias del imperfecto de subjuntivo en '-ra' (más frecuente en lengua general y prensa) y '-se' (más formal o literaria).",
+      "es-419": "En Hispanoamérica predomina casi exclusivamente la terminación en '-ra' (cantara, tuviera), percibiéndose las formas en '-se' como marcadamente librescas o arcaizantes."
+    },
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Pedagogical synthesis prepared for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "es-gram-c1-02",
+    "rule_code": "ES_COND_IRREAL_PASADO_01",
+    "language": "es",
+    "cefr_level": "C1",
+    "title": "Condicionales Irreales en el Pasado y Correlación Modal",
+    "category": "conditional_syntax",
+    "explanation_markdown": "Las **oraciones condicionales irreales en el pasado** expresan hipótesis contrafácticas sobre acontecimientos que no ocurrieron y cuyas consecuencias habrían sido distintas.\n\n### Esquemas canónicos C1:\n1. *Si + Pluscuamperfecto de Subjuntivo... + Condicional Compuesto*: Ex.: *Si hubieras avisado a tiempo, habríamos reservado el vuelo.*\n2. *Si + Pluscuamperfecto de Subjuntivo... + Pluscuamperfecto de Subjuntivo (en -ra)*: Ex.: *Si hubieras avisado a tiempo, hubiéramos reservado el vuelo.* (Uso muy extendido y estilísticamente aceptado en la norma culta con la forma en -ra, pero nunca con -se en la apódosis).\n\n### Contraste con el portugués:\nEn portugués se dice: *Se você tivesse avisado... teríamos reservado*. Nótese que en portugués el verbo auxiliar usual es 'ter' (*tivesse*), mientras que en español es exclusivamente 'haber' (*hubiera / hubiese*).",
+    "structural_formula": "Si + hubiera/hubiese + participio ... habría/hubiera + participio",
+    "examples": [
+      {
+        "target": "Si hubiésemos analizado los riesgos sistémicos, habríamos mitigado las pérdidas de capital.",
+        "en": "If we had analyzed the systemic risks, we would have mitigated the capital losses.",
+        "note": "Correlación formal estándar de hipótesis contrafáctica retrospectiva."
+      }
+    ],
+    "common_errors": [
+      {
+        "incorrect": "Si tuviera sabido...",
+        "correct": "Si hubiera sabido... / Si hubiese sabido...",
+        "reason": "Transferencia errónea del portugués 'se eu tivesse sabido'. En español los tiempos compuestos usan siempre 'haber'."
+      },
+      {
+        "incorrect": "Si habría sabido, vendría.",
+        "correct": "Si hubiera sabido, habría venido.",
+        "reason": "La prótasis (cláusula introducida por 'si') nunca admite tiempo condicional en la norma estándar."
+      }
+    ],
+    "regional_notes": {
+      "es-ES": "Uso frecuente tanto de 'habría hecho' como de 'hubiera hecho' en la apódosis principal.",
+      "es-419": "Marcada preferencia en amplias zonas de México y el Cono Sur por la duplicación del pluscuamperfecto: 'si hubiera tenido... hubiera ido'."
+    },
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Syntactic grammar synthesis prepared for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  }
+]

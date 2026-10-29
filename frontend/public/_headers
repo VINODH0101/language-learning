@@ -1,0 +1,6 @@
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: microphone=(), camera=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' https://audio.tatoeba.org https://upload.wikimedia.org blob:; connect-src 'self' https://*.supabase.co https://tatoeba.org https://commons.wikimedia.org; font-src 'self'; img-src 'self' data: https:;

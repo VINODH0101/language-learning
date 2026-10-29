@@ -1,0 +1,83 @@
+{
+  "prerrogativa": {
+    "source_id": "wik-pt-prerrogativa",
+    "lemma": "prerrogativa",
+    "language": "pt",
+    "regional_variety": "all",
+    "part_of_speech": "noun",
+    "cefr_level_estimate": "C1",
+    "phonetic_ipa": "/pɾe.ʁo.ɡaˈtʃi.vɐ/",
+    "audio_url": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Pt-br-prerrogativa.ogg",
+    "definitions_target": [
+      "Direito exclusivo, privilégio ou regalia ligado a determinado cargo, função ou poder.",
+      "Vantagem que goza alguém por lei ou costume."
+    ],
+    "definitions_en": [
+      "prerogative, privilege, exclusive right inherent to an office"
+    ],
+    "collocations": [
+      "prerrogativa legal",
+      "exercer prerrogativas"
+    ],
+    "examples": [
+      {
+        "id": "wik-ex-pt-01",
+        "sentence_target": "O julgamento constitucional compete como prerrogativa indelegável à Suprema Corte.",
+        "sentence_translation": "Constitutional adjudication belongs as an indelegable prerogative to the Supreme Court.",
+        "audio_url": null,
+        "provenance": {
+          "source_name": "Wiktionary",
+          "source_id": "wik-pt-prerrogativa",
+          "source_url": "https://pt.wiktionary.org/wiki/prerrogativa",
+          "license": {
+            "license_name": "CC-BY-SA-3.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+            "attribution_text": "Definition from Wiktionary under CC-BY-SA 3.0."
+          }
+        }
+      }
+    ],
+    "provenance": {
+      "source_name": "Wiktionary (Portuguese)",
+      "source_id": "wik-pt-prerrogativa",
+      "source_url": "https://pt.wiktionary.org/wiki/prerrogativa",
+      "license": {
+        "license_name": "CC-BY-SA-3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "attribution_text": "Definition from Wiktionary under CC-BY-SA 3.0."
+      }
+    }
+  },
+  "ponderar": {
+    "source_id": "wik-pt-ponderar",
+    "lemma": "ponderar",
+    "language": "pt",
+    "regional_variety": "all",
+    "part_of_speech": "verb",
+    "cefr_level_estimate": "C1",
+    "phonetic_ipa": "/põ.deˈʁaʁ/",
+    "audio_url": null,
+    "definitions_target": [
+      "Pesar mentalmente as razões, prós e contras; refletir maduramente.",
+      "Expor com prudência e comedimento."
+    ],
+    "definitions_en": [
+      "to weigh, to ponder, to reflect deeply upon, to evaluate thoughtfully"
+    ],
+    "collocations": [
+      "ponderar as consequências",
+      "cumpre ponderar"
+    ],
+    "examples": [],
+    "provenance": {
+      "source_name": "Wiktionary (Portuguese)",
+      "source_id": "wik-pt-ponderar",
+      "source_url": "https://pt.wiktionary.org/wiki/ponderar",
+      "license": {
+        "license_name": "CC-BY-SA-3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "attribution_text": "Definition from Wiktionary under CC-BY-SA 3.0."
+      }
+    }
+  }
+}

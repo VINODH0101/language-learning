@@ -1,0 +1,83 @@
+{
+  "soslayar": {
+    "source_id": "wik-es-soslayar",
+    "lemma": "soslayar",
+    "language": "es",
+    "regional_variety": "all",
+    "part_of_speech": "verb",
+    "cefr_level_estimate": "C1",
+    "phonetic_ipa": "/sos.laˈʝaɾ/",
+    "audio_url": null,
+    "definitions_target": [
+      "Evitar o esquivar una dificultad o compromiso con habilidad.",
+      "Poner una cosa ladeada o sesgada."
+    ],
+    "definitions_en": [
+      "to avoid, to sidestep, to skirt around an issue tactfully"
+    ],
+    "collocations": [
+      "soslayar el problema",
+      "soslayar dificultades"
+    ],
+    "examples": [
+      {
+        "id": "wik-ex-es-01",
+        "sentence_target": "El informe no pretendía soslayar los dilemas éticos que plantea la inteligencia artificial.",
+        "sentence_translation": "The report did not aim to sidestep the ethical dilemmas posed by artificial intelligence.",
+        "audio_url": null,
+        "provenance": {
+          "source_name": "Wiktionary",
+          "source_id": "wik-es-soslayar",
+          "source_url": "https://es.wiktionary.org/wiki/soslayar",
+          "license": {
+            "license_name": "CC-BY-SA-3.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+            "attribution_text": "Definition from Wiktionary under CC-BY-SA 3.0."
+          }
+        }
+      }
+    ],
+    "provenance": {
+      "source_name": "Wiktionary (Spanish)",
+      "source_id": "wik-es-soslayar",
+      "source_url": "https://es.wiktionary.org/wiki/soslayar",
+      "license": {
+        "license_name": "CC-BY-SA-3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "attribution_text": "Definition from Wiktionary under CC-BY-SA 3.0."
+      }
+    }
+  },
+  "exquisito": {
+    "source_id": "wik-es-exquisito",
+    "lemma": "exquisito",
+    "language": "es",
+    "regional_variety": "all",
+    "part_of_speech": "adjective",
+    "cefr_level_estimate": "B2",
+    "phonetic_ipa": "/eks.kiˈsi.to/",
+    "audio_url": null,
+    "definitions_target": [
+      "De singular y extraordinaria calidad, primor o gusto en su especie.",
+      "Muy refinado y de buen gusto."
+    ],
+    "definitions_en": [
+      "delicious, exquisite, exceptionally tasteful (NOT weird)"
+    ],
+    "collocations": [
+      "trato exquisito",
+      "sabor exquisito"
+    ],
+    "examples": [],
+    "provenance": {
+      "source_name": "Wiktionary (Spanish)",
+      "source_id": "wik-es-exquisito",
+      "source_url": "https://es.wiktionary.org/wiki/exquisito",
+      "license": {
+        "license_name": "CC-BY-SA-3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "attribution_text": "Definition from Wiktionary under CC-BY-SA 3.0."
+      }
+    }
+  }
+}

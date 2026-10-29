@@ -1,0 +1,242 @@
+[
+  {
+    "id": "ex-pt-01",
+    "curriculum_node_id": "pt-c1-01",
+    "language": "pt",
+    "exercise_type": "multiple_choice",
+    "prompt": "Selecione a opção que completa corretamente a frase com o infinitivo pessoal flexionado:",
+    "context_passage": "Para nós _____ o prazo legal, foi necessário trabalhar durante o fim de semana.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["cumprirmos"],
+    "distractors": [
+      {
+        "text": "cumprir",
+        "why_incorrect": "Falta a desinência pessoal '-mos' exigida pelo pronome 'nós' explícito como sujeito da oração reduzida."
+      },
+      {
+        "text": "cumpramos",
+        "why_incorrect": "'Cumpramos' é presente do subjuntivo; a preposição 'para' com oração reduzida de infinitivo rege o infinitivo pessoal flexionado."
+      },
+      {
+        "text": "cumpriram",
+        "why_incorrect": "'Cumpriram' é pretérito perfeito do indicativo na 3ª pessoa do plural, incompatível com o sujeito 'nós'."
+      }
+    ],
+    "explanation": "Com o sujeito explícito 'nós' introduzido pela preposição final 'para', flexiona-se o verbo no infinitivo pessoal: cumprir + mos = cumprirmos.",
+    "hint": "Lembre-se da terminação regular de 1ª pessoa do plural no infinitivo (-mos).",
+    "difficulty": 3,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "ex-pt-02",
+    "curriculum_node_id": "pt-c1-02",
+    "language": "pt",
+    "exercise_type": "cloze",
+    "prompt": "Preencha a lacuna com a forma correta do verbo 'ver' no futuro do subjuntivo:",
+    "context_passage": "Assim que você _____ o relatório de auditoria, convoque a equipe imediatamente.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["vir", "vir."],
+    "distractors": [
+      {
+        "text": "ver",
+        "why_incorrect": "'Ver' é o infinitivo impessoal. O futuro do subjuntivo de 'ver' tem o radical irregular 'vir' (você vir)."
+      },
+      {
+        "text": "veja",
+        "why_incorrect": "'Veja' é presente do subjuntivo; a conjunção temporal eventual 'assim que' exige o futuro do subjuntivo."
+      }
+    ],
+    "explanation": "O futuro do subjuntivo do verbo 'ver' conjuga-se: quando eu vir, quando tu vires, quando você vir, quando nós virmos, quando eles virem.",
+    "hint": "Atenção: o radical do verbo 'ver' no futuro do subjuntivo é idêntico ao infinitivo de 'vir'!",
+    "difficulty": 4,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "ex-pt-03",
+    "curriculum_node_id": "pt-c1-01",
+    "language": "pt",
+    "exercise_type": "error_correction",
+    "prompt": "Identifique a palavra incorreta e digite a forma corrigida correspondente:",
+    "context_passage": "Apesar de eles terem chegado cedo, foram impedidos de entrarem no recinto.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["entrar", "de entrar"],
+    "distractors": [
+      {
+        "text": "chegarem",
+        "why_incorrect": "'Terem chegado' já está corretamente flexionado no infinitivo composto."
+      }
+    ],
+    "explanation": "Com verbos passivos como 'foram impedidos de', a norma culta C1 recomenda o infinitivo não flexionado ('entrar') quando o agente já foi flexionado no verbo auxiliar/composto anterior.",
+    "hint": "Observe o segundo infinitivo após a preposição 'de'.",
+    "difficulty": 4,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "ex-pt-04",
+    "curriculum_node_id": "pt-c1-03",
+    "language": "pt",
+    "exercise_type": "multiple_choice",
+    "prompt": "Em registro formal culto europeu (pt-PT), qual colocação pronominal é obrigatória no início de período afirmativo?",
+    "context_passage": "_____ com atenção as recomendações da comissão parlamentar.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["Ouça-se", "Ouviram-se"],
+    "distractors": [
+      {
+        "text": "Se ouça",
+        "why_incorrect": "Na norma culta padrão (especialmente em Portugal), é proibido iniciar período com pronome oblíquo átono (próclise indevida)."
+      },
+      {
+        "text": "Se ouviram",
+        "why_incorrect": "Iniciar frase com pronome átono próclito contraria a norma culta padrão europeia e gramatical prescritiva."
+      }
+    ],
+    "explanation": "Na gramática normativa clássica e no português europeu padrão, a ênclise é mandatória quando não houver palavra atrativa precedente e no início absoluto de frases.",
+    "hint": "Em início de oração na norma culta clássica não se usa próclise.",
+    "difficulty": 3,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "ex-es-01",
+    "curriculum_node_id": "es-c1-01",
+    "language": "es",
+    "exercise_type": "multiple_choice",
+    "prompt": "Elija la opción adecuada para completar la oración concesiva subordinada:",
+    "context_passage": "Por mucho que _____ los accionistas, la directiva no modificará la política de dividendos.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["protesten"],
+    "distractors": [
+      {
+        "text": "protestan",
+        "why_incorrect": "'Por mucho que' en contextos de obstáculo potencial o virtual rige obligatoriamente el modo subjuntivo ('protesten'), no indicativo."
+      },
+      {
+        "text": "protestaron",
+        "why_incorrect": "El pretérito de indicativo no concuerda con la apódosis en futuro ('no modificará')."
+      },
+      {
+        "text": "hayan protestar",
+        "why_incorrect": "Construcción agramatical; falta el participio o la forma conjugada regular."
+      }
+    ],
+    "explanation": "La locución concesiva de intensidad 'por mucho que' rige sistemáticamente subjuntivo en español C1.",
+    "hint": "Recuerde qué modo verbal es exigido por locuciones concesivas como 'por más que' y 'por mucho que'.",
+    "difficulty": 3,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "ex-es-02",
+    "curriculum_node_id": "es-c1-02",
+    "language": "es",
+    "exercise_type": "cloze",
+    "prompt": "Rellene el hueco con la forma adecuada del verbo 'haber' para formular una hipótesis irreal en el pasado:",
+    "context_passage": "Si nosotros _____ previsto la inflación, habríamos diversificado los activos financieros.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["hubiéramos", "hubiésemos"],
+    "distractors": [
+      {
+        "text": "habríamos",
+        "why_incorrect": "La prótasis introducida por 'si' nunca admite condicional en la norma culta estándar."
+      },
+      {
+        "text": "tuviéramos",
+        "why_incorrect": "'Tener' no es verbo auxiliar para tiempos compuestos en español; es un calco erróneo del portugués 'tivéssemos'."
+      }
+    ],
+    "explanation": "En las oraciones condicionales irreales del pasado, la prótasis con 'si' exige el pluscuamperfecto de subjuntivo de 'haber': hubiéramos o hubiésemos.",
+    "hint": "Cuidado con interferencias del portugués: en español se usa exclusivamente el auxiliar 'haber'.",
+    "difficulty": 4,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "ex-es-03",
+    "curriculum_node_id": "es-c1-03",
+    "language": "es",
+    "exercise_type": "multiple_choice",
+    "prompt": "Identifique el conector discursivo de reformulación explicativa más formal:",
+    "context_passage": "El modelo no cumplió las expectativas; _____, fracasó en la prueba de estrés.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["dicho de otro modo", "más bien"],
+    "distractors": [
+      {
+        "text": "sin embargo",
+        "why_incorrect": "'Sin embargo' es un conector contraargumentativo, pero aquí se está reformulando y precisando la idea previa, no contrastándola."
+      },
+      {
+        "text": "por consiguiente",
+        "why_incorrect": "'Por consiguiente' es consecutivo de causa-efecto, mientras que aquí la segunda cláusula parafrasea y resume la primera."
+      }
+    ],
+    "explanation": "'Dicho de otro modo' es un marcador discursivo metatextual de reformulación parafrástica muy frecuente en el registro formal C1.",
+    "hint": "Busque la locución que introduce una paráfrasis clarificadora.",
+    "difficulty": 3,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "ex-es-04",
+    "curriculum_node_id": "es-c1-01",
+    "language": "es",
+    "exercise_type": "cloze",
+    "prompt": "Escriba el conector consecutivo de dos palabras que rige en registro formal ('por _____'):",
+    "context_passage": "La demanda se multiplicó exponencialmente y, por _____, fue preciso contratar más personal.",
+    "target_slot_index": null,
+    "acceptable_solutions": ["ende", "consiguiente", "tanto"],
+    "distractors": [
+      {
+        "text": "eso",
+        "why_incorrect": "'Por eso' es coloquial e informal; en registro C1 formal se utiliza 'por ende' o 'por consiguiente'."
+      }
+    ],
+    "explanation": "'Por ende' y 'por consiguiente' son conectores consecutivos cultos propios del nivel C1.",
+    "hint": "Palabra de cuatro letras que se combina con 'por' en la locución 'por _____'.",
+    "difficulty": 3,
+    "attribution": {
+      "source_name": "Polyglot C1 Daily Open Curriculum",
+      "source_url": "https://github.com/polyglot-c1-daily",
+      "license_type": "Original-Curated",
+      "attribution_text": "Original exercise item for Polyglot C1 Daily.",
+      "terms_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  }
+]

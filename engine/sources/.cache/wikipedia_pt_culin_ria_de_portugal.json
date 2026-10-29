@@ -1,0 +1,49 @@
+{
+  "type": "standard",
+  "title": "Gastronomia de Portugal",
+  "displaytitle": "<span lang=\"pt\" dir=\"ltr\"><span class=\"mw-page-title-main\">Gastronomia de Portugal</span></span>",
+  "namespace": {
+    "id": 0,
+    "text": ""
+  },
+  "wikibase_item": "Q180817",
+  "titles": {
+    "canonical": "Gastronomia_de_Portugal",
+    "normalized": "Gastronomia de Portugal",
+    "display": "<span lang=\"pt\" dir=\"ltr\"><span class=\"mw-page-title-main\">Gastronomia de Portugal</span></span>"
+  },
+  "pageid": 186811,
+  "thumbnail": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Pasteis_de_Nata.jpg/330px-Pasteis_de_Nata.jpg?utm_source=pt.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 330,
+    "height": 248
+  },
+  "originalimage": {
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Pasteis_de_Nata.jpg/3840px-Pasteis_de_Nata.jpg?utm_source=pt.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "width": 4032,
+    "height": 3024
+  },
+  "lang": "pt",
+  "dir": "ltr",
+  "revision": "73143407",
+  "tid": "53f9e0ea-c1fc-11f1-ac96-515fcb36f88f",
+  "timestamp": "2026-10-07T03:08:11Z",
+  "description": "comidas e bebidas típicas porutuguesas",
+  "description_source": "central",
+  "content_urls": {
+    "desktop": {
+      "page": "https://pt.wikipedia.org/wiki/Gastronomia_de_Portugal",
+      "revisions": "https://pt.wikipedia.org/wiki/Gastronomia_de_Portugal?action=history",
+      "edit": "https://pt.wikipedia.org/wiki/Gastronomia_de_Portugal?action=edit",
+      "talk": "https://pt.wikipedia.org/wiki/Discuss%C3%A3o:Gastronomia_de_Portugal"
+    },
+    "mobile": {
+      "page": "https://pt.wikipedia.org/wiki/Gastronomia_de_Portugal",
+      "revisions": "https://pt.wikipedia.org/wiki/Special:History/Gastronomia_de_Portugal",
+      "edit": "https://pt.wikipedia.org/wiki/Gastronomia_de_Portugal?action=edit",
+      "talk": "https://pt.wikipedia.org/wiki/Discuss%C3%A3o:Gastronomia_de_Portugal"
+    }
+  },
+  "extract": "A alimentação portuguesa, ainda que esteja restrita a um espaço geográfico relativamente pequeno, mostra influências atlânticas e também mediterrânicas, como é visível na quantidade de peixe consumida tradicionalmente. Muito mudou desde que Estrabão se referiu aos Lusitanos como um povo que se alimentava de bolotas. A base da gastronomia mediterrânica, assente na trilogia do pão, vinho e azeite, repete-se em todo o território nacional, acrescentando-se-lhe os produtos hortícolas, como em variadas sopas, e os frutos frescos. A carne e as vísceras, principalmente de porco, compõem também um conjunto de pratos e petiscos regionais, onde sobressaem os presuntos e os enchidos. Com o advento das descobertas marítimas, a culinária portuguesa rapidamente integrou o uso de especiarias, do açúcar, além de outros produtos, como o feijão e a batata, que foram adotados como produtos essenciais. Note-se que a variedade de pratos regionais se verifica mesmo em áreas restritas. Duas cidades vizinhas podem apresentar, sob o mesmo nome, pratos que podem diferir bastante na forma de confecção, ainda que partilhem a mesma receita de base. As generalizações nem sempre estão correctas: as diversas culinárias regionais variam muito na mesma região.",
+  "extract_html": "<p>A alimentação <b>portuguesa</b>, ainda que esteja restrita a um espaço geográfico relativamente pequeno, mostra influências atlânticas e também mediterrânicas, como é visível na quantidade de peixe consumida tradicionalmente. Muito mudou desde que Estrabão se referiu aos Lusitanos como um povo que se alimentava de bolotas. A base da gastronomia mediterrânica, assente na trilogia do pão, vinho e azeite, repete-se em todo o território nacional, acrescentando-se-lhe os produtos hortícolas, como em variadas sopas, e os frutos frescos. A carne e as vísceras, principalmente de porco, compõem também um conjunto de pratos e petiscos regionais, onde sobressaem os presuntos e os enchidos. Com o advento das descobertas marítimas, a culinária portuguesa rapidamente integrou o uso de especiarias, do açúcar, além de outros produtos, como o feijão e a batata, que foram adotados como produtos essenciais. Note-se que a variedade de pratos regionais se verifica mesmo em áreas restritas. Duas cidades vizinhas podem apresentar, sob o mesmo nome, pratos que podem diferir bastante na forma de confecção, ainda que partilhem a mesma receita de base. As generalizações nem sempre estão correctas: as diversas culinárias regionais variam muito na mesma região.</p>"
+}

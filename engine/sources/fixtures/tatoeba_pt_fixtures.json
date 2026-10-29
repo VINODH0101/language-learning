@@ -1,0 +1,26 @@
+{
+  "language": "pt",
+  "examples": [
+    {
+      "id": "tat-pt-101",
+      "sentence_target": "O projeto reduziu despesas operacionais; além disso, ampliou a produtividade da equipe.",
+      "sentence_translation": "The project reduced operating expenses; furthermore, it expanded team productivity.",
+      "audio_url": "https://audio.tatoeba.org/sentences/por/101.mp3",
+      "lemma_tags": ["além disso", "produtividade", "despesa"]
+    },
+    {
+      "id": "tat-pt-102",
+      "sentence_target": "Cumpre ponderar com prudência os impactos ecológicos antes de autorizar a exploração mineral.",
+      "sentence_translation": "It is essential to weigh ecological impacts prudently before authorizing mineral exploration.",
+      "audio_url": "https://audio.tatoeba.org/sentences/por/102.mp3",
+      "lemma_tags": ["ponderar", "prudência", "ecológico"]
+    },
+    {
+      "id": "tat-pt-103",
+      "sentence_target": "Para nós analisarmos as cláusulas, precisamos do relatório completo.",
+      "sentence_translation": "In order for us to analyze the clauses, we need the full report.",
+      "audio_url": "https://audio.tatoeba.org/sentences/por/103.mp3",
+      "lemma_tags": ["analisar", "infinitivo", "cláusula"]
+    }
+  ]
+}

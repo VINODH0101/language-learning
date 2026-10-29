@@ -1,0 +1,72 @@
+name: Daily Lexilume Automation
+
+on:
+  schedule:
+    # 04:00 UTC = 09:30 AM Asia/Kolkata (IST)
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: 'Target learner ID'
+        required: false
+        default: 'default_learner'
+      recipient_email:
+        description: 'Target recipient email address'
+        required: false
+        default: 'learner@lexilume.com'
+      dry_run:
+        description: 'Simulate without sending real emails (dry-run)'
+        type: boolean
+        default: false
+      force:
+        description: 'Bypass idempotency lock and force resend'
+        type: boolean
+        default: false
+
+concurrency:
+  group: daily-lexilume-execution
+  cancel-in-progress: false
+
+jobs:
+  run-daily-digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run verification tests
+        run: |
+          python -m pytest tests/ -v
+
+      - name: Execute Daily Batch Runner
+        env:
+          POLYGLOT_USER_ID: ${{ github.event.inputs.user_id || 'default_learner' }}
+          POLYGLOT_RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || secrets.RECIPIENT_EMAIL }}
+          POLYGLOT_SCHEDULE_TIMEZONE: 'Asia/Kolkata'
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev' }}
+          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER || 'resend' }}
+        run: |
+          EXTRA_FLAGS=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --dry-run"
+          fi
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --force"
+          fi
+          python scripts/run_daily_batch.py $EXTRA_FLAGS

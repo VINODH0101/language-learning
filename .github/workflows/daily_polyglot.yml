@@ -31,6 +31,8 @@ jobs:
   run-daily-digest:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node24
 
     steps:
       - name: Check out repository

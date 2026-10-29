@@ -61,6 +61,10 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev' }}
           EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER || 'resend' }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: |
           EXTRA_FLAGS=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then

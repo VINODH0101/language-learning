@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node -e \"require('fs').copyFileSync('dist/index.html', 'dist/200.html')\"",
+    "build": "tsc -b && vite build && node -e \"const fs=require('fs'); fs.copyFileSync('dist/index.html','dist/200.html'); if(fs.existsSync('dist/_redirects')) fs.unlinkSync('dist/_redirects');\"",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"

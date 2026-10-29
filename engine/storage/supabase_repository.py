@@ -418,3 +418,26 @@ class SupabaseStorageRepository(StorageRepository):
         if res:
             return [row["article_id"] for row in res]
         return self._mem.get_recent_article_ids(user_id, language, limit=limit) if self._mem else []
+
+    # --- Learner Profiles & Daily Digest Opt-Ins ---
+
+    def get_opted_in_learners(self) -> List[Dict[str, Any]]:
+        """Fetch active learners opted-in for daily email digests from user_profiles table."""
+        if not self.is_connected:
+            return []
+
+        params = {
+            "is_active": "eq.true",
+            "select": "id,email,full_name,timezone,preferred_delivery_hour_utc,email_daily_lesson_opt_in",
+        }
+        res = self._rest_request("user_profiles", method="GET", params=params)
+        if not res:
+            return []
+
+        # Return learners who opted in for daily lesson emails (or active profiles)
+        opted_in = [
+            learner for learner in res
+            if learner.get("email_daily_lesson_opt_in") is True or learner.get("email_daily_lesson_opt_in") is None
+        ]
+        return opted_in if opted_in else res
+

@@ -53,21 +53,35 @@ jobs:
         run: |
           python -m pytest tests/ -v
 
+      - name: Verify Connections & APIs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || vars.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || vars.GEMINI_API_KEY }}
+          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER || vars.EMAIL_PROVIDER || 'smtp' }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || vars.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || vars.SMTP_PORT || '587' }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME || vars.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD || vars.SMTP_PASSWORD }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || vars.RESEND_API_KEY }}
+        run: |
+          python scripts/verify_connections.py
+
       - name: Execute Daily Batch Runner
         env:
           POLYGLOT_USER_ID: ${{ github.event.inputs.user_id || 'default_learner' }}
-          POLYGLOT_RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || secrets.RECIPIENT_EMAIL }}
+          POLYGLOT_RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || secrets.RECIPIENT_EMAIL || vars.RECIPIENT_EMAIL }}
           POLYGLOT_SCHEDULE_TIMEZONE: 'Asia/Kolkata'
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          EMAIL_FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev' }}
-          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER || 'resend' }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.gmail.com' }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || vars.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || vars.RESEND_API_KEY }}
+          EMAIL_FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS || vars.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev' }}
+          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER || vars.EMAIL_PROVIDER || 'smtp' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || vars.GEMINI_API_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || vars.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || vars.SMTP_PORT || '587' }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME || vars.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD || vars.SMTP_PASSWORD }}
         run: |
           EXTRA_FLAGS=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then

@@ -1,4 +1,4 @@
-export type InterfaceLanguage = 'en' | 'pt' | 'es';
+export type { InterfaceLanguage } from '../types';
 
 export interface TranslationDictionary {
   // Navigation & Header
@@ -325,7 +325,7 @@ export interface TranslationDictionary {
   dash_create_course_btn: string;
 }
 
-export const translations: Record<InterfaceLanguage, TranslationDictionary> = {
+export const translations: Record<string, TranslationDictionary> = {
   en: {
     nav_dashboard: 'Dashboard',
     nav_home: 'Home',

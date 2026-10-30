@@ -32,10 +32,10 @@ export interface VocabularyEntry {
   cefr_level: CEFRLevel;
   frequency_rank?: number;
   phonetic_ipa?: string;
-  translations: Record<Language, string>;
-  definitions: Record<Language, string>;
+  translations: Partial<Record<Language, string>>;
+  definitions: Partial<Record<Language, string>>;
   example_sentence_target: string;
-  example_sentence_translations: Record<Language, string>;
+  example_sentence_translations: Partial<Record<Language, string>>;
   topic: VocabularyTopic;
   grammar_notes?: string;
   collocations?: string[];
@@ -46,7 +46,7 @@ export interface EverydaySentenceEntry {
   id: string;
   sentence_target: string;
   target_language: Language;
-  translations: Record<Language, string>;
+  translations: Partial<Record<Language, string>>;
   cefr_level: CEFRLevel;
   topic: VocabularyTopic;
   context_notes?: string;

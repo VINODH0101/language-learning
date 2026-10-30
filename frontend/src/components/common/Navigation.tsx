@@ -23,6 +23,7 @@ import { InterfaceLanguage } from '../../i18n/translations';
 import { authService, AuthState } from '../../services/auth';
 import { courseService } from '../../services/courseService';
 import { Logo } from './Logo';
+import { InterfaceLanguageSelector } from './InterfaceLanguageSelector';
 import { BRANDING } from '../../config/branding';
 
 export type NavTab =
@@ -55,8 +56,10 @@ export const Navigation: React.FC<NavigationProps> = ({
   const { t, interfaceLanguage, setInterfaceLanguage } = useI18n();
   const [authState, setAuthState] = useState<AuthState>(authService.getState());
   const [isLearnDropdownOpen, setIsLearnDropdownOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const learnDropdownRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubAuth = authService.subscribe(setAuthState);
@@ -83,11 +86,15 @@ export const Navigation: React.FC<NavigationProps> = ({
       if (learnDropdownRef.current && !learnDropdownRef.current.contains(e.target as Node)) {
         setIsLearnDropdownOpen(false);
       }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsLearnDropdownOpen(false);
+        setIsProfileMenuOpen(false);
         setIsMobileDrawerOpen(false);
       }
     };
@@ -113,6 +120,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const handleSelectNavTab = (tab: NavTab) => {
     onSelectTab(tab);
     setIsLearnDropdownOpen(false);
+    setIsProfileMenuOpen(false);
     setIsMobileDrawerOpen(false);
   };
 
@@ -134,27 +142,28 @@ export const Navigation: React.FC<NavigationProps> = ({
     'english',
     'vocabulary',
     'translate',
+    'explore',
   ].includes(activeTab);
 
   const curriculumTracks = [
     {
       id: 'portuguese' as NavTab,
       label: t('nav_portuguese'),
-      desc: 'Trilha Imersiva C1 / B2',
+      desc: t('track_portuguese_desc', 'Trilha Imersiva C1 / B2'),
       badge: 'PT',
       flag: '🇵🇹',
     },
     {
       id: 'spanish' as NavTab,
       label: t('nav_spanish'),
-      desc: 'Trilha Imersiva C1 / B2',
+      desc: t('track_spanish_desc', 'Trilha Imersiva C1 / B2'),
       badge: 'ES',
       flag: '🇪🇸',
     },
     {
       id: 'english' as NavTab,
       label: t('nav_english'),
-      desc: 'Trilha para Falantes PT/ES',
+      desc: t('track_english_desc', 'Trilha para Falantes PT/ES'),
       badge: 'EN',
       flag: '🇬🇧',
     },
@@ -164,16 +173,23 @@ export const Navigation: React.FC<NavigationProps> = ({
     {
       id: 'vocabulary' as NavTab,
       label: t('nav_vocabulary'),
-      desc: 'Top 200 & Frases do Cotidiano',
+      desc: t('tool_vocabulary_desc', 'Top 200 & Frases do Cotidiano'),
       badge: 'VOCAB',
       icon: BookMarked,
     },
     {
       id: 'translate' as NavTab,
       label: t('nav_translate'),
-      desc: 'Dicionário Bilíngue & Tradução',
+      desc: t('tool_translate_desc', 'Dicionário Bilíngue & Tradução'),
       badge: 'DICT',
       icon: Languages,
+    },
+    {
+      id: 'explore' as NavTab,
+      label: t('nav_explore'),
+      desc: t('tool_explore_desc', 'Imersão Cultural & Leituras Globais'),
+      badge: 'CULTURE',
+      icon: Compass,
     },
   ];
 
@@ -185,8 +201,6 @@ export const Navigation: React.FC<NavigationProps> = ({
       handleSelectNavTab(getActiveCourseTab());
     }
   };
-
-  const interfaceLangs: InterfaceLanguage[] = ['en', 'pt', 'es'];
 
   return (
     <>
@@ -342,20 +356,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 )}
               </div>
 
-              {/* 3. Explore (Worldwide Culture) */}
-              <button
-                onClick={() => handleSelectNavTab('explore')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'explore'
-                    ? 'bg-slate-800 text-sky-300 shadow-sm border border-slate-700/80 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
-              >
-                <Compass className="w-4 h-4 text-sky-400" />
-                <span>{t('nav_explore')}</span>
-              </button>
-
-              {/* 4. Practice */}
+              {/* 3. Practice */}
               <button
                 onClick={() => handleSelectNavTab('practice')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
@@ -368,7 +369,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <span>{t('nav_practice')}</span>
               </button>
 
-              {/* 5. Progress */}
+              {/* 4. Progress */}
               <button
                 onClick={() => handleSelectNavTab('progress')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
@@ -380,66 +381,15 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <TrendingUp className="w-4 h-4 text-indigo-400" />
                 <span>{t('nav_progress')}</span>
               </button>
-
-              {/* 6. Settings */}
-              <button
-                onClick={() => handleSelectNavTab('settings')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'settings'
-                    ? 'bg-slate-800 text-slate-100 shadow-sm border border-slate-700/80 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
-              >
-                <Settings className="w-4 h-4 text-slate-400" />
-                <span>{t('nav_settings')}</span>
-              </button>
-
-              {/* Admin Console (If Admin Role) */}
-              {authState.role === 'admin' && (
-                <button
-                  onClick={() => handleSelectNavTab('admin')}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                    activeTab === 'admin'
-                      ? 'bg-purple-950 border border-purple-700 text-purple-200 font-bold shadow-sm'
-                      : 'text-purple-400 hover:bg-slate-800/70 hover:text-purple-300'
-                  }`}
-                >
-                  <Shield className="w-4 h-4 text-purple-400" />
-                  <span>Admin</span>
-                </button>
-              )}
             </nav>
 
             {/* RIGHT CORNER ALWAYS: Language Switcher, Sign In Button & Controls */}
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-              {/* Segmented Interface Language Switcher (EN · PT · ES) */}
-              <div
-                className="flex items-center bg-slate-800/90 p-0.5 rounded-xl border border-slate-700/80 shadow-inner"
-                role="group"
-                aria-label="Selecionar Idioma da Interface"
-              >
-                {interfaceLangs.map((lang) => {
-                  const isActive = interfaceLanguage === lang;
-                  return (
-                    <button
-                      key={lang}
-                      onClick={() => setInterfaceLanguage(lang)}
-                      className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold uppercase transition-all duration-150 cursor-pointer min-h-[28px] sm:min-h-[30px] ${
-                        isActive
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-                      }`}
-                      aria-pressed={isActive}
-                      title={`Interface: ${lang.toUpperCase()}`}
-                    >
-                      {lang}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Centralized Accessible 15-Locale Interface Language Selector */}
+              <InterfaceLanguageSelector />
 
-              {/* Sign In CTA Button (Guests) or User Account Pill (Authenticated) */}
-              {authState.isGuest ? (
+              {/* Sign In CTA Button (Guests) */}
+              {authState.isGuest && (
                 <button
                   onClick={onOpenAuth}
                   className="flex items-center justify-center gap-1.5 p-2 sm:px-4 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs sm:text-sm font-bold cursor-pointer transition-all duration-150 shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/40 min-h-[38px] min-w-[38px] shrink-0"
@@ -449,34 +399,116 @@ export const Navigation: React.FC<NavigationProps> = ({
                   <LogIn className="w-4 h-4 shrink-0" />
                   <span className="hidden sm:inline">{t('nav_sign_in')}</span>
                 </button>
-              ) : (
-                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                  <button
-                    onClick={() => handleSelectNavTab('settings')}
-                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-200 hover:text-white transition cursor-pointer min-h-[38px]"
-                    title={`Conectado como ${authState.user?.full_name || 'Usuário'}`}
-                  >
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold shadow-inner shrink-0">
-                      {authState.user?.full_name ? (
-                        authState.user.full_name.charAt(0).toUpperCase()
-                      ) : (
-                        <User className="w-3.5 h-3.5" />
-                      )}
-                    </div>
-                    <span className="hidden md:inline font-semibold max-w-[90px] truncate">
-                      {authState.user?.full_name?.split(' ')[0] || 'Conta'}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => authService.signOut()}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 rounded-xl transition cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center border border-transparent hover:border-slate-700/60 shrink-0"
-                    title={t('nav_sign_out')}
-                    aria-label={t('nav_sign_out')}
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
               )}
+
+              {/* User Account / Profile Menu Dropdown */}
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-200 hover:text-white transition cursor-pointer min-h-[38px]"
+                  aria-expanded={isProfileMenuOpen}
+                  aria-haspopup="true"
+                  aria-label={t('navigation:profile_menu_aria', 'Menu do Perfil e Configurações')}
+                  title={t('navigation:profile_menu_aria', 'Menu do Perfil e Configurações')}
+                >
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold shadow-inner shrink-0">
+                    {authState.user?.full_name ? (
+                      authState.user.full_name.charAt(0).toUpperCase()
+                    ) : (
+                      <User className="w-3.5 h-3.5" />
+                    )}
+                  </div>
+                  <span className="hidden md:inline font-semibold max-w-[90px] truncate">
+                    {authState.user?.full_name?.split(' ')[0] || (authState.isGuest ? t('navigation:guest_mode', 'Convidado') : t('navigation:account', 'Conta'))}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                      isProfileMenuOpen ? 'rotate-180 text-indigo-400' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Profile Menu Dropdown Panel */}
+                {isProfileMenuOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn space-y-1 backdrop-blur-md">
+                    {/* User Info Header */}
+                    <div className="px-3 py-2 border-b border-slate-800/80">
+                      <p className="font-bold text-xs text-white truncate">
+                        {authState.user?.full_name || t('navigation:guest_mode', 'Modo Convidado')}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {authState.user?.email || t('common:offline', 'Armazenamento Local Offline')}
+                      </p>
+                    </div>
+
+                    {/* Profile & Settings Navigation */}
+                    <button
+                      onClick={() => handleSelectNavTab('settings')}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      <User className="w-4 h-4 text-indigo-400" />
+                      <span>{t('navigation:my_profile_track', 'Meu Perfil & Metas')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSelectNavTab('settings')}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-slate-400" />
+                      <span>{t('nav_settings')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        onOpenOnboarding();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      <GraduationCap className="w-4 h-4 text-amber-400" />
+                      <span>{t('navigation:onboarding_guide', 'Guia de Boas-Vindas')}</span>
+                    </button>
+
+                    {/* Admin Item if Admin */}
+                    {authState.role === 'admin' && (
+                      <button
+                        onClick={() => handleSelectNavTab('admin')}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-purple-300 hover:text-purple-100 hover:bg-purple-950/60 border border-purple-900/60 transition cursor-pointer"
+                      >
+                        <Shield className="w-4 h-4 text-purple-400" />
+                        <span>{t('navigation:admin_panel', 'Console Admin')}</span>
+                      </button>
+                    )}
+
+                    <div className="border-t border-slate-800/80 my-1" />
+
+                    {/* Sign in / Sign out */}
+                    {authState.isGuest ? (
+                      <button
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          onOpenAuth();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40 transition cursor-pointer"
+                      >
+                        <LogIn className="w-4 h-4" />
+                        <span>{t('nav_sign_in')}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          authService.signOut();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 transition cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>{t('nav_sign_out')}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Mobile Drawer Hamburger Button */}
               <button
@@ -520,18 +552,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           <span className="text-[10px] tracking-tight leading-none">{t('nav_learn')}</span>
         </button>
 
-        {/* 3. Explore */}
-        <button
-          onClick={() => handleSelectNavTab('explore')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            activeTab === 'explore' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Compass className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight leading-none">{t('nav_explore')}</span>
-        </button>
-
-        {/* 4. Practice */}
+        {/* 3. Practice */}
         <button
           onClick={() => handleSelectNavTab('practice')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
@@ -542,7 +563,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           <span className="text-[10px] tracking-tight leading-none">{t('nav_practice')}</span>
         </button>
 
-        {/* 5. Progress */}
+        {/* 4. Progress */}
         <button
           onClick={() => handleSelectNavTab('progress')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
@@ -580,32 +601,18 @@ export const Navigation: React.FC<NavigationProps> = ({
                 </button>
               </div>
 
-              {/* Interface Language Segmented Toggle in Drawer */}
+              {/* Interface Language Dropdown in Drawer */}
               <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-800">
                 <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5 px-1">
-                  Idioma da Interface
+                  {t('settings:interface_lang_label', 'Idioma da Interface')}
                 </div>
-                <div className="grid grid-cols-3 gap-1 bg-slate-900/80 p-1 rounded-lg border border-slate-800">
-                  {interfaceLangs.map((lang) => (
-                    <button
-                      key={lang}
-                      onClick={() => setInterfaceLanguage(lang)}
-                      className={`py-1 rounded text-xs font-bold uppercase transition text-center cursor-pointer ${
-                        interfaceLanguage === lang
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      {lang}
-                    </button>
-                  ))}
-                </div>
+                <InterfaceLanguageSelector className="w-full" />
               </div>
 
               {/* Subsection 1: Trilhas de Idiomas */}
               <div className="space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
-                  Trilhas de Aprendizado (CEFR)
+                  {t('learning:curriculum_tracks', 'Trilhas de Aprendizado (CEFR)')}
                 </span>
                 {curriculumTracks.map((item) => (
                   <button
@@ -640,7 +647,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               {/* Subsection 2: Ferramentas & Vocabulário */}
               <div className="space-y-1 pt-2 border-t border-slate-800">
                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
-                  Ferramentas & Consulta
+                  {t('learning:study_tools', 'Ferramentas & Consulta')}
                 </span>
                 {studyTools.map((tool) => {
                   const ToolIcon = tool.icon;
@@ -678,7 +685,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               {/* Subsection 3: Preferências & Admin */}
               <div className="space-y-1 pt-2 border-t border-slate-800">
                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
-                  Sistema & Preferências
+                  {t('settings:title', 'Sistema & Preferências')}
                 </span>
                 <button
                   onClick={() => handleSelectNavTab('settings')}
@@ -702,7 +709,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     }`}
                   >
                     <Shield className="w-4 h-4" />
-                    <span>Painel Administrativo</span>
+                    <span>{t('navigation:admin_panel', 'Painel Administrativo')}</span>
                   </button>
                 )}
               </div>
@@ -718,7 +725,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition cursor-pointer min-h-[44px]"
               >
                 <Compass className="w-4 h-4 text-sky-400" />
-                <span>Reiniciar Guia de Onboarding</span>
+                <span>{t('navigation:onboarding_guide', 'Reiniciar Guia de Onboarding')}</span>
               </button>
 
               {/* Sign in / Sign out button in drawer */}

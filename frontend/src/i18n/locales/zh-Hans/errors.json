@@ -1,0 +1,7 @@
+{
+  "offline_title": "当前处于离线状态",
+  "offline_desc": "Lexilume支持100%离线学习！你的所有练习和记忆卡片已保存在本地，重新联网后将自动同步。",
+  "network_error": "无法连接到服务器，请检查网络设置。",
+  "provider_unavailable": "外部服务暂时无法响应，已自动切换为本地数据。",
+  "unknown_error": "发生未知错误，请稍后重试。"
+}

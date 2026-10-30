@@ -12,6 +12,7 @@ import {
   isCulturalBookmarked,
   CulturalBookmarkRecord,
 } from './localDb';
+import { syncEngine } from './syncEngine';
 
 export class CultureService {
   /**
@@ -151,6 +152,9 @@ export class CultureService {
 
     if (currentlySaved) {
       await deleteCulturalBookmark(userId, article.id);
+      if (userId && userId !== 'guest') {
+        syncEngine.queueAction('DELETE_CULTURAL_BOOKMARK', { article_id: article.id }, userId).catch(() => {});
+      }
       return false;
     } else {
       const record: CulturalBookmarkRecord = {
@@ -165,6 +169,9 @@ export class CultureService {
         created_at: new Date().toISOString(),
       };
       await saveCulturalBookmark(record);
+      if (userId && userId !== 'guest') {
+        syncEngine.queueAction('SYNC_CULTURAL_BOOKMARK', record, userId).catch(() => {});
+      }
       return true;
     }
   }

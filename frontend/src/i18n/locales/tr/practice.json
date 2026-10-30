@@ -1,0 +1,15 @@
+{
+  "title": "Práctica y Repetición Espaciada",
+  "subtitle": "Refuerza el vocabulario con el algoritmo SM-2, cuestionarios y desafíos gramaticales",
+  "tab_sm2": "Tarjetas SM-2",
+  "tab_multiple_choice": "Opción Múltiple",
+  "tab_cloze": "Rellenar Huecos",
+  "tab_mistakes": "Cuaderno de Errores",
+  "rating_again": "Otra vez (1)",
+  "rating_hard": "Difícil (3)",
+  "rating_good": "Bien (4)",
+  "rating_easy": "Fácil (5)",
+  "session_reviewed": "{{count}} tarjetas repasadas",
+  "cards_remaining": "{{count}} restantes",
+  "all_caught_up": "¡Todo al día! No hay tarjetas pendientes de repaso ahora mismo."
+}

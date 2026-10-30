@@ -7,6 +7,10 @@ import {
   CheckCircle2,
   Filter,
   Wand2,
+  Mic,
+  Headphones,
+  Camera,
+  MessageSquare,
 } from 'lucide-react';
 import { Language, VocabularyItem, ExerciseTemplate } from '../types';
 import { ptVocabulary, esVocabulary, enVocabulary, exerciseTemplates, curatedMaterials } from '../data/seedData';
@@ -17,11 +21,30 @@ import { ReadingSection } from '../components/lesson/ReadingSection';
 import { MistakeNotebook } from '../components/practice/MistakeNotebook';
 import { FalseFriendsTrainer } from '../components/practice/FalseFriendsTrainer';
 import { LanguageToolStudio } from '../components/practice/LanguageToolStudio';
+import { WritingCoach } from '../features/writing/WritingCoach';
+import { SpeakingCoach } from '../features/speaking/SpeakingCoach';
+import { ListeningStudio } from '../features/listening/ListeningStudio';
+import { ReadingStudio } from '../features/reading/ReadingStudio';
+import { ScanAndLearn } from '../features/ocr/ScanAndLearn';
+import { ConversationStudio } from '../features/conversation/ConversationStudio';
 import { Badge } from '../components/common/Badge';
+import { useI18n } from '../i18n/i18nContext';
 
-type PracticeMode = 'srs' | 'multiple_choice' | 'cloze' | 'reading' | 'mistakes' | 'false_friends' | 'proofreading';
+type PracticeMode =
+  | 'srs'
+  | 'listening'
+  | 'reading'
+  | 'speaking'
+  | 'conversation'
+  | 'proofreading'
+  | 'ocr'
+  | 'multiple_choice'
+  | 'cloze'
+  | 'mistakes'
+  | 'false_friends';
 
 export const PracticePage: React.FC = () => {
+  const { t } = useI18n();
   const [selectedLang, setSelectedLang] = useState<Language>('pt');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('srs');
 
@@ -57,15 +80,15 @@ export const PracticePage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-xs font-bold text-sky-400 uppercase tracking-wider">
-              Centro de Treinamento e Consolidação
+              {t('practice:title', 'Centro de Treinamento e Consolidação')}
             </span>
             <Badge variant="sky" size="sm">
-              Treino Ativo
+              {t('common:active', 'Treino Ativo')}
             </Badge>
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">Prática e Recordação Espaçada</h1>
+          <h1 className="text-2xl font-bold text-slate-100">{t('practice:title', 'Prática e Recordação Espaçada')}</h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Pratique com exercícios determinísticos, flashcards de retenção SM-2 e interpretação de texto.
+            {t('practice:subtitle', 'Pratique com exercícios determinísticos, flashcards de retenção SM-2 e interpretação de texto.')}
           </p>
         </div>
 
@@ -115,7 +138,79 @@ export const PracticePage: React.FC = () => {
           }`}
         >
           <Sparkles className="w-4 h-4 text-sky-400" />
-          <span>Cartões SM-2 ({activeDeck.length})</span>
+          <span>{t('practice:tab_sm2', 'Cartões SM-2')} ({activeDeck.length})</span>
+        </button>
+
+        <button
+          onClick={() => setPracticeMode('listening')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+            practiceMode === 'listening'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+          }`}
+        >
+          <Headphones className="w-4 h-4 text-indigo-400" />
+          <span>Listening Studio</span>
+        </button>
+
+        <button
+          onClick={() => setPracticeMode('reading')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+            practiceMode === 'reading'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-emerald-400" />
+          <span>Reading Studio</span>
+        </button>
+
+        <button
+          onClick={() => setPracticeMode('speaking')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+            practiceMode === 'speaking'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+          }`}
+        >
+          <Mic className="w-4 h-4 text-purple-400" />
+          <span>Speaking Coach</span>
+        </button>
+
+        <button
+          onClick={() => setPracticeMode('conversation')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+            practiceMode === 'conversation'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4 text-purple-400" />
+          <span>Conversation Studio</span>
+        </button>
+
+        <button
+          onClick={() => setPracticeMode('proofreading')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+            practiceMode === 'proofreading'
+              ? 'bg-teal-600 text-white shadow-sm'
+              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+          }`}
+        >
+          <PenTool className="w-4 h-4 text-teal-400" />
+          <span>Writing Coach</span>
+        </button>
+
+        <button
+          onClick={() => setPracticeMode('ocr')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+            practiceMode === 'ocr'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+          }`}
+        >
+          <Camera className="w-4 h-4 text-amber-400" />
+          <span>Scan & Learn (OCR)</span>
         </button>
 
         <button
@@ -143,18 +238,6 @@ export const PracticePage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setPracticeMode('reading')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
-            practiceMode === 'reading'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          <BookOpen className="w-4 h-4 text-indigo-400" />
-          <span>Compreensão de Leitura</span>
-        </button>
-
-        <button
           onClick={() => setPracticeMode('mistakes')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
             practiceMode === 'mistakes'
@@ -177,24 +260,36 @@ export const PracticePage: React.FC = () => {
           <Filter className="w-4 h-4 text-amber-400" />
           <span>Treinador Falsos Cognatos</span>
         </button>
-
-        <button
-          onClick={() => setPracticeMode('proofreading')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
-            practiceMode === 'proofreading'
-              ? 'bg-teal-600 text-white shadow-sm'
-              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          <Wand2 className="w-4 h-4 text-teal-400" />
-          <span>Revisão Gramatical (LanguageTool)</span>
-        </button>
       </div>
 
       {/* Practice Viewports */}
       <div className="pt-2">
         {practiceMode === 'srs' && (
           <FlashcardDeck vocabularyList={activeDeck} />
+        )}
+
+        {practiceMode === 'listening' && (
+          <ListeningStudio language={selectedLang} />
+        )}
+
+        {practiceMode === 'reading' && (
+          <ReadingStudio language={selectedLang} />
+        )}
+
+        {practiceMode === 'speaking' && (
+          <SpeakingCoach language={selectedLang} />
+        )}
+
+        {practiceMode === 'conversation' && (
+          <ConversationStudio language={selectedLang} />
+        )}
+
+        {practiceMode === 'proofreading' && (
+          <WritingCoach language={selectedLang} />
+        )}
+
+        {practiceMode === 'ocr' && (
+          <ScanAndLearn language={selectedLang} />
         )}
 
         {practiceMode === 'multiple_choice' && (
@@ -236,33 +331,12 @@ export const PracticePage: React.FC = () => {
           />
         )}
 
-        {practiceMode === 'reading' && (
-          <ReadingSection
-            reading={{
-              title: readingMat.title,
-              passage_target: readingMat.content_target,
-              passage_en: readingMat.content_en,
-              passage_pt: readingMat.content_pt,
-              passage_es: readingMat.content_es,
-              glossary: readingMat.glossary || {},
-              comprehension_questions: readingMat.comprehension_questions || [],
-              attribution: readingMat.attribution,
-            }}
-            language={selectedLang}
-            variety="all"
-          />
-        )}
-
         {practiceMode === 'mistakes' && (
           <MistakeNotebook language={selectedLang} />
         )}
 
         {practiceMode === 'false_friends' && (
           <FalseFriendsTrainer language={selectedLang} />
-        )}
-
-        {practiceMode === 'proofreading' && (
-          <LanguageToolStudio language={selectedLang} />
         )}
       </div>
     </div>

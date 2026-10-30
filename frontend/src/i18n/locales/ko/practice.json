@@ -1,0 +1,15 @@
+{
+  "title": "練習と間隔反復学習",
+  "subtitle": "SM-2アルゴリズムと問題演習で長期記憶に定着",
+  "tab_sm2": "SM-2 単語カード",
+  "tab_multiple_choice": "選択問題",
+  "tab_cloze": "穴埋め問題",
+  "tab_mistakes": "間違いノート",
+  "rating_again": "もう一度 (1)",
+  "rating_hard": "難しい (3)",
+  "rating_good": "普通 (4)",
+  "rating_easy": "簡単 (5)",
+  "session_reviewed": "{{count}} 枚復習完了",
+  "cards_remaining": "残り {{count}} 枚",
+  "all_caught_up": "すべて復習完了！現在復習が必要なカードはありません。"
+}

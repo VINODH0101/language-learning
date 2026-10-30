@@ -30,13 +30,14 @@ import {
   NormalizedCulturalEntity,
 } from '../integrations/external-apis/core/types';
 import { ArticleReaderModal } from '../components/culture/ArticleReaderModal';
+import { LexilumeWorldHub } from '../features/world/LexilumeWorldHub';
 import { useI18n } from '../i18n/i18nContext';
 import { authService } from '../services/auth';
 import { Language, CEFRLevel } from '../types';
 
 export const CultureExplorePage: React.FC = () => {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<'discover' | 'wikipedia' | 'jikan' | 'bookmarks'>('discover');
+  const [activeTab, setActiveTab] = useState<'world' | 'discover' | 'wikipedia' | 'jikan' | 'bookmarks'>('world');
   const [selectedArticle, setSelectedArticle] = useState<CulturalArticle | null>(null);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
 
@@ -249,8 +250,20 @@ export const CultureExplorePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs: Discover Catalog vs. Wikipedia vs. Jikan vs. Bookmarks */}
+      {/* Tabs: Lexilume World vs. Discover Catalog vs. Wikipedia vs. Jikan vs. Bookmarks */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+        <button
+          onClick={() => setActiveTab('world')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition min-h-[44px] cursor-pointer ${
+            activeTab === 'world'
+              ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md ring-1 ring-indigo-400'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-300" />
+          <span>Lexilume World</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('discover')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition min-h-[44px] cursor-pointer ${
@@ -304,6 +317,13 @@ export const CultureExplorePage: React.FC = () => {
           )}
         </button>
       </div>
+
+      {/* 0. Lexilume World Integrated Hub */}
+      {activeTab === 'world' && (
+        <div className="pt-2">
+          <LexilumeWorldHub />
+        </div>
+      )}
 
       {/* 1. Curated Catalog View (Discover & Bookmarks) */}
       {(activeTab === 'discover' || activeTab === 'bookmarks') && (

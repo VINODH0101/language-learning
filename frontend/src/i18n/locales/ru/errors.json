@@ -1,0 +1,7 @@
+{
+  "offline_title": "Estás sin conexión",
+  "offline_desc": "¡Lexilume funciona completamente sin conexión! Tus repasos y progreso se guardan localmente y se sincronizarán al reconectar.",
+  "network_error": "No se puede contactar con el servidor. Por favor revisa tu conexión a internet.",
+  "provider_unavailable": "El proveedor externo no está disponible temporalmente. Usando datos locales.",
+  "unknown_error": "Ocurrió un error inesperado. Por favor inténtalo de nuevo."
+}

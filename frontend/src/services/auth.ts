@@ -94,35 +94,43 @@ class AuthService {
   };
 
   constructor() {
-    this.initAuth();
-    if (isSupabaseConfigured) {
-      supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (session?.user && this.currentState.user?.auth_user_id !== session.user.id) {
-            const profile = await this.fetchLiveProfile(session.user.id, session.user.email || '');
-            if (profile) {
-              courseService.setUserId(profile.id);
-              StorageService.setCurrentUser(profile.id);
-              this.updateState({
-                user: profile,
-                role: profile.role,
-                isGuest: false,
-                isLoading: false,
-              });
+    // Defer initialization to next tick to let circular module imports resolve safely
+    setTimeout(() => {
+      this.initAuth();
+      if (isSupabaseConfigured) {
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            if (session?.user && this.currentState.user?.auth_user_id !== session.user.id) {
+              const profile = await this.fetchLiveProfile(session.user.id, session.user.email || '');
+              if (profile) {
+                const effectiveId = profile.auth_user_id || profile.id;
+                if (typeof courseService !== 'undefined' && courseService?.setUserId) {
+                  courseService.setUserId(effectiveId);
+                }
+                StorageService.setCurrentUser(effectiveId);
+                this.updateState({
+                  user: profile,
+                  role: profile.role,
+                  isGuest: false,
+                  isLoading: false,
+                });
+              }
             }
+          } else if (event === 'SIGNED_OUT') {
+            if (typeof courseService !== 'undefined' && courseService?.setUserId) {
+              courseService.setUserId('guest');
+            }
+            StorageService.setCurrentUser('guest');
+            this.updateState({
+              user: null,
+              role: 'guest',
+              isGuest: true,
+              isLoading: false,
+            });
           }
-        } else if (event === 'SIGNED_OUT') {
-          courseService.setUserId('guest');
-          StorageService.setCurrentUser('guest');
-          this.updateState({
-            user: null,
-            role: 'guest',
-            isGuest: true,
-            isLoading: false,
-          });
-        }
-      });
-    }
+        });
+      }
+    }, 0);
   }
 
   private async initAuth() {
@@ -133,8 +141,11 @@ class AuthService {
         if (session && session.user) {
           const profile = await this.fetchLiveProfile(session.user.id, session.user.email || '');
           if (profile) {
-            courseService.setUserId(profile.id);
-            StorageService.setCurrentUser(profile.id);
+            const effectiveId = profile.auth_user_id || profile.id;
+            if (typeof courseService !== 'undefined' && courseService?.setUserId) {
+              courseService.setUserId(effectiveId);
+            }
+            StorageService.setCurrentUser(effectiveId);
             this.updateState({
               user: profile,
               role: profile.role,
@@ -149,15 +160,17 @@ class AuthService {
       }
     }
 
-    // 2. Only if Supabase is NOT configured or during local mock offline testing, inspect mock auth
-    const allowMock = !isSupabaseConfigured || (typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-    if (allowMock) {
+    // 2. Only if Supabase is NOT configured (e.g. offline testing), inspect mock auth
+    if (!isSupabaseConfigured) {
       try {
         const savedMock = localStorage.getItem(STORAGE_KEYS.MOCK_AUTH_USER);
         if (savedMock) {
           const parsed = JSON.parse(savedMock) as UserProfile;
-          courseService.setUserId(parsed.id);
-          StorageService.setCurrentUser(parsed.id);
+          const effectiveId = parsed.auth_user_id || parsed.id;
+          if (typeof courseService !== 'undefined' && courseService?.setUserId) {
+            courseService.setUserId(effectiveId);
+          }
+          StorageService.setCurrentUser(effectiveId);
           this.updateState({
             user: parsed,
             role: parsed.role,
@@ -170,7 +183,9 @@ class AuthService {
     }
 
     // 3. Fallback to Guest Mode
-    courseService.setUserId('guest');
+    if (typeof courseService !== 'undefined' && courseService?.setUserId) {
+      courseService.setUserId('guest');
+    }
     StorageService.setCurrentUser('guest');
     this.updateState({
       user: null,
@@ -307,9 +322,10 @@ class AuthService {
 
           const profile = await this.fetchLiveProfile(data.user.id, email);
           if (profile) {
-            courseService.setUserId(profile.id);
-            StorageService.migrateGuestData(profile.id);
-            StorageService.setCurrentUser(profile.id);
+            const effectiveId = profile.auth_user_id || profile.id;
+            courseService.setUserId(effectiveId);
+            StorageService.migrateGuestData(effectiveId);
+            StorageService.setCurrentUser(effectiveId);
             this.updateState({
               user: profile,
               role: profile.role,
@@ -318,6 +334,7 @@ class AuthService {
             });
             return { user: profile, error: null };
           }
+          return { user: null, error: 'Conta criada, mas o perfil não pôde ser inicializado no Supabase. Por favor, tente entrar.' };
         }
       } catch (err: any) {
         return { user: null, error: err.message || 'Erro ao criar conta no Supabase.' };
@@ -330,9 +347,10 @@ class AuthService {
       return { user: null, error: 'Este email já está cadastrado no sistema.' };
     }
 
+    const salt = Math.random().toString(36).substring(2, 9);
     const mockProfile: UserProfile = {
-      id: `usr_${Date.now()}`,
-      auth_user_id: `auth_${Date.now()}`,
+      id: `usr_${Date.now()}_${salt}`,
+      auth_user_id: `auth_${Date.now()}_${salt}`,
       email: normalizedEmail,
       full_name: fullName,
       role: 'user',
@@ -357,12 +375,13 @@ class AuthService {
       streak_days: 1,
     };
 
+    const effectiveId = mockProfile.auth_user_id || mockProfile.id;
     mockUsersDb.set(normalizedEmail, { user: mockProfile, passwordHash: password });
     localStorage.setItem(STORAGE_KEYS.MOCK_AUTH_USER, JSON.stringify(mockProfile));
 
-    courseService.setUserId(mockProfile.id);
-    StorageService.migrateGuestData(mockProfile.id);
-    StorageService.setCurrentUser(mockProfile.id);
+    courseService.setUserId(effectiveId);
+    StorageService.migrateGuestData(effectiveId);
+    StorageService.setCurrentUser(effectiveId);
     this.updateState({
       user: mockProfile,
       role: 'user',
@@ -402,8 +421,9 @@ class AuthService {
               };
             }
 
-            courseService.setUserId(profile.id);
-            StorageService.setCurrentUser(profile.id);
+            const effectiveId = profile.auth_user_id || profile.id;
+            courseService.setUserId(effectiveId);
+            StorageService.setCurrentUser(effectiveId);
             this.updateState({
               user: profile,
               role: profile.role,
@@ -412,7 +432,9 @@ class AuthService {
             });
             return { user: profile, error: null };
           }
+          return { user: null, error: 'Perfil de usuário não encontrado no Supabase.' };
         }
+        return { user: null, error: 'Falha na autenticação com o Supabase.' };
       } catch (err: any) {
         return { user: null, error: err.message || 'Erro durante a autenticação.' };
       }
@@ -431,8 +453,9 @@ class AuthService {
     record.user.last_active_at = new Date().toISOString();
     localStorage.setItem(STORAGE_KEYS.MOCK_AUTH_USER, JSON.stringify(record.user));
 
-    courseService.setUserId(record.user.id);
-    StorageService.setCurrentUser(record.user.id);
+    const effectiveId = record.user.auth_user_id || record.user.id;
+    courseService.setUserId(effectiveId);
+    StorageService.setCurrentUser(effectiveId);
     this.updateState({
       user: record.user,
       role: record.user.role,

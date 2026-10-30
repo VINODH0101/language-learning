@@ -1,0 +1,15 @@
+{
+  "title": "Practice & Spaced Repetition",
+  "subtitle": "Reinforce vocabulary with SM-2 algorithm, quizzes, and grammar challenges",
+  "tab_sm2": "SM-2 Flashcards",
+  "tab_multiple_choice": "Multiple Choice",
+  "tab_cloze": "Fill in the Blanks",
+  "tab_mistakes": "Mistake Notebook",
+  "rating_again": "Again (1)",
+  "rating_hard": "Hard (3)",
+  "rating_good": "Good (4)",
+  "rating_easy": "Easy (5)",
+  "session_reviewed": "{{count}} cards reviewed",
+  "cards_remaining": "{{count}} remaining",
+  "all_caught_up": "All caught up! No cards due for review right now."
+}

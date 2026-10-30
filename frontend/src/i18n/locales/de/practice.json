@@ -1,0 +1,15 @@
+{
+  "title": "Übung & Spaced Repetition",
+  "subtitle": "Festige deinen Wortschatz mit dem SM-2-Algorithmus, Quizzen und Grammatiktests",
+  "tab_sm2": "SM-2 Karteikarten",
+  "tab_multiple_choice": "Multiple-Choice",
+  "tab_cloze": "Lückentexte",
+  "tab_mistakes": "Fehler-Notizbuch",
+  "rating_again": "Nochmal (1)",
+  "rating_hard": "Schwer (3)",
+  "rating_good": "Gut (4)",
+  "rating_easy": "Einfach (5)",
+  "session_reviewed": "{{count}} Karten geübt",
+  "cards_remaining": "{{count}} verbleibend",
+  "all_caught_up": "Alles erledigt! Keine Karten zur Wiederholung offen."
+}

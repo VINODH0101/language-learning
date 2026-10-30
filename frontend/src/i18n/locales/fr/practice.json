@@ -1,0 +1,15 @@
+{
+  "title": "Pratique et Répétition Espacée",
+  "subtitle": "Renforcez votre vocabulaire avec l'algorithme SM-2, des quiz et des défis",
+  "tab_sm2": "Cartes SM-2",
+  "tab_multiple_choice": "Choix Multiple",
+  "tab_cloze": "Textes à Trous",
+  "tab_mistakes": "Cahier d'Erreurs",
+  "rating_again": "À revoir (1)",
+  "rating_hard": "Difficile (3)",
+  "rating_good": "Bon (4)",
+  "rating_easy": "Facile (5)",
+  "session_reviewed": "{{count}} cartes évaluées",
+  "cards_remaining": "{{count}} restantes",
+  "all_caught_up": "Tout est à jour ! Aucune carte en attente de révision pour le moment."
+}

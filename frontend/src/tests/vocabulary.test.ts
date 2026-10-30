@@ -33,15 +33,15 @@ describe('Multilingual Vocabulary Service', () => {
 
           expect(trans, `Missing translation for entry ${entry.id} in ${explanationLang}`).toBeDefined();
           expect(typeof trans).toBe('string');
-          expect(trans.length).toBeGreaterThan(0);
+          expect(trans!.length).toBeGreaterThan(0);
 
           expect(def, `Missing definition for entry ${entry.id} in ${explanationLang}`).toBeDefined();
           expect(typeof def).toBe('string');
-          expect(def.length).toBeGreaterThan(0);
+          expect(def!.length).toBeGreaterThan(0);
 
           expect(exTrans, `Missing example translation for entry ${entry.id} in ${explanationLang}`).toBeDefined();
           expect(typeof exTrans).toBe('string');
-          expect(exTrans.length).toBeGreaterThan(0);
+          expect(exTrans!.length).toBeGreaterThan(0);
         });
       });
     });
@@ -86,7 +86,7 @@ describe('Multilingual Vocabulary Service', () => {
         expect(sent.target_language).toBe(lang);
         languages.forEach(expLang => {
           expect(sent.translations[expLang]).toBeDefined();
-          expect(sent.translations[expLang].length).toBeGreaterThan(0);
+          expect(sent.translations[expLang]!.length).toBeGreaterThan(0);
         });
       });
     });

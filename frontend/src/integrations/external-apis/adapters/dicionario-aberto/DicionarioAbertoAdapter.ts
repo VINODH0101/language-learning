@@ -57,23 +57,30 @@ export class DicionarioAbertoAdapter extends BaseApiProvider<DictionaryInput, No
     const encoded = encodeURIComponent(input.word.trim().toLowerCase());
     const url = `https://api.dicionario-aberto.net/word/${encoded}`;
 
-    const response = await fetch(url);
-    if (response.status === 404) {
-      throw new ProviderUnavailableError(
-        this.metadata.id,
-        404,
-        `Palavra "${input.word}" não encontrada no Dicionário Aberto.`
-      );
-    }
-    if (!response.ok) {
-      throw new ProviderUnavailableError(
-        this.metadata.id,
-        response.status,
-        `Dicionário Aberto HTTP ${response.status}: ${response.statusText}`
-      );
-    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1500);
 
-    return await response.json();
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (response.status === 404) {
+        throw new ProviderUnavailableError(
+          this.metadata.id,
+          404,
+          `Palavra "${input.word}" não encontrada no Dicionário Aberto.`
+        );
+      }
+      if (!response.ok) {
+        throw new ProviderUnavailableError(
+          this.metadata.id,
+          response.status,
+          `Dicionário Aberto HTTP ${response.status}: ${response.statusText}`
+        );
+      }
+
+      return await response.json();
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   protected normalize(raw: unknown, input: DictionaryInput): NormalizedDictionaryEntry {

@@ -10,6 +10,18 @@
 import { Course, CourseConfig, Language, RegionalVariety, CEFRLevel, ExplanationLanguage } from '../types';
 import { supabase } from './supabaseClient';
 import { enforceRegionalVariety, isValidRegionalVariety } from '../lib/languages/languageMatrix';
+import { syncEngine } from './syncEngine';
+
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 const COURSE_STORAGE_PREFIX = 'polyglot_courses_';
 const ACTIVE_COURSE_PREFIX = 'polyglot_active_course_';
@@ -140,10 +152,10 @@ class CourseService {
       localStorage.setItem(this.getActiveStorageKey(uid), courseId);
     } catch {}
 
-    // Async sync if authenticated
-    if (uid !== 'guest' && supabase) {
-      Promise.resolve(supabase.rpc('set_active_course', { p_course_id: courseId })).catch((err: any) => {
-        console.warn('Failed to sync active course to Supabase', err);
+    // Queue synchronization if authenticated
+    if (uid !== 'guest') {
+      syncEngine.queueAction('SYNC_COURSE', activated, uid).catch((err: any) => {
+        console.warn('Failed to queue active course sync', err);
       });
     }
 
@@ -177,7 +189,7 @@ class CourseService {
     }
 
     const now = new Date().toISOString();
-    const id = `course_${uid}_${sanitizedData.target_language}_${Date.now()}`;
+    const id = generateUUID();
 
     const newCourse: Course = {
       ...sanitizedData,
@@ -200,25 +212,11 @@ class CourseService {
       localStorage.setItem(this.getActiveStorageKey(uid), id);
     } catch {}
 
-    // Sync to Supabase if authenticated
-    if (uid !== 'guest' && supabase) {
-      Promise.resolve(
-        supabase
-          .from('user_courses')
-          .insert({
-            id: newCourse.id,
-            user_id: uid,
-            target_language: newCourse.target_language,
-            regional_variant: newCourse.regional_variant,
-            cefr_level: newCourse.cefr_level,
-            explanation_language: newCourse.explanation_language,
-            daily_goal_minutes: newCourse.daily_goal_minutes,
-            streak_days: newCourse.streak_days,
-            total_lessons_completed: newCourse.total_lessons_completed,
-            completed_curriculum_node_ids: newCourse.completed_curriculum_node_ids,
-            is_active: true,
-          })
-      ).catch((err: any) => console.warn('Supabase course insert sync error', err));
+    // Queue synchronization if authenticated
+    if (uid !== 'guest') {
+      syncEngine.queueAction('SYNC_COURSE', newCourse, uid).catch((err: any) => {
+        console.warn('Failed to queue course insert sync', err);
+      });
     }
 
     this.notify();
@@ -258,17 +256,10 @@ class CourseService {
 
     this.saveCourses(nextCourses, uid);
 
-    if (uid !== 'guest' && supabase) {
-      Promise.resolve(
-        supabase
-          .from('user_courses')
-          .update({
-            ...updates,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', courseId)
-          .eq('user_id', uid)
-      ).catch((err: any) => console.warn('Supabase course update sync error', err));
+    if (uid !== 'guest') {
+      syncEngine.queueAction('SYNC_COURSE', updatedCourse, uid).catch((err: any) => {
+        console.warn('Failed to queue course update sync', err);
+      });
     }
 
     this.notify();
@@ -299,14 +290,11 @@ class CourseService {
 
     this.saveCourses(nextCourses, uid);
 
-    if (uid !== 'guest' && supabase) {
-      Promise.resolve(
-        supabase
-          .from('user_courses')
-          .delete()
-          .eq('id', courseId)
-          .eq('user_id', uid)
-      ).catch((err: any) => console.warn('Supabase course delete error', err));
+    const toDelete = courses.find(c => c.id === courseId);
+    if (toDelete && uid !== 'guest') {
+      syncEngine.queueAction('DELETE_COURSE', toDelete, uid).catch((err: any) => {
+        console.warn('Failed to queue course delete sync', err);
+      });
     }
 
     this.notify();
@@ -328,7 +316,7 @@ class CourseService {
       if (!exists) {
         merged.push({
           ...gc,
-          id: `course_${authenticatedUserId}_${gc.target_language}_${Date.now()}`,
+          id: generateUUID(),
           user_id: authenticatedUserId,
           is_active: false,
           updated_at: new Date().toISOString(),
@@ -401,9 +389,9 @@ class CourseService {
   private initializeDefaultCourses(userId?: string): Course[] {
     const uid = userId || this.currentUserId;
     const now = new Date().toISOString();
-    const initial: Course[] = DEFAULT_COURSES.map((tmpl, idx) => ({
+    const initial: Course[] = DEFAULT_COURSES.map((tmpl) => ({
       ...tmpl,
-      id: `course_${uid}_${tmpl.target_language}_${idx + 1}`,
+      id: generateUUID(),
       user_id: uid,
       created_at: now,
       updated_at: now,

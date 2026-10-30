@@ -23,9 +23,11 @@ import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { PlacementTestModal } from '../components/diagnostic/PlacementTestModal';
+import { useI18n } from '../i18n/i18nContext';
 import { toast } from 'sonner';
 
 export const ProgressPage: React.FC = () => {
+  const { t } = useI18n();
   const [selectedLang, setSelectedLang] = useState<Language>('pt');
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
 
@@ -69,15 +71,15 @@ export const ProgressPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
-              Análise de Competência e Retenção
+              {t('navigation:nav_progress', 'Progresso')}
             </span>
             <Badge variant="indigo" size="sm">
-              Nível Atual: {track.current_cefr_level}
+              {track.current_cefr_level}
             </Badge>
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">Progresso e Desempenho Real</h1>
+          <h1 className="text-2xl font-bold text-slate-100">{t('navigation:nav_progress', 'Progresso')} & {t('dashboard:recent_activity_title', 'Desempenho')}</h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Estatísticas calculadas a partir de tentativas reais de exercícios e intervalos do algoritmo SuperMemo SM-2.
+            {t('dashboard:accuracy_rate', 'Estatísticas')}: SuperMemo SM-2 & CEFR.
           </p>
         </div>
 
@@ -121,7 +123,7 @@ export const ProgressPage: React.FC = () => {
             icon={<Award className="w-4 h-4 text-indigo-400" />}
             onClick={() => setIsDiagnosticOpen(true)}
           >
-            Fazer Teste Diagnóstico
+            {t('common:details', 'Diagnóstico')}
           </Button>
         </div>
       </div>
@@ -254,7 +256,7 @@ export const ProgressPage: React.FC = () => {
 
                 <div className="shrink-0 text-right">
                   <span className="text-[11px] font-mono text-slate-400">
-                    {isCompleted ? 'Concluído' : isCurrent ? 'Em Curso' : 'Bloqueado'}
+                    {isCompleted ? t('common:completed', 'Concluído') : isCurrent ? t('common:active', 'Em Curso') : '—'}
                   </span>
                 </div>
               </div>

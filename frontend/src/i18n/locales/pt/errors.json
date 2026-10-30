@@ -1,0 +1,7 @@
+{
+  "offline_title": "Você está offline",
+  "offline_desc": "O Lexilume funciona 100% offline! Suas revisões e progresso estão salvos no armazenamento local e serão sincronizados ao reconectar.",
+  "network_error": "Não foi possível conectar ao servidor. Verifique sua conexão.",
+  "provider_unavailable": "O serviço externo está temporariamente indisponível. Usando dados locais.",
+  "unknown_error": "Ocorreu um erro inesperado. Tente novamente."
+}

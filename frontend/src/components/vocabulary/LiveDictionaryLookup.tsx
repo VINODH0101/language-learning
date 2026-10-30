@@ -28,7 +28,7 @@ export const LiveDictionaryLookup: React.FC<LiveDictionaryLookupProps> = ({ targ
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
 
-  const sampleWords: Record<Language, string[]> = {
+  const sampleWords: Partial<Record<Language, string[]>> = {
     en: ['serendipity', 'resilience', 'eloquent', 'prerogative'],
     pt: ['saudade', 'alvíssaras', 'inefável', 'perspicácia'],
     es: ['sobremesa', 'madrugada', 'desvelo', 'añoranza'],
@@ -110,7 +110,7 @@ export const LiveDictionaryLookup: React.FC<LiveDictionaryLookupProps> = ({ targ
 
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] text-slate-500 font-semibold mr-1">Sugestões:</span>
-          {sampleWords[targetLang].map(sample => (
+          {(sampleWords[targetLang] || []).map(sample => (
             <button
               key={sample}
               onClick={() => {

@@ -26,6 +26,8 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Alert } from '../components/common/Alert';
 import { Badge } from '../components/common/Badge';
+import { AvatarCustomizer } from '../features/profile/AvatarCustomizer';
+import { INTERFACE_LANGUAGES_LIST } from '../i18n/interfaceLanguages';
 import { toast } from 'sonner';
 
 export const SettingsPage: React.FC = () => {
@@ -162,6 +164,14 @@ export const SettingsPage: React.FC = () => {
         </Alert>
       )}
 
+      {/* Lexilume DiceBear Avatar Customizer */}
+      <AvatarCustomizer
+        initialSeed={settings.full_name || 'lexilume_learner'}
+        onAvatarSaved={(url) => {
+          setSettings(prev => ({ ...prev, avatar_url: url }));
+        }}
+      />
+
       <form onSubmit={handleSave} className="space-y-6">
         {/* Core Card: Decoupled 4-Way Language Separation Architecture */}
         <Card
@@ -183,9 +193,11 @@ export const SettingsPage: React.FC = () => {
                   onChange={(e) => setInterfaceLanguage(e.target.value as any)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-medium"
                 >
-                  <option value="en">🇬🇧 English (Interface Chrome)</option>
-                  <option value="pt">🇵🇹 Português (Interface do Sistema)</option>
-                  <option value="es">🇪🇸 Español (Interfaz del Sistema)</option>
+                  {INTERFACE_LANGUAGES_LIST.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.flag} {lang.nativeName} ({lang.name})
+                    </option>
+                  ))}
                 </select>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Controls buttons, tab bars, notifications, and headers. Completely independent of what you study.
@@ -278,7 +290,7 @@ export const SettingsPage: React.FC = () => {
             <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-bold text-slate-300 block">{t('settings_theme_label')}</span>
-                <span className="text-[11px] text-slate-500">Ajuste o modo de exibição de cores da interface</span>
+                <span className="text-[11px] text-slate-500">{t('settings_theme_desc') || 'Adjust interface appearance and color mode'}</span>
               </div>
               <div className="w-full sm:w-60">
                 <select
@@ -297,8 +309,8 @@ export const SettingsPage: React.FC = () => {
 
         {/* Global Regional Dialect Standards across all language tracks */}
         <Card
-          title="Padrões Dialetais Globais por Idioma"
-          subtitle="Variantes padrão salvas no perfil para cada idioma estudado"
+          title={t('settings_dialect_standards_title') || 'Global Regional Dialect Standards'}
+          subtitle={t('settings_dialect_standards_subtitle') || 'Default variants saved in profile for each language studied'}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -385,13 +397,13 @@ export const SettingsPage: React.FC = () => {
 
         {/* Delivery & Schedule Preferences */}
         <Card
-          title="Preferências de Notificação e Email Diário"
-          subtitle="Configuração de fuso horário e entrega matinal via automação GitHub Actions"
+          title={t('settings_delivery_title') || 'Preferências de Notificação e Email Diário'}
+          subtitle={t('settings_delivery_subtitle') || 'Configuração de fuso horário e entrega matinal via automação GitHub Actions'}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Email do Destinatário
+                {t('auth_email_label')}
               </label>
               <input
                 type="email"
@@ -403,7 +415,7 @@ export const SettingsPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Fuso Horário Configurado
+                {t('settings_timezone_label')}
               </label>
               <input
                 type="text"
@@ -438,7 +450,7 @@ export const SettingsPage: React.FC = () => {
                 className="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-indigo-500"
               />
               <label htmlFor="email_notifications" className="text-xs text-slate-300 cursor-pointer">
-                Notificações de sistema e alertas de ofensiva de estudo
+                {t('settings_notifications_label')}
               </label>
             </div>
           </div>

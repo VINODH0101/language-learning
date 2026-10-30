@@ -8,9 +8,37 @@
  * 4. Regional Variety (Dialectal qualification of the learning language: phonetics, audio, syntax notes)
  */
 
-export type InterfaceLanguage = 'en' | 'pt' | 'es';
+export type InterfaceLanguage =
+  | 'en'
+  | 'pt'
+  | 'pt-BR'
+  | 'pt-PT'
+  | 'es'
+  | 'fr'
+  | 'de'
+  | 'it'
+  | 'ja'
+  | 'ko'
+  | 'ru'
+  | 'nl'
+  | 'zh-Hans'
+  | 'tr'
+  | 'ta';
 
-export type LearningLanguage = 'pt' | 'es' | 'en';
+export type LearningLanguage =
+  | 'en'
+  | 'pt'
+  | 'es'
+  | 'fr'
+  | 'de'
+  | 'it'
+  | 'ja'
+  | 'ko'
+  | 'ru'
+  | 'nl'
+  | 'zh'
+  | 'tr'
+  | 'ta';
 
 export type ExplanationLanguage = 'en' | 'pt' | 'es';
 
@@ -26,12 +54,68 @@ export type RegionalVariety =
   // English varieties
   | 'en-US'
   | 'en-GB'
+  // French varieties
+  | 'fr-FR'
+  | 'fr-CA'
+  // German varieties
+  | 'de-DE'
+  | 'de-AT'
+  | 'de-CH'
+  // Italian varieties
+  | 'it-IT'
+  // Japanese varieties
+  | 'ja-JP'
+  // Korean varieties
+  | 'ko-KR'
+  // Russian varieties
+  | 'ru-RU'
+  // Dutch varieties
+  | 'nl-NL'
+  | 'nl-BE'
+  // Chinese varieties
+  | 'zh-Hans'
+  | 'zh-CN'
+  // Turkish varieties
+  | 'tr-TR'
+  // Tamil varieties
+  | 'ta-IN'
+  | 'ta-LK'
   // Universal neutral
   | 'all';
 
-export const SUPPORTED_INTERFACE_LANGUAGES: readonly InterfaceLanguage[] = ['en', 'pt', 'es'] as const;
+export const SUPPORTED_INTERFACE_LANGUAGES: readonly InterfaceLanguage[] = [
+  'en',
+  'pt',
+  'pt-BR',
+  'pt-PT',
+  'es',
+  'fr',
+  'de',
+  'it',
+  'ja',
+  'ko',
+  'ru',
+  'nl',
+  'zh-Hans',
+  'tr',
+  'ta',
+] as const;
 
-export const SUPPORTED_LEARNING_LANGUAGES: readonly LearningLanguage[] = ['pt', 'es', 'en'] as const;
+export const SUPPORTED_LEARNING_LANGUAGES: readonly LearningLanguage[] = [
+  'en',
+  'pt',
+  'es',
+  'fr',
+  'de',
+  'it',
+  'ja',
+  'ko',
+  'ru',
+  'nl',
+  'zh',
+  'tr',
+  'ta',
+] as const;
 
 export const SUPPORTED_EXPLANATION_LANGUAGES: readonly ExplanationLanguage[] = ['en', 'pt', 'es'] as const;
 
@@ -40,18 +124,38 @@ export const SUPPORTED_EXPLANATION_LANGUAGES: readonly ExplanationLanguage[] = [
  * A regional variety is ALWAYS bound to a specific learning language.
  */
 export const REGIONAL_VARIETIES_BY_LANGUAGE: Record<LearningLanguage, readonly RegionalVariety[]> = {
+  en: ['en-US', 'en-GB', 'all'],
   pt: ['pt-BR', 'pt-PT', 'all'],
   es: ['es-ES', 'es-419', 'es-MX', 'es-AR', 'all'],
-  en: ['en-US', 'en-GB', 'all'],
+  fr: ['fr-FR', 'fr-CA', 'all'],
+  de: ['de-DE', 'de-AT', 'de-CH', 'all'],
+  it: ['it-IT', 'all'],
+  ja: ['ja-JP', 'all'],
+  ko: ['ko-KR', 'all'],
+  ru: ['ru-RU', 'all'],
+  nl: ['nl-NL', 'nl-BE', 'all'],
+  zh: ['zh-Hans', 'zh-CN', 'all'],
+  tr: ['tr-TR', 'all'],
+  ta: ['ta-IN', 'ta-LK', 'all'],
 };
 
 /**
  * Default regional variety per learning language when unspecified or invalid.
  */
 export const DEFAULT_REGIONAL_VARIETY: Record<LearningLanguage, RegionalVariety> = {
+  en: 'en-US',
   pt: 'pt-BR',
   es: 'es-ES',
-  en: 'en-US',
+  fr: 'fr-FR',
+  de: 'de-DE',
+  it: 'it-IT',
+  ja: 'ja-JP',
+  ko: 'ko-KR',
+  ru: 'ru-RU',
+  nl: 'nl-NL',
+  zh: 'zh-Hans',
+  tr: 'tr-TR',
+  ta: 'ta-IN',
 };
 
 export interface LanguageMetadata {
@@ -64,12 +168,20 @@ export interface LanguageMetadata {
 }
 
 export const LANGUAGE_METADATA: Record<LearningLanguage, LanguageMetadata> = {
+  en: {
+    code: 'en',
+    nameEn: 'English',
+    namePt: 'Inglês',
+    nameEs: 'Inglés',
+    flag: '🇺🇸',
+    defaultVariety: 'en-US',
+  },
   pt: {
     code: 'pt',
     nameEn: 'Portuguese',
     namePt: 'Português',
     nameEs: 'Portugués',
-    flag: '🇵🇹',
+    flag: '🇧🇷',
     defaultVariety: 'pt-BR',
   },
   es: {
@@ -80,13 +192,85 @@ export const LANGUAGE_METADATA: Record<LearningLanguage, LanguageMetadata> = {
     flag: '🇪🇸',
     defaultVariety: 'es-ES',
   },
-  en: {
-    code: 'en',
-    nameEn: 'English',
-    namePt: 'Inglês',
-    nameEs: 'Inglés',
-    flag: '🇬🇧',
-    defaultVariety: 'en-US',
+  fr: {
+    code: 'fr',
+    nameEn: 'French',
+    namePt: 'Francês',
+    nameEs: 'Francés',
+    flag: '🇫🇷',
+    defaultVariety: 'fr-FR',
+  },
+  de: {
+    code: 'de',
+    nameEn: 'German',
+    namePt: 'Alemão',
+    nameEs: 'Alemán',
+    flag: '🇩🇪',
+    defaultVariety: 'de-DE',
+  },
+  it: {
+    code: 'it',
+    nameEn: 'Italian',
+    namePt: 'Italiano',
+    nameEs: 'Italiano',
+    flag: '🇮🇹',
+    defaultVariety: 'it-IT',
+  },
+  ja: {
+    code: 'ja',
+    nameEn: 'Japanese',
+    namePt: 'Japonês',
+    nameEs: 'Japonés',
+    flag: '🇯🇵',
+    defaultVariety: 'ja-JP',
+  },
+  ko: {
+    code: 'ko',
+    nameEn: 'Korean',
+    namePt: 'Coreano',
+    nameEs: 'Coreano',
+    flag: '🇰🇷',
+    defaultVariety: 'ko-KR',
+  },
+  ru: {
+    code: 'ru',
+    nameEn: 'Russian',
+    namePt: 'Russo',
+    nameEs: 'Ruso',
+    flag: '🇷🇺',
+    defaultVariety: 'ru-RU',
+  },
+  nl: {
+    code: 'nl',
+    nameEn: 'Dutch',
+    namePt: 'Holandês',
+    nameEs: 'Holandés',
+    flag: '🇳🇱',
+    defaultVariety: 'nl-NL',
+  },
+  zh: {
+    code: 'zh',
+    nameEn: 'Mandarin Chinese',
+    namePt: 'Chinês Mandarim',
+    nameEs: 'Chino Mandarín',
+    flag: '🇨🇳',
+    defaultVariety: 'zh-Hans',
+  },
+  tr: {
+    code: 'tr',
+    nameEn: 'Turkish',
+    namePt: 'Turco',
+    nameEs: 'Turco',
+    flag: '🇹🇷',
+    defaultVariety: 'tr-TR',
+  },
+  ta: {
+    code: 'ta',
+    nameEn: 'Tamil',
+    namePt: 'Tâmil',
+    nameEs: 'Tamil',
+    flag: '🇮🇳',
+    defaultVariety: 'ta-IN',
   },
 };
 
@@ -101,6 +285,24 @@ export interface RegionalVarietyMetadata {
 }
 
 export const REGIONAL_VARIETY_METADATA: Record<RegionalVariety, RegionalVarietyMetadata> = {
+  'en-US': {
+    code: 'en-US',
+    language: 'en',
+    labelEn: 'American English (en-US)',
+    labelPt: 'Inglês Americano (en-US)',
+    labelEs: 'Inglés Americano (en-US)',
+    flag: '🇺🇸',
+    voiceLocale: 'en-US',
+  },
+  'en-GB': {
+    code: 'en-GB',
+    language: 'en',
+    labelEn: 'British English (en-GB)',
+    labelPt: 'Inglês Britânico (en-GB)',
+    labelEs: 'Inglés Británico (en-GB)',
+    flag: '🇬🇧',
+    voiceLocale: 'en-GB',
+  },
   'pt-BR': {
     code: 'pt-BR',
     language: 'pt',
@@ -155,23 +357,149 @@ export const REGIONAL_VARIETY_METADATA: Record<RegionalVariety, RegionalVarietyM
     flag: '🇦🇷',
     voiceLocale: 'es-AR',
   },
-  'en-US': {
-    code: 'en-US',
-    language: 'en',
-    labelEn: 'American English (en-US)',
-    labelPt: 'Inglês Americano (en-US)',
-    labelEs: 'Inglés Americano (en-US)',
-    flag: '🇺🇸',
-    voiceLocale: 'en-US',
+  'fr-FR': {
+    code: 'fr-FR',
+    language: 'fr',
+    labelEn: 'Metropolitan French (fr-FR)',
+    labelPt: 'Francês Metropolitano (fr-FR)',
+    labelEs: 'Francés Metropolitano (fr-FR)',
+    flag: '🇫🇷',
+    voiceLocale: 'fr-FR',
   },
-  'en-GB': {
-    code: 'en-GB',
-    language: 'en',
-    labelEn: 'British English (en-GB)',
-    labelPt: 'Inglês Britânico (en-GB)',
-    labelEs: 'Inglés Británico (en-GB)',
-    flag: '🇬🇧',
-    voiceLocale: 'en-GB',
+  'fr-CA': {
+    code: 'fr-CA',
+    language: 'fr',
+    labelEn: 'Canadian French (fr-CA)',
+    labelPt: 'Francês Canadense (fr-CA)',
+    labelEs: 'Francés Canadiense (fr-CA)',
+    flag: '🇨🇦',
+    voiceLocale: 'fr-CA',
+  },
+  'de-DE': {
+    code: 'de-DE',
+    language: 'de',
+    labelEn: 'German (Germany) (de-DE)',
+    labelPt: 'Alemão (Alemanha) (de-DE)',
+    labelEs: 'Alemán (Alemania) (de-DE)',
+    flag: '🇩🇪',
+    voiceLocale: 'de-DE',
+  },
+  'de-AT': {
+    code: 'de-AT',
+    language: 'de',
+    labelEn: 'Austrian German (de-AT)',
+    labelPt: 'Alemão Austríaco (de-AT)',
+    labelEs: 'Alemán Austríaco (de-AT)',
+    flag: '🇦🇹',
+    voiceLocale: 'de-AT',
+  },
+  'de-CH': {
+    code: 'de-CH',
+    language: 'de',
+    labelEn: 'Swiss German (de-CH)',
+    labelPt: 'Alemão Suíço (de-CH)',
+    labelEs: 'Alemán Suizo (de-CH)',
+    flag: '🇨🇭',
+    voiceLocale: 'de-CH',
+  },
+  'it-IT': {
+    code: 'it-IT',
+    language: 'it',
+    labelEn: 'Standard Italian (it-IT)',
+    labelPt: 'Italiano Padrão (it-IT)',
+    labelEs: 'Italiano Estándar (it-IT)',
+    flag: '🇮🇹',
+    voiceLocale: 'it-IT',
+  },
+  'ja-JP': {
+    code: 'ja-JP',
+    language: 'ja',
+    labelEn: 'Standard Japanese (ja-JP)',
+    labelPt: 'Japonês Padrão (ja-JP)',
+    labelEs: 'Japonés Estándar (ja-JP)',
+    flag: '🇯🇵',
+    voiceLocale: 'ja-JP',
+  },
+  'ko-KR': {
+    code: 'ko-KR',
+    language: 'ko',
+    labelEn: 'Standard Korean (ko-KR)',
+    labelPt: 'Coreano Padrão (ko-KR)',
+    labelEs: 'Coreano Estándar (ko-KR)',
+    flag: '🇰🇷',
+    voiceLocale: 'ko-KR',
+  },
+  'ru-RU': {
+    code: 'ru-RU',
+    language: 'ru',
+    labelEn: 'Standard Russian (ru-RU)',
+    labelPt: 'Russo Padrão (ru-RU)',
+    labelEs: 'Ruso Estándar (ru-RU)',
+    flag: '🇷🇺',
+    voiceLocale: 'ru-RU',
+  },
+  'nl-NL': {
+    code: 'nl-NL',
+    language: 'nl',
+    labelEn: 'Standard Dutch (nl-NL)',
+    labelPt: 'Holandês Padrão (nl-NL)',
+    labelEs: 'Holandés Estándar (nl-NL)',
+    flag: '🇳🇱',
+    voiceLocale: 'nl-NL',
+  },
+  'nl-BE': {
+    code: 'nl-BE',
+    language: 'nl',
+    labelEn: 'Flemish Dutch (nl-BE)',
+    labelPt: 'Holandês Flamengo (nl-BE)',
+    labelEs: 'Holandés Flamenco (nl-BE)',
+    flag: '🇧🇪',
+    voiceLocale: 'nl-BE',
+  },
+  'zh-Hans': {
+    code: 'zh-Hans',
+    language: 'zh',
+    labelEn: 'Simplified Chinese (zh-Hans)',
+    labelPt: 'Chinês Simplificado (zh-Hans)',
+    labelEs: 'Chino Simplificado (zh-Hans)',
+    flag: '🇨🇳',
+    voiceLocale: 'zh-CN',
+  },
+  'zh-CN': {
+    code: 'zh-CN',
+    language: 'zh',
+    labelEn: 'Mandarin (Mainland) (zh-CN)',
+    labelPt: 'Mandarim (China) (zh-CN)',
+    labelEs: 'Mandarín (China) (zh-CN)',
+    flag: '🇨🇳',
+    voiceLocale: 'zh-CN',
+  },
+  'tr-TR': {
+    code: 'tr-TR',
+    language: 'tr',
+    labelEn: 'Standard Turkish (tr-TR)',
+    labelPt: 'Turco Padrão (tr-TR)',
+    labelEs: 'Turco Estándar (tr-TR)',
+    flag: '🇹🇷',
+    voiceLocale: 'tr-TR',
+  },
+  'ta-IN': {
+    code: 'ta-IN',
+    language: 'ta',
+    labelEn: 'Indian Tamil (ta-IN)',
+    labelPt: 'Tâmil Indiano (ta-IN)',
+    labelEs: 'Tamil Indio (ta-IN)',
+    flag: '🇮🇳',
+    voiceLocale: 'ta-IN',
+  },
+  'ta-LK': {
+    code: 'ta-LK',
+    language: 'ta',
+    labelEn: 'Sri Lankan Tamil (ta-LK)',
+    labelPt: 'Tâmil Ceilanês (ta-LK)',
+    labelEs: 'Tamil de Sri Lanka (ta-LK)',
+    flag: '🇱🇰',
+    voiceLocale: 'ta-LK',
   },
   'all': {
     code: 'all',
@@ -210,11 +538,14 @@ export function enforceRegionalVariety(
   return DEFAULT_REGIONAL_VARIETY[learningLanguage] || 'all';
 }
 
+import { isForbiddenLanguage } from '../../config/languages/languageRegistry';
+
 export function isValidInterfaceLanguage(lang: unknown): lang is InterfaceLanguage {
   return typeof lang === 'string' && SUPPORTED_INTERFACE_LANGUAGES.includes(lang as InterfaceLanguage);
 }
 
 export function isValidLearningLanguage(lang: unknown): lang is LearningLanguage {
+  if (isForbiddenLanguage(lang)) return false;
   return typeof lang === 'string' && SUPPORTED_LEARNING_LANGUAGES.includes(lang as LearningLanguage);
 }
 

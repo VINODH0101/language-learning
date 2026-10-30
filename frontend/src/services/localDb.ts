@@ -356,6 +356,24 @@ export async function savePhrasebookWord(
     }
   }
 
+  if (record.user_id && record.user_id !== 'guest') {
+    try {
+      await enqueueSyncAction('SYNC_SAVED_VOCABULARY', {
+        id: record.id,
+        user_id: record.user_id,
+        source_text: record.source_text,
+        translated_text: record.translated_text,
+        source_lang: record.source_lang,
+        target_lang: record.target_lang,
+        part_of_speech: record.part_of_speech,
+        context_sentence: record.context_sentence,
+        created_at: record.created_at,
+      }, record.user_id);
+    } catch (syncErr) {
+      console.warn('Failed to enqueue saved vocabulary sync', syncErr);
+    }
+  }
+
   return id;
 }
 
@@ -380,12 +398,32 @@ export async function getPhrasebookWords(targetLang?: string): Promise<SavedVoca
 }
 
 export async function deletePhrasebookWord(id: string): Promise<void> {
+  let existing = memoryFallback.savedVocabulary.get(id);
+  if (!existing && isIndexedDBAvailable()) {
+    try {
+      existing = await localDb.savedVocabulary.get(id);
+    } catch {}
+  }
+
   memoryFallback.savedVocabulary.delete(id);
   if (isIndexedDBAvailable()) {
     try {
       await localDb.savedVocabulary.delete(id);
     } catch (err) {
       console.warn('Error deleting phrasebook word', err);
+    }
+  }
+
+  if (existing?.user_id && existing.user_id !== 'guest') {
+    try {
+      await enqueueSyncAction('DELETE_SAVED_VOCABULARY', {
+        id: existing.id,
+        user_id: existing.user_id,
+        source_text: existing.source_text,
+        target_lang: existing.target_lang,
+      }, existing.user_id);
+    } catch (syncErr) {
+      console.warn('Failed to enqueue delete vocabulary sync', syncErr);
     }
   }
 }
@@ -714,4 +752,65 @@ export async function getApiCacheCount(): Promise<number> {
     return memoryFallback.apiCache.size;
   }
 }
+
+// ============================================================================
+// 9. READING HISTORY TRACKING
+// ============================================================================
+
+export interface ReadingHistoryRecord {
+  id: string;
+  user_id: string;
+  article_id: string;
+  title: string;
+  language: Language;
+  cefr_level: string;
+  source: 'wikipedia' | 'gutendex' | 'curated';
+  completed_at: string;
+}
+
+const readingHistoryMemory: ReadingHistoryRecord[] = [];
+
+export async function logReadingSession(record: Omit<ReadingHistoryRecord, 'id' | 'completed_at'>): Promise<ReadingHistoryRecord> {
+  const fullRecord: ReadingHistoryRecord = {
+    ...record,
+    id: `read_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    completed_at: new Date().toISOString(),
+  };
+
+  readingHistoryMemory.unshift(fullRecord);
+  if (readingHistoryMemory.length > 50) {
+    readingHistoryMemory.pop();
+  }
+
+  // Also persist in localStorage for persistence across reloads
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const key = `lexilume_reading_history_${record.user_id || 'guest'}`;
+      const existingStr = localStorage.getItem(key);
+      const existing: ReadingHistoryRecord[] = existingStr ? JSON.parse(existingStr) : [];
+      existing.unshift(fullRecord);
+      localStorage.setItem(key, JSON.stringify(existing.slice(0, 50)));
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return fullRecord;
+}
+
+export async function getReadingHistory(userId: string = 'guest'): Promise<ReadingHistoryRecord[]> {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const key = `lexilume_reading_history_${userId}`;
+      const existingStr = localStorage.getItem(key);
+      if (existingStr) {
+        return JSON.parse(existingStr);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  return readingHistoryMemory.filter(r => r.user_id === userId || userId === 'guest');
+}
+
 

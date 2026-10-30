@@ -13,6 +13,8 @@ import {
 import { useI18n } from '../../i18n/i18nContext';
 import { authService } from '../../services/auth';
 import { Button } from '../common/Button';
+import { TurnstileWidget } from '../common/TurnstileWidget';
+import { UmamiProvider } from '../../services/providers/analytics/umamiProvider';
 import { toast } from 'sonner';
 
 interface AuthModalProps {
@@ -36,6 +38,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
 
   // Guest Migration Prompt State
   const [migrationPrompt, setMigrationPrompt] = useState<{
@@ -52,17 +55,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (mode === 'signup') {
       if (!fullName.trim()) {
-        setErrorMsg('Por favor, informe seu nome completo.');
+        setErrorMsg(t('auth:error_full_name', 'Please enter your full name'));
         setLoading(false);
         return;
       }
       if (password.length < 8) {
-        setErrorMsg(t('auth_password_min_length'));
+        setErrorMsg(t('auth:error_password_length', 'Password must be at least 8 characters'));
         setLoading(false);
         return;
       }
       if (password !== confirmPassword) {
-        setErrorMsg(t('auth_password_mismatch'));
+        setErrorMsg(t('auth:error_password_mismatch', 'Passwords do not match'));
+        setLoading(false);
+        return;
+      }
+
+      // Check bot protection token
+      if (!turnstileToken) {
+        setErrorMsg(t('auth:error_bot_verification', 'Please complete the bot protection check'));
         setLoading(false);
         return;
       }
@@ -75,6 +85,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.error) {
         setErrorMsg(res.error);
       } else if (res.user) {
+        UmamiProvider.getInstance().trackEvent('registration_completed');
         toast.success(`Conta criada com sucesso! Bem-vindo(a), ${res.user.full_name}!`);
         // Check if there is guest data to import
         setMigrationPrompt({ userId: res.user.id, show: true });
@@ -145,7 +156,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <Download className="w-6 h-6" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-slate-100">Preservar Progresso de Visitante</h3>
+              <h3 className="text-lg font-bold text-slate-100">{t('auth:guest_migration_title', 'Preserve Guest Progress')}</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
                 {t('auth_guest_migration_prompt')}
               </p>
@@ -193,7 +204,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Seu Nome Completo"
+                    placeholder={t('auth:full_name_placeholder', 'Your full name')}
                     className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -266,6 +277,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
+            {(mode === 'signup' || mode === 'forgot_password') && (
+              <TurnstileWidget
+                action={mode}
+                onVerify={(token) => {
+                  setTurnstileToken(token);
+                  setErrorMsg(null);
+                }}
+                onError={(err) => setErrorMsg(err)}
+                onExpire={() => setTurnstileToken('')}
+              />
+            )}
+
             <div className="pt-2">
               <Button
                 variant="primary"
@@ -274,7 +297,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 disabled={loading}
               >
                 {loading
-                  ? 'Aguarde...'
+                  ? t('common:loading', 'Aguarde...')
                   : mode === 'signin'
                   ? t('auth_sign_in_btn')
                   : mode === 'signup'

@@ -18,27 +18,31 @@ export const PracticeQuiz: React.FC<PracticeQuizProps> = ({
   const [score, setScore] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  if (entries.length < 2) {
+  const current = entries && entries.length > 0 ? entries[currentIndex] : null;
+  const correctAnswer = current ? (current.translations[explanationLanguage] || current.translations['en'] || '') : '';
+
+  // Generate 3 plausible distractors from the remaining entries
+  const distractors = React.useMemo(() => {
+    if (!current || entries.length < 2) return [];
+    return entries
+      .filter(e => e.id !== current.id)
+      .map(e => e.translations[explanationLanguage] || e.translations['en'] || '')
+      .slice(0, 3);
+  }, [entries, current, explanationLanguage]);
+
+  // Shuffle options deterministically for current question
+  const options = React.useMemo(() => {
+    if (!correctAnswer) return [];
+    return [correctAnswer, ...distractors].sort(() => Math.random() - 0.5);
+  }, [currentIndex, correctAnswer, distractors]);
+
+  if (entries.length < 2 || !current) {
     return (
       <div className="text-center py-12 text-slate-400">
         São necessários pelo menos 2 vocábulos para gerar o teste prático.
       </div>
     );
   }
-
-  const current = entries[currentIndex];
-  const correctAnswer = current.translations[explanationLanguage] || current.translations['en'];
-
-  // Generate 3 plausible distractors from the remaining entries
-  const distractors = entries
-    .filter(e => e.id !== current.id)
-    .map(e => e.translations[explanationLanguage] || e.translations['en'])
-    .slice(0, 3);
-
-  // Shuffle options deterministically for current question
-  const options = React.useMemo(() => {
-    return [correctAnswer, ...distractors].sort(() => Math.random() - 0.5);
-  }, [currentIndex, correctAnswer]);
 
   const handleSubmit = () => {
     if (!selectedOption) return;

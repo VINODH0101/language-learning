@@ -25,6 +25,7 @@ import { UserDetailModal } from '../components/admin/UserDetailModal';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
+import { AdminWorkbench } from '../features/admin/AdminWorkbench';
 
 interface AdminPageProps {
   onNavigateTab: (tab: any) => void;
@@ -34,7 +35,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
   const { t } = useI18n();
   const authState = authService.getState();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'analytics' | 'audit'>('users');
+  const [activeAdminTab, setActiveAdminTab] = useState<'workbench' | 'users' | 'analytics' | 'audit'>('workbench');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,6 +228,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
       {/* Admin Tab Navigation */}
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
         <button
+          onClick={() => setActiveAdminTab('workbench')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition ${
+            activeAdminTab === 'workbench'
+              ? 'bg-rose-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          Admin Workbench & Ferramentas
+        </button>
+        <button
           onClick={() => setActiveAdminTab('users')}
           className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition ${
             activeAdminTab === 'users'
@@ -257,6 +268,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
           {t('admin_tab_audit')} ({auditLogs.length})
         </button>
       </div>
+
+      {/* TAB 0: ADMIN WORKBENCH & ADVANCED SYSTEM TOOLS */}
+      {activeAdminTab === 'workbench' && (
+        <AdminWorkbench />
+      )}
 
       {/* TAB 1: USERS MANAGEMENT TABLE */}
       {activeAdminTab === 'users' && (

@@ -1,4 +1,10 @@
 import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+afterEach(() => {
+  cleanup();
+});
 
 // Standard jsdom mock for window.matchMedia
 if (typeof window !== 'undefined') {

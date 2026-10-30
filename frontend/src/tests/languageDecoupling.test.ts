@@ -69,13 +69,16 @@ describe('Enforce Separation between Interface, Learning, Explanation, and Regio
       expect(isValidInterfaceLanguage('en')).toBe(true);
       expect(isValidInterfaceLanguage('pt')).toBe(true);
       expect(isValidInterfaceLanguage('es')).toBe(true);
-      expect(isValidInterfaceLanguage('fr')).toBe(false);
+      expect(isValidInterfaceLanguage('fr')).toBe(true);
+      expect(isValidInterfaceLanguage('hi')).toBe(false); // Hindi explicitly excluded
 
       // Learning Language
       expect(isValidLearningLanguage('pt')).toBe(true);
       expect(isValidLearningLanguage('es')).toBe(true);
       expect(isValidLearningLanguage('en')).toBe(true);
-      expect(isValidLearningLanguage('de')).toBe(false);
+      expect(isValidLearningLanguage('de')).toBe(true);
+      expect(isValidLearningLanguage('ja')).toBe(true);
+      expect(isValidLearningLanguage('hi')).toBe(false); // Hindi explicitly excluded
 
       // Explanation Language
       expect(isValidExplanationLanguage('en')).toBe(true);

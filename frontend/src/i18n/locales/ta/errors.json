@@ -1,0 +1,7 @@
+{
+  "offline_title": "You are offline",
+  "offline_desc": "Lexilume works completely offline! Your reviews and progress are saved in browser storage and will sync when you reconnect.",
+  "network_error": "Unable to reach server. Please check your network connection.",
+  "provider_unavailable": "The external provider is temporarily unavailable. Using local fallback.",
+  "unknown_error": "An unexpected error occurred. Please try again."
+}

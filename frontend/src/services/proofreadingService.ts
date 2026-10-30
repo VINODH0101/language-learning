@@ -8,6 +8,7 @@ import {
   NormalizedProofreadResult,
   NormalizedProofreadMatch,
 } from '../integrations/external-apis/core/types';
+import { Language } from '../types';
 
 const languageToolAdapter = new LanguageToolAdapter();
 
@@ -17,9 +18,19 @@ export class ProofreadingService {
    */
   public static async checkText(
     text: string,
-    language: 'pt' | 'es' | 'en'
+    language: Language | string
   ): Promise<NormalizedProofreadResult> {
-    const langCode = language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es';
+    const langMap: Record<string, string> = {
+      pt: 'pt-BR',
+      en: 'en-US',
+      es: 'es',
+      fr: 'fr',
+      de: 'de-DE',
+      ru: 'ru-RU',
+      nl: 'nl',
+      it: 'it',
+    };
+    const langCode = langMap[language] || 'auto';
     return await languageToolAdapter.execute({
       text,
       language: langCode,

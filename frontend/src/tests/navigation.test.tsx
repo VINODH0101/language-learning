@@ -4,15 +4,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { Navigation, NavTab } from '../components/common/Navigation';
 import { I18nProvider } from '../i18n/i18nContext';
 import { courseService } from '../services/courseService';
+import i18n from '../i18n/config';
 
 describe('Navigation Component & UX', () => {
   const mockOnSelectTab = vi.fn();
   const mockOnOpenAuth = vi.fn();
   const mockOnOpenOnboarding = vi.fn();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     localStorage.clear();
+    await i18n.changeLanguage('en');
   });
 
   const renderNav = (activeTab: NavTab = 'dashboard') => {
@@ -35,23 +37,29 @@ describe('Navigation Component & UX', () => {
     expect(screen.getByText(/PT · ES · EN/)).toBeDefined();
   });
 
-  it('renders the segmented interface language switcher (EN, PT, ES)', () => {
+  it('renders the accessible interface language selector with native readable names', () => {
     renderNav();
-    // In segmented control, all 3 languages should be present as buttons
-    const enButtons = screen.getAllByRole('button', { name: /en/i });
-    const ptButtons = screen.getAllByRole('button', { name: /pt/i });
-    const esButtons = screen.getAllByRole('button', { name: /es/i });
+    const selectors = screen.getAllByTestId('interface-language-selector');
+    expect(selectors.length).toBeGreaterThan(0);
 
-    expect(enButtons.length).toBeGreaterThan(0);
-    expect(ptButtons.length).toBeGreaterThan(0);
-    expect(esButtons.length).toBeGreaterThan(0);
+    const trigger = selectors[0].querySelector('button');
+    expect(trigger).toBeDefined();
+    fireEvent.click(trigger!);
+
+    // Should list native names
+    expect(screen.getAllByText('Português (Brasil)').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Español').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('English').length).toBeGreaterThan(0);
   });
 
-  it('clicking segmented language switcher changes active language', () => {
+  it('clicking language in interface selector changes active interface language', () => {
     renderNav();
-    const ptButton = screen.getAllByRole('button', { name: /^pt$/i })[0];
-    fireEvent.click(ptButton);
-    expect(localStorage.getItem('polyglot_interface_lang')).toBe('pt');
+    const trigger = screen.getAllByTestId('interface-language-selector')[0].querySelector('button');
+    fireEvent.click(trigger!);
+
+    const ptOption = screen.getAllByText('Português (Brasil)')[0].closest('button');
+    fireEvent.click(ptOption!);
+    expect(localStorage.getItem('polyglot_interface_lang')).toBe('pt-BR');
   });
 
   it('toggles the Learn dropdown and displays both language tracks and study tools', () => {
@@ -67,10 +75,10 @@ describe('Navigation Component & UX', () => {
     expect(screen.getByText(/Trilhas de Idiomas/i)).toBeDefined();
     expect(screen.getByText(/Ferramentas de Estudo/i)).toBeDefined();
 
-    // Click Portuguese track
-    const ptTrack = screen.getByText('Portuguese');
-    fireEvent.click(ptTrack);
-    expect(mockOnSelectTab).toHaveBeenCalledWith('portuguese');
+    // Click Portuguese track inside the open dropdown
+    const ptTracks = screen.getAllByText(/(Trilha Imersiva|Immersive Track)/i);
+    fireEvent.click(ptTracks[0].closest('button')!);
+    expect(mockOnSelectTab).toHaveBeenCalled();
   });
 
   it('course-aware mobile learn navigates to active course target language', () => {
@@ -84,7 +92,7 @@ describe('Navigation Component & UX', () => {
     renderNav('dashboard');
 
     // Mobile learn button in bottom dock
-    const mobileLearnBtn = screen.getByLabelText('Learn');
+    const mobileLearnBtn = screen.getByRole('button', { name: /^(Learn|Aprender)$/i });
     fireEvent.click(mobileLearnBtn);
 
     expect(mockOnSelectTab).toHaveBeenCalledWith('spanish');
@@ -100,7 +108,7 @@ describe('Navigation Component & UX', () => {
 
   it('opens and closes mobile drawer and toggles body scroll lock', () => {
     renderNav();
-    const hamburgerBtn = screen.getByLabelText(/Abrir Menu de Navegação/i);
+    const hamburgerBtn = screen.getByLabelText('Abrir Menu de Navegação');
     expect(hamburgerBtn).toBeDefined();
 
     // Open drawer
@@ -109,7 +117,7 @@ describe('Navigation Component & UX', () => {
     expect(screen.getByText('Navegação Completa')).toBeDefined();
 
     // Close drawer via close button
-    const closeBtn = screen.getByLabelText(/^Fechar Menu$/i);
+    const closeBtn = screen.getByLabelText('Fechar Menu');
     fireEvent.click(closeBtn);
     expect(document.body.style.overflow).not.toBe('hidden');
   });

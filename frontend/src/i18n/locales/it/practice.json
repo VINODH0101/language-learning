@@ -1,0 +1,15 @@
+{
+  "title": "Pratica e Ripetizione Spaziata",
+  "subtitle": "Rafforza il lessico con l'algoritmo SM-2, quiz ed esercizi grammaticali",
+  "tab_sm2": "Schede SM-2",
+  "tab_multiple_choice": "Scelta Multipla",
+  "tab_cloze": "Testo a Buchi",
+  "tab_mistakes": "Quaderno degli Errori",
+  "rating_again": "Di nuovo (1)",
+  "rating_hard": "Difficile (3)",
+  "rating_good": "Buono (4)",
+  "rating_easy": "Facile (5)",
+  "session_reviewed": "{{count}} schede completate",
+  "cards_remaining": "{{count}} rimanenti",
+  "all_caught_up": "Tutto in ordine! Nessuna scheda da ripassare adesso."
+}

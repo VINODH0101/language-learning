@@ -25,10 +25,26 @@ from engine.core import PolyglotEngine
 
 
 def test_language_enums_and_varieties_exist():
-    # Learning Languages
+    # Learning Languages - All 13 supported languages
     assert Language.PORTUGUESE == "pt"
     assert Language.SPANISH == "es"
     assert Language.ENGLISH == "en"
+    assert Language.FRENCH == "fr"
+    assert Language.GERMAN == "de"
+    assert Language.ITALIAN == "it"
+    assert Language.JAPANESE == "ja"
+    assert Language.KOREAN == "ko"
+    assert Language.RUSSIAN == "ru"
+    assert Language.DUTCH == "nl"
+    assert Language.CHINESE == "zh"
+    assert Language.TURKISH == "tr"
+    assert Language.TAMIL == "ta"
+
+    # Strict invariant: Hindi MUST NOT be included
+    all_language_codes = [lang.value for lang in Language]
+    assert "hi" not in all_language_codes
+    assert "hin" not in all_language_codes
+    assert len(all_language_codes) == 13
 
     # Interface Languages
     assert InterfaceLanguage.EN == "en"
@@ -40,9 +56,13 @@ def test_language_enums_and_varieties_exist():
     assert ExplanationLanguage.PT == "pt"
     assert ExplanationLanguage.ES == "es"
 
-    # Regional Varieties for English
+    # Regional Varieties for English, Portuguese, French, Chinese, Tamil
     assert RegionalVariety.EN_US == "en-US"
     assert RegionalVariety.EN_GB == "en-GB"
+    assert RegionalVariety.PT_BR == "pt-BR"
+    assert RegionalVariety.PT_PT == "pt-PT"
+    assert RegionalVariety.ZH_HANS == "zh-Hans"
+    assert RegionalVariety.TA_IN == "ta-IN"
 
 
 def test_regional_variety_scoping_rules():

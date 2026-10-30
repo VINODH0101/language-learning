@@ -29,6 +29,7 @@ import { PracticeQuiz } from '../components/vocabulary/PracticeQuiz';
 import { DownloadPdfDialog } from '../components/vocabulary/DownloadPdfDialog';
 import { EmptyState } from '../components/common/EmptyState';
 import { LiveDictionaryLookup } from '../components/vocabulary/LiveDictionaryLookup';
+import { VocabularyExplorer } from '../features/vocabulary/VocabularyExplorer';
 import { courseService } from '../services/courseService';
 import { useI18n } from '../i18n/i18nContext';
 
@@ -194,8 +195,8 @@ export const VocabularyPage: React.FC = () => {
               : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
           }`}
         >
-          <BookOpen className="w-4 h-4" />
-          <span>Dicionário Aberto & Free Dict</span>
+          <Search className="w-4 h-4" />
+          <span>Explorador de Vocabulário</span>
         </button>
       </div>
 
@@ -322,7 +323,7 @@ export const VocabularyPage: React.FC = () => {
 
       {/* Main Viewport Content based on Active Tab */}
       {activeTab === 'live_dict' ? (
-        <LiveDictionaryLookup targetLang={targetLang} />
+        <VocabularyExplorer targetLang={targetLang} explanationLang={explanationLang} />
       ) : activeTab === 'practice' ? (
         <div className="space-y-6">
           {/* Practice Mode Switcher */}

@@ -2,7 +2,20 @@
  * Domain TypeScript interfaces for Polyglot C1 Daily frontend.
  */
 
-export type Language = 'pt' | 'es' | 'en';
+export type Language =
+  | 'en'
+  | 'pt'
+  | 'es'
+  | 'fr'
+  | 'de'
+  | 'it'
+  | 'ja'
+  | 'ko'
+  | 'ru'
+  | 'nl'
+  | 'zh'
+  | 'tr'
+  | 'ta';
 
 export type RegionalVariety =
   | 'pt-BR'
@@ -13,9 +26,42 @@ export type RegionalVariety =
   | 'es-AR'
   | 'en-US'
   | 'en-GB'
+  | 'fr-FR'
+  | 'fr-CA'
+  | 'de-DE'
+  | 'de-AT'
+  | 'de-CH'
+  | 'it-IT'
+  | 'ja-JP'
+  | 'ko-KR'
+  | 'ru-RU'
+  | 'nl-NL'
+  | 'nl-BE'
+  | 'zh-Hans'
+  | 'zh-CN'
+  | 'tr-TR'
+  | 'ta-IN'
+  | 'ta-LK'
   | 'all';
 
 export type ExplanationLanguage = 'en' | 'pt' | 'es';
+
+export type InterfaceLanguage =
+  | 'en'
+  | 'pt'
+  | 'pt-BR'
+  | 'pt-PT'
+  | 'es'
+  | 'fr'
+  | 'de'
+  | 'it'
+  | 'ja'
+  | 'ko'
+  | 'ru'
+  | 'nl'
+  | 'zh-Hans'
+  | 'tr'
+  | 'ta';
 
 export type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
@@ -123,7 +169,21 @@ export interface DialogueScenario {
   vocabulary: Array<{ term: string; meaning: string; usage_note?: string }>;
 }
 
-export type ExerciseType = 'cloze' | 'multiple_choice' | 'reorder' | 'error_correction' | 'translation';
+export type ExerciseType =
+  | 'cloze'
+  | 'multiple_choice'
+  | 'reorder'
+  | 'error_correction'
+  | 'translation'
+  | 'matching'
+  | 'listening_comprehension'
+  | 'reading_comprehension'
+  | 'grammar_correction'
+  | 'writing_response'
+  | 'conversation_response'
+  | 'pronunciation_practice';
+
+export * from './contentEngine';
 
 export type MasteryStatus = 'unseen' | 'presented' | 'learning' | 'reviewing' | 'mastered';
 
@@ -343,10 +403,10 @@ export interface UserProfile {
   full_name: string;
   role: UserRole;
   account_status: AccountStatus;
-  native_language: 'pt' | 'es' | 'en';
-  primary_target_language: 'en' | 'pt' | 'es';
-  interface_language: 'en' | 'pt' | 'es';
-  explanation_language: 'en' | 'pt' | 'es';
+  native_language: Language | string;
+  primary_target_language: Language;
+  interface_language: InterfaceLanguage;
+  explanation_language: ExplanationLanguage;
   pt_variety: 'pt-BR' | 'pt-PT';
   es_variety: 'es-ES' | 'es-419' | 'es-MX' | 'es-AR';
   study_mode: StudyMode;
@@ -355,6 +415,7 @@ export interface UserProfile {
   onboarding_completed: boolean;
   email_daily_lesson_opt_in: boolean;
   email_notifications_enabled: boolean;
+  avatar_url?: string;
   created_at: string;
   last_active_at?: string;
   total_lessons_completed?: number;
@@ -378,13 +439,13 @@ export interface UserSettings {
   user_id: string;
   full_name: string;
   email: string;
-  native_language: 'pt' | 'es' | 'en';
-  primary_target_language: 'en' | 'pt' | 'es';
+  native_language: Language | string;
+  primary_target_language: Language;
   pt_variety: 'pt-BR' | 'pt-PT';
   es_variety: 'es-ES' | 'es-419' | 'es-MX' | 'es-AR';
   en_variety?: 'en-US' | 'en-GB';
-  explanation_language?: 'en' | 'pt' | 'es';
-  interface_language?: 'en' | 'pt' | 'es';
+  explanation_language?: ExplanationLanguage;
+  interface_language?: InterfaceLanguage;
   study_mode: StudyMode;
   target_timezone: string;
   preferred_delivery_hour_utc: number;
@@ -398,8 +459,8 @@ export interface SavedTranslationBookmark {
   id: string;
   source_text: string;
   translated_text: string;
-  source_lang: 'pt' | 'es' | 'en';
-  target_lang: 'pt' | 'es' | 'en';
+  source_lang: Language | string;
+  target_lang: Language | string;
   provider_used: string;
   is_verified: boolean;
   notes?: string;

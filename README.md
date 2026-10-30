@@ -1,11 +1,12 @@
 # Lexilume — Illuminate Your Words
 
 [![License: CC-BY-4.0](https://img.shields.io/badge/License-CC_BY_4.0-blue.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![Tests: 98 Python passing](https://img.shields.io/badge/Python_Tests-98_passing-success.svg)](#testing)
-[![Tests: 136 Vitest passing](https://img.shields.io/badge/Vitest_Tests-136_passing-success.svg)](#testing)
-[![Zero-Cost Guarantee](https://img.shields.io/badge/Stack-100%25_Free_Tier-emerald.svg)](#free-tier-operational-guarantees)
+[![Tests: 100 Python passing](https://img.shields.io/badge/Python_Tests-100_passing-success.svg)](#testing)
+[![Tests: 254 Vitest passing](https://img.shields.io/badge/Vitest_Tests-254_passing-success.svg)](#testing)
+[![Zero-Paid AI Guarantee](https://img.shields.io/badge/Stack-Zero_Paid_APIs-emerald.svg)](#zero-paid-ai-invariants)
+[![Production Domain](https://img.shields.io/badge/Production-lexi.monster-indigo.svg)](https://lexi.monster)
 
-**Lexilume** is an AI-powered multilingual learning platform for vocabulary mastery, daily lessons, reading comprehension, translation, grammar, spaced repetition, and personalized language development across Portuguese, Spanish, and English (CEFR A1–C1).
+**Lexilume** is a high-caliber multilingual language learning platform designed for structured vocabulary mastery, daily pedagogical lessons, reading comprehension, contextual translation, grammar acquisition, spaced repetition (SM-2), and real-world interactive learning across 15 supported languages and regional varieties.
 
 The application requires **zero paid runtime AI APIs**, operates seamlessly offline via local-first Dexie/IndexedDB persistence, and runs within perpetual free-tier infrastructure.
 
@@ -13,16 +14,27 @@ The application requires **zero paid runtime AI APIs**, operates seamlessly offl
 
 ## Architecture Highlights
 
-- **Multilingual Progression (A1 → C1)**: Structured progression graphs for Portuguese (BR/PT), Spanish (ES/419/MX/AR), and English (US/GB) with strict 4-way language decoupling (Interface, Learning, Explanation, Variety).
-- **Date-Seeded Dynamic Rotation Engine**: Lessons advance deterministically with the calendar day, rotating vocabulary batches, authentic situational dialogues (Travel, Work, Executive Interview), and reading passages daily.
+- **Multilingual Support Across 15 Languages**: Complete curriculum and capability configurations for English (`en`), Portuguese (`pt`, `pt-BR`, `pt-PT`), Spanish (`es`, `es-ES`, `es-419`, `es-MX`, `es-AR`), French (`fr`, `fr-FR`, `fr-CA`), German (`de`, `de-DE`, `de-AT`, `de-CH`), Italian (`it`, `it-IT`), Japanese (`ja`, `ja-JP`), Korean (`ko`, `ko-KR`), Russian (`ru`, `ru-RU`), Dutch (`nl`, `nl-NL`, `nl-BE`), Mandarin Chinese (`zh`, `zh-Hans`, `zh-CN`), Turkish (`tr`, `tr-TR`), and Tamil (`ta`, `ta-IN`, `ta-LK`). *(Hindi is explicitly excluded platform-wide).*
+- **Strict 4-Way Linguistic Decoupling**: Independent dimensions for `interface_language`, `learning_language`, `explanation_language`, and `regional_variety`. Changing interface language never alters study tracks or resets learner progress.
+- **Complete Local UI Internationalization (i18n)**: 15 interface locales across 9 functional namespaces (135 local JSON bundles) bundled directly into the application with zero paid translation runtime overhead.
 - **Deterministic 12-Section Daily Lessons**: Each lesson includes learning objectives, active vocabulary, grammar rules with structural formulas, reading comprehension, pragmatic conversation scripts, speaking prompts, writing guidelines, listening comprehension, contextual exercises with distractor feedback, spaced repetition reviews, and open resources.
 - **SuperMemo-2 (SM-2) Spaced Repetition**: Distinguishes `presented` vocabulary from `mastered` items ($\ge 5$ consecutive successful reviews and $\ge 21$-day interval).
-- **Interlinguistic False Friends Engine**: Detects and alerts learners to critical cross-language false cognates (*esquisito*, *polvo*, *presunto*, *borracha*, etc.).
-- **Central External API Integration Layer**: Modular, rate-limited, and cached adapters for free dictionary and language tools, transparently enriched and cached in IndexedDB.
-- **Automated Email Digest & Batch Pipeline**: Scheduled daily delivery via **GitHub Actions** and **Resend** or transactional **SMTP**.
-- **Idempotency & Deduplication**: Database-backed delivery ledger and SHA-256 content fingerprints prevent duplicate sends or double-advancing curriculum state on job retries.
-- **Accessible Responsive Web Client**: Single Page Application built with React 19, TypeScript, and Tailwind CSS v4, deployable statically to Cloudflare Pages.
-- **Trilingual Translation & Lexicon**: Bidirectional dictionary search (PT ↔ EN, ES ↔ EN, EN ↔ PT/ES), native text-to-speech, contextual exercises, and personal bookmarking.
+- **Lexilume World (Real-World Learning Layer)**: Contextual learning powered by free open APIs: Open-Meteo (Weather & AQI), Nager.Date (Global Cultural Calendar), Frankfurter (ECB currency exchange math drills), and REST Countries.
+- **Dual-Tier Offline Persistence**: Authoritative Supabase PostgreSQL cloud sync for authenticated users paired with Dexie / IndexedDB for offline learning, local mistake notebooks, and mutation queue replay (`SyncEngine`).
+- **Zero-Paid AI Invariant**: All core learning runs offline with curated open educational datasets (Wiktionary, Tatoeba, Openverse). Optional Google Gemini integration operates strictly with full deterministic rule-based fallbacks across all error states.
+
+---
+
+## Release Documentation
+
+Detailed technical audits and operational verifications are documented in `docs/release/`:
+- [Final QA & Production Readiness Report](docs/release/FINAL_QA_REPORT.md)
+- [Security & Privacy Audit Report](docs/release/SECURITY_REPORT.md)
+- [Performance & Bundle Optimization Report](docs/release/PERFORMANCE_REPORT.md)
+- [External Free API Verification Report](docs/release/API_VERIFICATION_REPORT.md)
+- [Multilingual Language Coverage Report](docs/release/LANGUAGE_COVERAGE_REPORT.md)
+- [Database Persistence & Schema Report](docs/release/DATABASE_VERIFICATION_REPORT.md)
+- [Known Limitations & Considerations](docs/release/KNOWN_LIMITATIONS.md)
 
 ---
 
@@ -44,99 +56,80 @@ The application requires **zero paid runtime AI APIs**, operates seamlessly offl
 │   └── translation/            # Modular translation providers, LRU cache & quota guard
 ├── frontend/                   # React 19 + TypeScript + Vite + Tailwind CSS v4
 │   ├── src/                    # Components, pages, services, types & tests
-│   └── public/                 # Static assets, _redirects, _headers
+│   │   ├── config/             # Language registries, capabilities & CEFR bounds
+│   │   ├── features/           # Dashboard, CourseView (4 stages), Vocabulary
+│   │   ├── i18n/               # i18next config, 15-locale dropdown & 135 resource bundles
+│   │   ├── integrations/       # External free API adapters (MyMemory, Tatoeba, etc.)
+│   │   └── services/           # Dexie localDb, SyncEngine, SRS, Speech
+│   └── public/                 # Static assets, 200.html SPA routing
 ├── scripts/                    # Operational automation CLI scripts
 │   ├── run_daily_batch.py      # Daily batch lesson generation & email delivery
 │   ├── retention_cleanup.py    # Storage retention & account lifecycle pruning
 │   └── backup_restore.py       # Essential progress export and restoration
-├── supabase/migrations/        # Relational schema DDL & Row-Level Security
+├── supabase/migrations/        # Relational schema DDL & Row-Level Security (001 to 010)
 │   ├── 001_initial_schema.sql  # Core tables & foreign key constraints
 │   ├── 002_rls_policies.sql    # Row-Level Security isolation policies
-│   ├── 003_email_and_retention.sql # Delivery ledger & cleanup audit logs
-│   ├── 004_minimal_wikipedia_assignments.sql # Minimal daily reading assignments
-│   ├── 005_language_directions_and_saved_translations.sql # Trilingual directions & bookmarks
-│   ├── 009_schema_reconciliation_and_sync.sql # Schema reconciliation, sync & RLS
+│   ├── 007_multiple_courses_and_progress_isolation.sql # Course isolation
+│   ├── 010_database_persistence_and_sync_repair.sql   # Reconciled sync & RLS
 │   └── rollback/               # Reversible migration rollback scripts
-├── tests/                      # Python pytest automated test suite (98 tests)
-├── docs/                       # Architectural guides & deep-dives
-│   ├── PROJECT_AUDIT.md        # Comprehensive architecture & security audit
-│   ├── DESIGN_SYSTEM.md        # UI/UX design tokens, typography & component inventory
-│   ├── MULTILINGUAL_MATRIX.md  # 4-way language decoupling & 9 direction matrix
-│   ├── CONTENT_AUTHORING.md    # Pedagogical content authoring guidelines
-│   ├── EXTERNAL_API_INTEGRATION.md # Central API integration layer & adapters
-│   └── SOURCE_ADAPTERS.md      # Python core content source adapters
-├── AGENTS.md                   # AI coding agent ground-truth instructions & invariants
-├── ARCHITECTURE.md             # Core system architecture & principles
-├── DATA_MODEL.md               # PostgreSQL schema & entity-relationship specifications
-├── ENGINEERING_SPEC.md         # Master engineering & pedagogical specification
-├── API_CATALOG.md              # External API specifications & rate limits
-├── DATA_LICENSES.md            # Provenance & content licensing compliance
-├── DEPLOYMENT.md               # Production deployment step-by-step guide
-├── ENVIRONMENT_VARIABLES.md    # Environment variable reference
-├── SECURITY.md                 # Security architecture & credential boundaries
-├── BACKUP_AND_RECOVERY.md      # Disaster recovery & backup procedures
-├── OPERATIONS_RUNBOOK.md       # Operational runbook & troubleshooting
-└── COST_AND_LIMITS.md          # Free-tier quotas, limits, and cost audit
+├── tests/                      # Python pytest automated test suite (101 tests)
+└── docs/                       # Architectural guides & release reports
+    └── release/                # Production release certification reports
 ```
 
 ---
 
-## Quickstart
+## Quickstart & Verification
 
 ### Prerequisites
 - Python 3.12+
 - Node.js v20+ / v24+ and npm
 
-### 1. Python Engine Setup
+### 1. Python Engine Verification
 ```bash
 # Clone the repository
-git clone https://github.com/polyglot-c1-daily/language-learning.git
+git clone https://github.com/VINODH0101/language-learning.git
 cd language-learning
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run Python verification tests (78 tests)
+# Run Python verification tests (100 passed, 1 skipped)
 python -m pytest tests/ -v
 ```
 
-### 2. Frontend Dashboard Setup
+### 2. Frontend Verification & Build
 ```bash
-cd frontend
-npm install
+# Run all frontend unit and integration tests (254 passed)
+npm --prefix frontend test -- --run
 
-# Run frontend unit tests (98 tests)
-npx vitest run
+# Run linter verification (0 errors)
+npm --prefix frontend run lint
 
-# Run production build
-npm run build
+# Compile production bundle (TypeScript & Vite)
+npm --prefix frontend run build
 
 # Start local development server
-npm run dev
-```
-
-### 3. Running Daily Lesson Batch (Dry-Run)
-```bash
-# Execute dry-run batch simulation (zero external mutations)
-python scripts/run_daily_batch.py --dry-run
+npm --prefix frontend run dev
 ```
 
 ---
 
-## Testing Verification
+## Verification Test Summary
 
-| Test Suite | Scope | Tests | Result | Execution Time |
+| Test Suite | Scope | Total Tests | Verified Result | Execution Time |
 | :--- | :--- | :--- | :--- | :--- |
-| **Backend Pytest** | Curriculum, SM-2, generators, sources, email, security, decoupling, migrations | 82 | **100% Passed** | ~6.25s |
-| **Frontend Vitest** | SM-2 client, local storage, dynamic rotation, external APIs, culture, vocab, 4-way decoupling, navigation UX | 132+ | **100% Passed** | All 19 suites |
-| **Vite Production Build** | TypeScript strict checks & CSS compilation (`tsc -b && vite build`) | — | **0 Errors** | Production Ready |
+| **Frontend Vitest** | 4-way decoupling, 15-locale i18n, Dexie localDb, SyncEngine, SM-2, UX redesign, Lexilume World, API adapters | 254 | **254 Passed / 0 Failed (100%)** | ~24.2s |
+| **Python Pytest** | Curriculum syllabi, SM-2 engine, source adapters, SQL migrations 001-010, input sanitization, PII scrubbing | 101 | **100 Passed, 1 Skipped / 0 Failed** | ~8.1s |
+| **Production Build** | TypeScript strict checks & Vite production compilation (`tsc -b && vite build`) | 2,707 modules | **Exit code 0 (Gzip: ~778 kB)** | ~31.1s |
+| **Linter (Oxlint)** | Syntax, hook ordering, unused imports, React rules | 264 files | **0 Errors, 342 Warnings** | ~170ms |
 
 ---
 
 ## Free-Tier Operational Guarantees
 
-Lexilume is designed specifically to run indefinitely on perpetual free tiers:
-1. **Supabase PostgreSQL**: 500 MB database allowance with 8 migrations and strict RLS. Daily batch jobs prevent the 7-day inactivity pause.
-2. **GitHub Actions**: Consumes ~60 minutes/month out of 2,000 free minutes/month (3% usage).
-3. **Cloudflare Pages**: Static SPA hosting with unlimited bandwidth and 500 free builds/month.
-4. **Resend**: 100 free emails/day and 3,000/month for personal learner accounts. Fallback to standard SMTP (Gmail App Password) supported.
+Lexilume operates indefinitely within perpetual free tiers:
+1. **Supabase PostgreSQL**: 500 MB database allowance with 10 migrations and strict RLS. Daily batch jobs prevent inactivity pauses.
+2. **Cloudflare Pages**: Static SPA deployment with unlimited bandwidth and edge delivery (`lexi.monster`).
+3. **GitHub Actions**: Consumes ~60 minutes/month out of 2,000 free minutes/month (3% usage).
+4. **Free Open APIs**: MyMemory, Tatoeba, Wiktionary, Open-Meteo, Nager.Date, Frankfurter, and Cloudflare Turnstile operate without paid credit card requirements.

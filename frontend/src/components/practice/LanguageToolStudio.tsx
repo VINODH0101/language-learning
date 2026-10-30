@@ -23,7 +23,7 @@ export const LanguageToolStudio: React.FC<LanguageToolStudioProps> = ({ language
   const [result, setResult] = useState<NormalizedProofreadResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const sampleTexts: Record<Language, string> = {
+  const sampleTexts: Partial<Record<Language, string>> = {
     pt: 'Nós foi ao mercado e comprou duas maçãs maçãs ontem.',
     es: 'Yo sabo que los ninos juega en el parque.',
     en: 'She do not knows the the answer for this question.',
@@ -63,7 +63,7 @@ export const LanguageToolStudio: React.FC<LanguageToolStudioProps> = ({ language
   };
 
   const handleUseSample = () => {
-    setText(sampleTexts[language]);
+    setText(sampleTexts[language] || '');
     setResult(null);
     setErrorMsg(null);
   };

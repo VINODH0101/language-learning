@@ -1,0 +1,15 @@
+{
+  "title": "练习与间隔重复",
+  "subtitle": "借助SM-2算法、互动练习与语法强化巩固长期记忆",
+  "tab_sm2": "SM-2 闪卡",
+  "tab_multiple_choice": "单项选择",
+  "tab_cloze": "完形填空",
+  "tab_mistakes": "错题本",
+  "rating_again": "重来 (1)",
+  "rating_hard": "困难 (3)",
+  "rating_good": "良好 (4)",
+  "rating_easy": "简单 (5)",
+  "session_reviewed": "已复习 {{count}} 张卡片",
+  "cards_remaining": "剩余 {{count}} 张",
+  "all_caught_up": "全部搞定！当前没有需要复习的卡片。"
+}

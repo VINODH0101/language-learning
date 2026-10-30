@@ -23,9 +23,9 @@ export const VocabularyCard: React.FC<VocabularyCardProps> = ({
   const [isTranslationVisible, setIsTranslationVisible] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
 
-  const translation = entry.translations[explanationLanguage] || entry.translations['en'];
-  const definition = entry.definitions[explanationLanguage] || entry.definitions['en'];
-  const exampleTranslation = entry.example_sentence_translations[explanationLanguage] || entry.example_sentence_translations['en'];
+  const translation = entry.translations[explanationLanguage] || entry.translations['en'] || '';
+  const definition = entry.definitions[explanationLanguage] || entry.definitions['en'] || '';
+  const exampleTranslation = entry.example_sentence_translations[explanationLanguage] || entry.example_sentence_translations['en'] || '';
 
   const handleSave = async () => {
     try {

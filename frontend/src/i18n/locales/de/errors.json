@@ -1,0 +1,7 @@
+{
+  "offline_title": "Du bist offline",
+  "offline_desc": "Lexilume funktioniert komplett offline! Deine Wiederholungen und Fortschritte werden lokal gespeichert und synchronisiert, sobald du wieder online bist.",
+  "network_error": "Server nicht erreichbar. Bitte überprüfe deine Internetverbindung.",
+  "provider_unavailable": "Der externe Dienst ist vorübergehend nicht erreichbar. Lokale Daten werden genutzt.",
+  "unknown_error": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut."
+}

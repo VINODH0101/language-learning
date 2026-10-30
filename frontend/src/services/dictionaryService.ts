@@ -5,12 +5,16 @@
 
 import { FreeDictionaryAdapter } from '../integrations/external-apis/adapters/free-dictionary/FreeDictionaryAdapter';
 import { DicionarioAbertoAdapter } from '../integrations/external-apis/adapters/dicionario-aberto/DicionarioAbertoAdapter';
+import { DictionaryManager } from './providers/dictionary/dictionaryManager';
 import { NormalizedDictionaryEntry } from '../integrations/external-apis/core/types';
 import { esVocabulary } from '../data/seedData';
 import { trilingualDictionary } from '../data/translationData';
 
+import { Language } from '../types';
+
 const freeDictAdapter = new FreeDictionaryAdapter();
 const dicionarioAbertoAdapter = new DicionarioAbertoAdapter();
+const dictionaryManager = DictionaryManager.getInstance();
 
 export class DictionaryService {
   /**
@@ -18,7 +22,7 @@ export class DictionaryService {
    */
   public static async lookup(
     word: string,
-    language: 'en' | 'pt' | 'es'
+    language: Language | string
   ): Promise<NormalizedDictionaryEntry> {
     const cleanWord = word.trim();
     if (!cleanWord) {
@@ -33,58 +37,63 @@ export class DictionaryService {
       return await dicionarioAbertoAdapter.execute({ word: cleanWord, language: 'pt' });
     }
 
-    // Spanish Lookup: curated seed data + trilingual dictionary
-    const q = cleanWord.toLowerCase();
-    const esMatch = esVocabulary.find(v => v.lemma.toLowerCase() === q);
-    if (esMatch) {
-      return {
-        word: esMatch.lemma,
-        language: 'es',
-        phonetic: esMatch.phonetic_ipa,
-        meanings: [
-          {
-            partOfSpeech: esMatch.part_of_speech,
-            definitions: [
-              esMatch.definition_target,
-              esMatch.definition_en ? `EN: ${esMatch.definition_en}` : '',
-            ].filter(Boolean),
-            examples: [esMatch.example_sentence_target],
-          },
-        ],
-        provider: 'curated-es-seed',
-      };
+    if (language === 'es') {
+      // Spanish Lookup: curated seed data + trilingual dictionary
+      const q = cleanWord.toLowerCase();
+      const esMatch = esVocabulary.find(v => v.lemma.toLowerCase() === q);
+      if (esMatch) {
+        return {
+          word: esMatch.lemma,
+          language: 'es',
+          phonetic: esMatch.phonetic_ipa,
+          meanings: [
+            {
+              partOfSpeech: esMatch.part_of_speech,
+              definitions: [esMatch.definition_target, esMatch.definition_en].filter(Boolean),
+              examples: [esMatch.example_sentence_target].filter(Boolean),
+            },
+          ],
+          provider: 'curated_seed',
+        };
+      }
+
+      const triMatch = trilingualDictionary.find(d => d.spanish.toLowerCase() === q);
+      if (triMatch) {
+        return {
+          word: triMatch.spanish,
+          language: 'es',
+          phonetic: triMatch.phonetic_es,
+          meanings: [
+            {
+              partOfSpeech: triMatch.part_of_speech,
+              definitions: [
+                `Inglês: ${triMatch.english}`,
+                `Português: ${triMatch.portuguese}`,
+              ],
+              examples: [triMatch.example_es].filter(Boolean),
+            },
+          ],
+          provider: 'trilingual_dictionary',
+        };
+      }
     }
 
-    const triMatch = trilingualDictionary.find(t => t.spanish.toLowerCase() === q);
-    if (triMatch) {
+    // Comprehensive Kaikki/Wiktionary lookup for all supported languages
+    try {
+      return await dictionaryManager.lookup(cleanWord, language);
+    } catch {
       return {
-        word: triMatch.spanish,
-        language: 'es',
-        phonetic: triMatch.phonetic_en,
+        word: cleanWord,
+        language: language as string,
         meanings: [
           {
-            partOfSpeech: triMatch.part_of_speech,
-            definitions: [
-              `PT: ${triMatch.portuguese}`,
-              `EN: ${triMatch.english}`,
-            ],
-            examples: [triMatch.example_es],
+            partOfSpeech: 'termo',
+            definitions: [`Definição contextual para "${cleanWord}" (${language})`],
+            examples: [],
           },
         ],
-        provider: 'curated-es-seed',
+        provider: 'fallback',
       };
     }
-
-    return {
-      word: cleanWord,
-      language: 'es',
-      meanings: [
-        {
-          partOfSpeech: 'termo',
-          definitions: [`Termo registrado em espanhol. Consulte frases de exemplo no módulo de prática.`],
-        },
-      ],
-      provider: 'fallback',
-    };
   }
 }

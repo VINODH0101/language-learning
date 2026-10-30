@@ -8,6 +8,7 @@ import {
   Language,
   SavedTranslationBookmark,
 } from '../types';
+import { syncEngine } from './syncEngine';
 
 const STORAGE_KEYS = {
   SETTINGS: 'polyglot_settings',
@@ -171,7 +172,8 @@ export class StorageService {
   }
 
   static saveSRSItem(item: SRSItemState, userId?: string): void {
-    const items = this.getSRSItems(undefined, userId);
+    const uid = userId || this.currentUserId;
+    const items = this.getSRSItems(undefined, uid);
     const idx = items.findIndex(i => i.vocabulary_item_id === item.vocabulary_item_id);
     if (idx >= 0) {
       items[idx] = item;
@@ -179,9 +181,12 @@ export class StorageService {
       items.push(item);
     }
     try {
-      localStorage.setItem(this.getKey(STORAGE_KEYS.SRS_ITEMS, userId), JSON.stringify(items));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.SRS_ITEMS, uid), JSON.stringify(items));
     } catch (e) {
       console.warn('Error saving SRS items', e);
+    }
+    if (uid && uid !== 'guest') {
+      syncEngine.queueAction('SYNC_SRS_REVIEW', item, uid).catch(() => {});
     }
   }
 
@@ -196,14 +201,18 @@ export class StorageService {
   }
 
   static saveExerciseAttempt(attempt: ExerciseAttempt, userId?: string): void {
-    const attempts = this.getExerciseAttempts(userId);
+    const uid = userId || this.currentUserId;
+    const attempts = this.getExerciseAttempts(uid);
     attempts.unshift(attempt);
     // Keep last 100 attempts
     const trimmed = attempts.slice(0, 100);
     try {
-      localStorage.setItem(this.getKey(STORAGE_KEYS.ATTEMPTS, userId), JSON.stringify(trimmed));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.ATTEMPTS, uid), JSON.stringify(trimmed));
     } catch (e) {
       console.warn('Error saving exercise attempt', e);
+    }
+    if (uid && uid !== 'guest') {
+      syncEngine.queueAction('SYNC_EXERCISE_ATTEMPT', attempt, uid).catch(() => {});
     }
   }
 

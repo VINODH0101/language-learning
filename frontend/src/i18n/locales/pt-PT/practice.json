@@ -1,0 +1,15 @@
+{
+  "title": "Prática e Recordação Espaçada",
+  "subtitle": "Reforce o vocabulário com o algoritmo SM-2, quizzes e desafios gramaticais",
+  "tab_sm2": "Cartões SM-2",
+  "tab_multiple_choice": "Múltipla Escolha",
+  "tab_cloze": "Lacunas e Correção",
+  "tab_mistakes": "Caderno de Erros",
+  "rating_again": "Errei (1)",
+  "rating_hard": "Difícil (3)",
+  "rating_good": "Bom (4)",
+  "rating_easy": "Fácil (5)",
+  "session_reviewed": "{{count}} cartões avaliados",
+  "cards_remaining": "{{count}} restantes",
+  "all_caught_up": "Tudo em dia! Nenhum cartão pendente de revisão neste momento."
+}

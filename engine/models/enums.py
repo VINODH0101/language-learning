@@ -8,6 +8,16 @@ class Language(str, Enum):
     PORTUGUESE = "pt"
     SPANISH = "es"
     ENGLISH = "en"
+    FRENCH = "fr"
+    GERMAN = "de"
+    ITALIAN = "it"
+    JAPANESE = "ja"
+    KOREAN = "ko"
+    RUSSIAN = "ru"
+    DUTCH = "nl"
+    CHINESE = "zh"
+    TURKISH = "tr"
+    TAMIL = "ta"
 
 
 class InterfaceLanguage(str, Enum):
@@ -34,6 +44,32 @@ class RegionalVariety(str, Enum):
     # English varieties
     EN_US = "en-US"  # American English
     EN_GB = "en-GB"  # British English
+    # French varieties
+    FR_FR = "fr-FR"
+    FR_CA = "fr-CA"
+    # German varieties
+    DE_DE = "de-DE"
+    DE_AT = "de-AT"
+    DE_CH = "de-CH"
+    # Italian varieties
+    IT_IT = "it-IT"
+    # Japanese varieties
+    JA_JP = "ja-JP"
+    # Korean varieties
+    KO_KR = "ko-KR"
+    # Russian varieties
+    RU_RU = "ru-RU"
+    # Dutch varieties
+    NL_NL = "nl-NL"
+    NL_BE = "nl-BE"
+    # Chinese varieties
+    ZH_HANS = "zh-Hans"
+    ZH_CN = "zh-CN"
+    # Turkish varieties
+    TR_TR = "tr-TR"
+    # Tamil varieties
+    TA_IN = "ta-IN"
+    TA_LK = "ta-LK"
     ALL = "all"
 
 
@@ -47,12 +83,32 @@ REGIONAL_VARIETIES_BY_LANGUAGE: Dict[Language, List[RegionalVariety]] = {
         RegionalVariety.ALL,
     ],
     Language.ENGLISH: [RegionalVariety.EN_US, RegionalVariety.EN_GB, RegionalVariety.ALL],
+    Language.FRENCH: [RegionalVariety.FR_FR, RegionalVariety.FR_CA, RegionalVariety.ALL],
+    Language.GERMAN: [RegionalVariety.DE_DE, RegionalVariety.DE_AT, RegionalVariety.DE_CH, RegionalVariety.ALL],
+    Language.ITALIAN: [RegionalVariety.IT_IT, RegionalVariety.ALL],
+    Language.JAPANESE: [RegionalVariety.JA_JP, RegionalVariety.ALL],
+    Language.KOREAN: [RegionalVariety.KO_KR, RegionalVariety.ALL],
+    Language.RUSSIAN: [RegionalVariety.RU_RU, RegionalVariety.ALL],
+    Language.DUTCH: [RegionalVariety.NL_NL, RegionalVariety.NL_BE, RegionalVariety.ALL],
+    Language.CHINESE: [RegionalVariety.ZH_HANS, RegionalVariety.ZH_CN, RegionalVariety.ALL],
+    Language.TURKISH: [RegionalVariety.TR_TR, RegionalVariety.ALL],
+    Language.TAMIL: [RegionalVariety.TA_IN, RegionalVariety.TA_LK, RegionalVariety.ALL],
 }
 
 DEFAULT_REGIONAL_VARIETY: Dict[Language, RegionalVariety] = {
     Language.PORTUGUESE: RegionalVariety.PT_BR,
     Language.SPANISH: RegionalVariety.ES_ES,
     Language.ENGLISH: RegionalVariety.EN_US,
+    Language.FRENCH: RegionalVariety.FR_FR,
+    Language.GERMAN: RegionalVariety.DE_DE,
+    Language.ITALIAN: RegionalVariety.IT_IT,
+    Language.JAPANESE: RegionalVariety.JA_JP,
+    Language.KOREAN: RegionalVariety.KO_KR,
+    Language.RUSSIAN: RegionalVariety.RU_RU,
+    Language.DUTCH: RegionalVariety.NL_NL,
+    Language.CHINESE: RegionalVariety.ZH_HANS,
+    Language.TURKISH: RegionalVariety.TR_TR,
+    Language.TAMIL: RegionalVariety.TA_IN,
 }
 
 
@@ -124,11 +180,18 @@ class SkillCategory(str, Enum):
 
 
 class ExerciseType(str, Enum):
-    CLOZE = "cloze"                      # Fill-in-the-blank
-    MULTIPLE_CHOICE = "multiple_choice"  # Multiple choice with distractors
-    REORDER = "reorder"                  # Unscramble words to build a valid sentence
-    ERROR_CORRECTION = "error_correction" # Find and correct grammatical / lexical mistake
-    TRANSLATION = "translation"          # Contextual translation with validated target set
+    CLOZE = "cloze"                                 # Fill-in-the-blank
+    MULTIPLE_CHOICE = "multiple_choice"             # Multiple choice with distractors
+    REORDER = "reorder"                             # Unscramble words to build a valid sentence
+    ERROR_CORRECTION = "error_correction"           # Find and correct grammatical / lexical mistake
+    TRANSLATION = "translation"                     # Contextual translation with validated target set
+    MATCHING = "matching"                           # Match vocabulary, collocations, or concept pairs
+    LISTENING_COMPREHENSION = "listening_comprehension" # Listen to audio clip and answer questions
+    READING_COMPREHENSION = "reading_comprehension" # Read target passage and infer meaning
+    GRAMMAR_CORRECTION = "grammar_correction"       # Rewrite sentence applying grammar rule
+    WRITING_RESPONSE = "writing_response"           # Construct free-form written answer to prompt
+    CONVERSATION_RESPONSE = "conversation_response" # Interactive dialogue choice / pragmatic reply
+    PRONUNCIATION_PRACTICE = "pronunciation_practice" # Speech recognition pronunciation drill
 
 
 class MaterialType(str, Enum):

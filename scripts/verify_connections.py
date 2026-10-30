@@ -128,27 +128,85 @@ def check_supabase():
 def check_gemini():
     print_header("Google Gemini AI API")
     gemini_key = os.environ.get("GEMINI_API_KEY")
+    configured_model = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
+    normalized_configured = (
+        configured_model[len("models/"):]
+        if configured_model.startswith("models/")
+        else configured_model
+    )
 
     if not gemini_key or not gemini_key.strip():
         print(f"  [{YELLOW}NOT CONFIGURED{RESET}] GEMINI_API_KEY is not set.")
         print("    -> Add GEMINI_API_KEY to your GitHub Secrets or local .env to enable AI dialogue generation.")
         return
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash?key={gemini_key.strip()}"
-    req = urllib.request.Request(url, headers={"User-Agent": "Lexilume-HealthCheck/2.0"})
+    # 1. Model Discovery via https://generativelanguage.googleapis.com/v1beta/models
+    query_params = urllib.parse.urlencode({"key": gemini_key.strip()})
+    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?{query_params}"
+    req = urllib.request.Request(list_url, headers={"User-Agent": "Lexilume-HealthCheck/2.0"})
+
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            if resp.status == 200:
-                print(f"  [{GREEN}CONNECTED{RESET}] Google Gemini API key is valid and responsive (HTTP 200)!")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            models = data.get("models", [])
+
+            # Filter models that explicitly support generateContent
+            content_models = [
+                m for m in models
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+            ]
+            content_model_names = [
+                m.get("name", "").replace("models/", "") for m in content_models
+            ]
+
+            print(
+                f"  [{GREEN}API KEY VALID{RESET}] Discovered {len(models)} model(s) "
+                f"({len(content_models)} supporting content generation)."
+            )
+
+            # Check if configured model is in active content models
+            if normalized_configured in content_model_names:
+                print(f"  [{GREEN}MODEL READY{RESET}] Configured model '{normalized_configured}' is active and supports generateContent.")
             else:
-                print(f"  [{YELLOW}STATUS {resp.status}{RESET}] Gemini returned code {resp.status}")
+                print(
+                    f"  [{YELLOW}MODEL UNAVAILABLE{RESET}] Configured model '{configured_model}' not found in active generateContent models."
+                )
+                sample_available = content_model_names[:5]
+                print(f"    Available generation models: {', '.join(sample_available)}")
+
     except urllib.error.HTTPError as e:
-        if e.code == 400 or e.code == 403:
-            print(f"  [{RED}INVALID KEY{RESET}] Google Gemini rejected the API key (HTTP {e.code}). Verify your key at https://aistudio.google.com/")
+        if e.code in (401, 403):
+            print(f"  [{RED}AUTH ERROR{RESET}] HTTP {e.code}: Invalid GEMINI_API_KEY or access restricted. Verify at https://aistudio.google.com/")
+            return
+        elif e.code == 429:
+            print(f"  [{RED}QUOTA ERROR{RESET}] HTTP 429: Rate limit or daily quota exhausted.")
+            return
+        elif e.code == 404:
+            print(f"  [{RED}ENDPOINT ERROR{RESET}] HTTP 404: Model discovery endpoint unreachable.")
+            return
         else:
             print(f"  [{RED}HTTP ERROR{RESET}] HTTP {e.code}: {e.reason}")
+            return
+    except (urllib.error.URLError, TimeoutError) as e:
+        print(f"  [{RED}NETWORK ERROR{RESET}] Gemini connection timed out or unreachable: {e}")
+        return
     except Exception as e:
-        print(f"  [{RED}ERROR{RESET}] Gemini connection failed: {e}")
+        print(f"  [{RED}ERROR{RESET}] Unexpected Gemini error: {e}")
+        return
+
+    # 2. Live Generation Verification
+    try:
+        from engine.generators.gemini_generator import GeminiLessonGenerator
+        gen = GeminiLessonGenerator(api_key=gemini_key, model=configured_model, timeout_seconds=10.0)
+        res = gen.verify_generation(prompt="Say hello in Portuguese in 3 words")
+        if res.get("success"):
+            print(f"  [{GREEN}GENERATION VERIFIED{RESET}] Model '{normalized_configured}' generated content successfully!")
+        else:
+            cat = res.get("category", "UNKNOWN")
+            print(f"  [{YELLOW}GENERATION NOTICE{RESET}] Live generation ping returned [{cat}]: {res.get('error')}")
+            print("    -> Pedagogical engine will automatically use deterministic educational fallback if generation fails.")
+    except Exception as e:
+        print(f"  [{YELLOW}GENERATION NOTICE{RESET}] Generation verification skipped: {e}")
 
 
 def check_email():
@@ -159,8 +217,19 @@ def check_email():
     if provider == "smtp":
         host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
         port = int(os.environ.get("SMTP_PORT", 587))
-        username = os.environ.get("SMTP_USERNAME")
-        password = os.environ.get("SMTP_PASSWORD")
+        username = (
+            os.environ.get("SMTP_USERNAME")
+            or os.environ.get("GMAIL_USERNAME")
+            or os.environ.get("EMAIL_USERNAME")
+            or os.environ.get("EMAIL_USER")
+        )
+        password = (
+            os.environ.get("SMTP_PASSWORD")
+            or os.environ.get("GMAIL_APP_PASSWORD")
+            or os.environ.get("GMAIL_PASSWORD")
+            or os.environ.get("EMAIL_PASSWORD")
+            or os.environ.get("APP_PASSWORD")
+        )
 
         if not username or not password:
             print(f"  [{YELLOW}NOT CONFIGURED{RESET}] SMTP_USERNAME or SMTP_PASSWORD is not set.")

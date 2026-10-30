@@ -99,10 +99,14 @@ In your GitHub repository, navigate to **Settings → Secrets and variables → 
 |---|---|---|
 | `SUPABASE_URL` | Your Supabase project URL | `https://xyzcompany.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Private Supabase service role secret key | `eyJhbGciOi...` |
-| `RESEND_API_KEY` | Resend API key (if using Resend) | `re_123456789...` |
-| `RECIPIENT_EMAIL` | Learner email address for digests | `learner@example.com` |
-| `EMAIL_FROM_ADDRESS` | Sender display name and verified address | `Lexilume <onboarding@resend.dev>` |
-| `EMAIL_PROVIDER` | Email provider (`resend` or `smtp`) | `resend` |
+| `GEMINI_API_KEY` | Google Gemini API Key for dynamic dialogue generation | `AIzaSy...` |
+| `EMAIL_PROVIDER` | Email provider (`smtp` or `resend`) | `smtp` |
+| `SMTP_HOST` | SMTP server address | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP port with STARTTLS | `587` |
+| `SMTP_USERNAME` | Your email address | `youremail@gmail.com` |
+| `SMTP_PASSWORD` | Google App Password (16-char) | `abcd efgh ijkl mnop` |
+| `EMAIL_FROM_ADDRESS` | Sender display name and address | `Lexilume <youremail@gmail.com>` |
+| `RECIPIENT_EMAIL` | Fallback learner email address | `learner@example.com` |
 
 ### 4.2 Workflow Schedule & Verification
 The cron workflow is located at [`.github/workflows/daily_polyglot.yml`](file:///C:/Users/vinod/OneDrive/Desktop/language-learning/.github/workflows/daily_polyglot.yml):

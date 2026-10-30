@@ -39,9 +39,54 @@ const DEFAULT_SETTINGS: UserSettings = {
 };
 
 export class StorageService {
-  static getSettings(): UserSettings {
+  private static currentUserId: string = 'guest';
+
+  /**
+   * Set the active user ID for storage scoping to prevent cross-account data leakage.
+   */
+  static setCurrentUser(userId: string | null | undefined): void {
+    this.currentUserId = userId && userId.trim() ? userId.trim() : 'guest';
+  }
+
+  static getCurrentUser(): string {
+    return this.currentUserId;
+  }
+
+  /**
+   * Resolves storage key scoped by the currently authenticated user ID or 'guest'.
+   */
+  static getKey(baseKey: string, explicitUserId?: string): string {
+    const uid = explicitUserId || this.currentUserId || 'guest';
+    return uid === 'guest' ? baseKey : `${baseKey}_${uid}`;
+  }
+
+  /**
+   * Safely migrates guest progress to an authenticated user partition.
+   */
+  static migrateGuestData(targetUserId: string): void {
+    if (!targetUserId || targetUserId === 'guest') return;
+    const keysToMigrate = [
+      STORAGE_KEYS.SETTINGS,
+      STORAGE_KEYS.TRACK_PT,
+      STORAGE_KEYS.TRACK_ES,
+      STORAGE_KEYS.TRACK_EN,
+      STORAGE_KEYS.SRS_ITEMS,
+      STORAGE_KEYS.ATTEMPTS,
+      STORAGE_KEYS.BOOKMARKS,
+      STORAGE_KEYS.DIAGNOSTICS,
+    ];
+    for (const baseKey of keysToMigrate) {
+      const guestVal = localStorage.getItem(baseKey);
+      const userKey = `${baseKey}_${targetUserId}`;
+      if (guestVal && !localStorage.getItem(userKey)) {
+        localStorage.setItem(userKey, guestVal);
+      }
+    }
+  }
+
+  static getSettings(userId?: string): UserSettings {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      const raw = localStorage.getItem(this.getKey(STORAGE_KEYS.SETTINGS, userId));
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.warn('Error reading settings from localStorage', e);
@@ -49,21 +94,22 @@ export class StorageService {
     return DEFAULT_SETTINGS;
   }
 
-  static saveSettings(settings: UserSettings): void {
+  static saveSettings(settings: UserSettings, userId?: string): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.SETTINGS, userId), JSON.stringify(settings));
     } catch (e) {
       console.warn('Error saving settings to localStorage', e);
     }
   }
 
-  static getTrackState(language: Language): UserTrackState {
-    const key =
+  static getTrackState(language: Language, userId?: string): UserTrackState {
+    const baseKey =
       language === 'pt'
         ? STORAGE_KEYS.TRACK_PT
         : language === 'es'
         ? STORAGE_KEYS.TRACK_ES
         : STORAGE_KEYS.TRACK_EN;
+    const key = this.getKey(baseKey, userId);
     try {
       const raw = localStorage.getItem(key);
       if (raw) return JSON.parse(raw);
@@ -71,7 +117,7 @@ export class StorageService {
       console.warn('Error reading track state', e);
     }
 
-    const settings = this.getSettings();
+    const settings = this.getSettings(userId);
     const regional =
       language === 'pt'
         ? settings.pt_variety
@@ -80,7 +126,7 @@ export class StorageService {
         : settings.en_variety || 'en-US';
 
     const defaultTrack: UserTrackState = {
-      user_id: settings.user_id,
+      user_id: userId || this.currentUserId || settings.user_id,
       language,
       regional_variety: regional,
       current_cefr_level: 'A1',
@@ -96,13 +142,14 @@ export class StorageService {
     return defaultTrack;
   }
 
-  static saveTrackState(track: UserTrackState): void {
-    const key =
+  static saveTrackState(track: UserTrackState, userId?: string): void {
+    const baseKey =
       track.language === 'pt'
         ? STORAGE_KEYS.TRACK_PT
         : track.language === 'es'
         ? STORAGE_KEYS.TRACK_ES
         : STORAGE_KEYS.TRACK_EN;
+    const key = this.getKey(baseKey, userId);
     try {
       localStorage.setItem(key, JSON.stringify(track));
     } catch (e) {
@@ -110,9 +157,9 @@ export class StorageService {
     }
   }
 
-  static getSRSItems(language?: Language): SRSItemState[] {
+  static getSRSItems(language?: Language, userId?: string): SRSItemState[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.SRS_ITEMS);
+      const raw = localStorage.getItem(this.getKey(STORAGE_KEYS.SRS_ITEMS, userId));
       if (raw) {
         const items: SRSItemState[] = JSON.parse(raw);
         return language ? items.filter(i => i.language === language) : items;
@@ -123,8 +170,8 @@ export class StorageService {
     return [];
   }
 
-  static saveSRSItem(item: SRSItemState): void {
-    const items = this.getSRSItems();
+  static saveSRSItem(item: SRSItemState, userId?: string): void {
+    const items = this.getSRSItems(undefined, userId);
     const idx = items.findIndex(i => i.vocabulary_item_id === item.vocabulary_item_id);
     if (idx >= 0) {
       items[idx] = item;
@@ -132,15 +179,15 @@ export class StorageService {
       items.push(item);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.SRS_ITEMS, JSON.stringify(items));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.SRS_ITEMS, userId), JSON.stringify(items));
     } catch (e) {
       console.warn('Error saving SRS items', e);
     }
   }
 
-  static getExerciseAttempts(): ExerciseAttempt[] {
+  static getExerciseAttempts(userId?: string): ExerciseAttempt[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.ATTEMPTS);
+      const raw = localStorage.getItem(this.getKey(STORAGE_KEYS.ATTEMPTS, userId));
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.warn('Error reading attempts', e);
@@ -148,21 +195,21 @@ export class StorageService {
     return [];
   }
 
-  static saveExerciseAttempt(attempt: ExerciseAttempt): void {
-    const attempts = this.getExerciseAttempts();
+  static saveExerciseAttempt(attempt: ExerciseAttempt, userId?: string): void {
+    const attempts = this.getExerciseAttempts(userId);
     attempts.unshift(attempt);
     // Keep last 100 attempts
     const trimmed = attempts.slice(0, 100);
     try {
-      localStorage.setItem(STORAGE_KEYS.ATTEMPTS, JSON.stringify(trimmed));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.ATTEMPTS, userId), JSON.stringify(trimmed));
     } catch (e) {
       console.warn('Error saving exercise attempt', e);
     }
   }
 
-  static getDailyLesson(language: Language, dateStr: string): DailyLessonPayload | null {
+  static getDailyLesson(language: Language, dateStr: string, userId?: string): DailyLessonPayload | null {
     try {
-      const key = `${STORAGE_KEYS.LESSONS}_${language}_${dateStr}`;
+      const key = `${this.getKey(STORAGE_KEYS.LESSONS, userId)}_${language}_${dateStr}`;
       const raw = localStorage.getItem(key);
       if (raw) return JSON.parse(raw);
     } catch (e) {
@@ -171,18 +218,18 @@ export class StorageService {
     return null;
   }
 
-  static saveDailyLesson(lesson: DailyLessonPayload): void {
+  static saveDailyLesson(lesson: DailyLessonPayload, userId?: string): void {
     try {
-      const key = `${STORAGE_KEYS.LESSONS}_${lesson.language}_${lesson.lesson_date}`;
+      const key = `${this.getKey(STORAGE_KEYS.LESSONS, userId)}_${lesson.language}_${lesson.lesson_date}`;
       localStorage.setItem(key, JSON.stringify(lesson));
     } catch (e) {
       console.warn('Error saving lesson to storage', e);
     }
   }
 
-  static getDiagnosticResults(): DiagnosticResult[] {
+  static getDiagnosticResults(userId?: string): DiagnosticResult[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.DIAGNOSTICS);
+      const raw = localStorage.getItem(this.getKey(STORAGE_KEYS.DIAGNOSTICS, userId));
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.warn('Error reading diagnostic results', e);
@@ -190,24 +237,24 @@ export class StorageService {
     return [];
   }
 
-  static saveDiagnosticResult(result: DiagnosticResult): void {
-    const results = this.getDiagnosticResults();
+  static saveDiagnosticResult(result: DiagnosticResult, userId?: string): void {
+    const results = this.getDiagnosticResults(userId);
     results.unshift(result);
     try {
-      localStorage.setItem(STORAGE_KEYS.DIAGNOSTICS, JSON.stringify(results));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.DIAGNOSTICS, userId), JSON.stringify(results));
     } catch (e) {
       console.warn('Error saving diagnostic result', e);
     }
   }
 
-  static exportAllData(): string {
+  static exportAllData(userId?: string): string {
     const payload = {
-      settings: this.getSettings(),
-      track_pt: this.getTrackState('pt'),
-      track_es: this.getTrackState('es'),
-      srs_items: this.getSRSItems(),
-      attempts: this.getExerciseAttempts(),
-      diagnostics: this.getDiagnosticResults(),
+      settings: this.getSettings(userId),
+      track_pt: this.getTrackState('pt', userId),
+      track_es: this.getTrackState('es', userId),
+      srs_items: this.getSRSItems(undefined, userId),
+      attempts: this.getExerciseAttempts(userId),
+      diagnostics: this.getDiagnosticResults(userId),
       exported_at: new Date().toISOString(),
     };
     return JSON.stringify(payload, null, 2);
@@ -221,11 +268,28 @@ export class StorageService {
     }
   }
 
+  static resetUserData(userId?: string): void {
+    const uid = userId || this.currentUserId;
+    if (!uid || uid === 'guest') {
+      this.resetAllData();
+      return;
+    }
+    const prefix = `_${uid}`;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.endsWith(prefix) || k.includes(`_${uid}_`))) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  }
+
   // --- Saved Translations & Bookmarks (Strict Free Tier Cap: 500 items) ---
 
-  static getSavedTranslations(): SavedTranslationBookmark[] {
+  static getSavedTranslations(userId?: string): SavedTranslationBookmark[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.BOOKMARKS);
+      const raw = localStorage.getItem(this.getKey(STORAGE_KEYS.BOOKMARKS, userId));
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.warn('Error reading saved translations', e);
@@ -233,8 +297,8 @@ export class StorageService {
     return [];
   }
 
-  static saveTranslationBookmark(bookmark: SavedTranslationBookmark): boolean {
-    const items = this.getSavedTranslations();
+  static saveTranslationBookmark(bookmark: SavedTranslationBookmark, userId?: string): boolean {
+    const items = this.getSavedTranslations(userId);
     if (items.length >= 500) {
       return false; // Quota cap reached
     }
@@ -247,7 +311,7 @@ export class StorageService {
       items.unshift(bookmark);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(items));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.BOOKMARKS, userId), JSON.stringify(items));
       return true;
     } catch (e) {
       console.warn('Error saving translation bookmark', e);
@@ -255,10 +319,10 @@ export class StorageService {
     }
   }
 
-  static deleteTranslationBookmark(id: string): void {
-    const items = this.getSavedTranslations().filter(i => i.id !== id);
+  static deleteTranslationBookmark(id: string, userId?: string): void {
+    const items = this.getSavedTranslations(userId).filter(i => i.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(items));
+      localStorage.setItem(this.getKey(STORAGE_KEYS.BOOKMARKS, userId), JSON.stringify(items));
     } catch (e) {
       console.warn('Error deleting bookmark', e);
     }
@@ -266,11 +330,11 @@ export class StorageService {
 
   // --- Ephemeral Daily Quota Guards (Guest: 10, Registered: 50) ---
 
-  static getTranslationQuotaStatus(isRegistered: boolean = false): { used: number; limit: number; remaining: number } {
+  static getTranslationQuotaStatus(isRegistered: boolean = false, userId?: string): { used: number; limit: number; remaining: number } {
     const limit = isRegistered ? 50 : 10;
     const today = new Date().toISOString().split('T')[0];
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.TRANSLATION_QUOTA);
+      const raw = localStorage.getItem(this.getKey(STORAGE_KEYS.TRANSLATION_QUOTA, userId));
       if (raw) {
         const data = JSON.parse(raw);
         if (data.date === today) {
@@ -284,15 +348,15 @@ export class StorageService {
     return { used: 0, limit, remaining: limit };
   }
 
-  static consumeTranslationQuotaToken(isRegistered: boolean = false): boolean {
-    const status = this.getTranslationQuotaStatus(isRegistered);
+  static consumeTranslationQuotaToken(isRegistered: boolean = false, userId?: string): boolean {
+    const status = this.getTranslationQuotaStatus(isRegistered, userId);
     if (status.remaining <= 0) {
       return false;
     }
     const today = new Date().toISOString().split('T')[0];
     try {
       localStorage.setItem(
-        STORAGE_KEYS.TRANSLATION_QUOTA,
+        this.getKey(STORAGE_KEYS.TRANSLATION_QUOTA, userId),
         JSON.stringify({ date: today, count: status.used + 1 })
       );
       return true;

@@ -19,7 +19,14 @@ from urllib.request import Request, urlopen
 from engine.models.enums import CEFRLevel, Language, RegionalVariety
 from engine.models.lesson import DailyLessonPayload
 from engine.models.progress import ExerciseAttempt, LessonAssignment, SRSItemState, UserTrackState
-from engine.storage.repository import InMemoryStorageRepository, StorageRepository
+from engine.storage.repository import (
+    InMemoryStorageRepository,
+    StorageRepository,
+    StorageError,
+    StorageConnectionError,
+    StorageAuthenticationError,
+    StorageSchemaError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,23 +43,34 @@ class SupabaseStorageRepository(StorageRepository):
         service_role_key: Optional[str] = None,
         timeout_seconds: float = 8.0,
         fallback_to_memory: bool = True,
+        strict_mode: Optional[bool] = None,
     ):
         self.supabase_url = (supabase_url or os.environ.get("SUPABASE_URL", "")).rstrip("/")
         self.service_role_key = service_role_key or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
         self.timeout = timeout_seconds
         self.fallback_to_memory = fallback_to_memory
+        self.strict_mode = (
+            strict_mode
+            if strict_mode is not None
+            else os.environ.get("STORAGE_STRICT_MODE", "false").lower() == "true"
+        )
         self._mem = InMemoryStorageRepository() if fallback_to_memory else None
 
         self.is_connected = bool(self.supabase_url and self.service_role_key)
         if not self.is_connected:
             logger.info("Supabase credentials not configured; using in-memory repository fallback.")
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self, prefer_upsert: bool = False) -> Dict[str, str]:
+        prefer = (
+            "resolution=merge-duplicates,return=representation"
+            if prefer_upsert
+            else "return=representation"
+        )
         return {
             "apikey": self.service_role_key,
             "Authorization": f"Bearer {self.service_role_key}",
             "Content-Type": "application/json",
-            "Prefer": "return=representation",
+            "Prefer": prefer,
             "User-Agent": "PolyglotC1Daily-StorageEngine/1.0",
         }
 
@@ -62,6 +80,7 @@ class SupabaseStorageRepository(StorageRepository):
         method: str = "GET",
         data: Optional[Any] = None,
         params: Optional[Dict[str, str]] = None,
+        prefer_upsert: bool = False,
     ) -> Optional[List[Dict[str, Any]]]:
         if not self.is_connected:
             return None
@@ -71,7 +90,8 @@ class SupabaseStorageRepository(StorageRepository):
             url += "?" + urllib.parse.urlencode(params)
 
         payload_bytes = json.dumps(data).encode("utf-8") if data is not None else None
-        req = Request(url, data=payload_bytes, headers=self._headers(), method=method)
+        headers = self._headers(prefer_upsert=prefer_upsert)
+        req = Request(url, data=payload_bytes, headers=headers, method=method)
 
         try:
             with urlopen(req, timeout=self.timeout) as resp:
@@ -89,10 +109,25 @@ class SupabaseStorageRepository(StorageRepository):
                 err = e.read().decode("utf-8")
             except Exception:
                 pass
-            logger.warning(f"Supabase REST error HTTP {e.code} on {endpoint}: {err}")
+
+            if e.code in (401, 403):
+                logger.error("[STORAGE_AUTH_FAILURE] HTTP %s on %s: %s", e.code, endpoint, err)
+                if self.strict_mode:
+                    raise StorageAuthenticationError(f"Authentication failure on {endpoint}: {err}") from e
+            elif e.code == 404:
+                logger.error("[STORAGE_SCHEMA_FAILURE] Table/Endpoint '%s' not found (HTTP 404): %s", endpoint, err)
+                if self.strict_mode:
+                    raise StorageSchemaError(f"Endpoint or table relation '{endpoint}' not found (HTTP 404)") from e
+            else:
+                logger.error("[STORAGE_REQUEST_FAILURE] HTTP %s on %s: %s", e.code, endpoint, err)
+                if self.strict_mode:
+                    raise StorageError(f"Storage error HTTP {e.code} on {endpoint}: {err}") from e
             return None
+
         except (URLError, TimeoutError) as e:
-            logger.warning(f"Supabase network error on {endpoint}: {e}")
+            logger.error("[STORAGE_NETWORK_FAILURE] Network/Timeout error on %s: %s", endpoint, e)
+            if self.strict_mode:
+                raise StorageConnectionError(f"Network error on {endpoint}: {e}") from e
             return None
 
     # --- User Learning Track ---
@@ -151,7 +186,7 @@ class SupabaseStorageRepository(StorageRepository):
             "recent_exercise_history": track_state.recent_exercise_history,
             "updated_at": "now()",
         }
-        self._rest_request("user_learning_tracks", method="POST", data=payload)
+        self._rest_request("user_learning_tracks", method="POST", data=payload, prefer_upsert=True)
 
     # --- Spaced Repetition (SRS) Items ---
 
@@ -205,7 +240,7 @@ class SupabaseStorageRepository(StorageRepository):
             "lapse_count": state.lapse_count,
             "mastery_status": state.mastery_status.value if hasattr(state.mastery_status, "value") else str(state.mastery_status),
         }
-        self._rest_request("srs_items", method="POST", data=payload)
+        self._rest_request("srs_items", method="POST", data=payload, prefer_upsert=True)
 
     # --- Daily Lessons ---
 
@@ -228,7 +263,7 @@ class SupabaseStorageRepository(StorageRepository):
             "content_fingerprint": lesson.content_fingerprint,
             "payload": lesson.model_dump(mode="json"),
         }
-        self._rest_request("daily_lessons", method="POST", data=payload)
+        self._rest_request("daily_lessons", method="POST", data=payload, prefer_upsert=True)
 
     def get_daily_lesson(self, user_id: str, language: Language, lesson_date: date) -> Optional[DailyLessonPayload]:
         if not self.is_connected and self._mem:
@@ -267,7 +302,7 @@ class SupabaseStorageRepository(StorageRepository):
             "attempt_count": attempt.attempt_count,
             "created_at": attempt.timestamp.isoformat(),
         }
-        self._rest_request("exercise_attempts", method="POST", data=payload)
+        self._rest_request("exercise_attempts", method="POST", data=payload, prefer_upsert=True)
 
     def get_exercise_attempts(self, user_id: str, exercise_id: Optional[str] = None) -> List[ExerciseAttempt]:
         if not self.is_connected and self._mem:

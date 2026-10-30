@@ -76,4 +76,69 @@ describe('StorageService (Local State Persistence)', () => {
     expect(attempts[0].id).toBe('att-2'); // Unshifted, latest first
     expect(attempts[1].id).toBe('att-1');
   });
+
+  it('enforces multi-user account isolation without cross-tenant data leakage', () => {
+    // 1. User Alpha logs in and saves Portuguese progress
+    StorageService.setCurrentUser('user_alpha');
+    const alphaTrack = StorageService.getTrackState('pt');
+    alphaTrack.total_lessons_completed = 10;
+    alphaTrack.streak_days = 5;
+    StorageService.saveTrackState(alphaTrack);
+
+    StorageService.saveSRSItem({
+      vocabulary_item_id: 'voc-alpha-1',
+      language: 'pt',
+      repetition_count: 3,
+      ease_factor: 2.5,
+      interval_days: 6,
+      next_review_date: '2026-11-05',
+      lapse_count: 0,
+      mastery_status: 'reviewing',
+      history: [],
+    });
+
+    // 2. User Beta logs in on the same browser
+    StorageService.setCurrentUser('user_beta');
+    const betaTrack = StorageService.getTrackState('pt');
+    // Beta must not see Alpha's progress!
+    expect(betaTrack.total_lessons_completed).toBe(0);
+    expect(betaTrack.streak_days).toBe(1);
+
+    const betaSRS = StorageService.getSRSItems('pt');
+    expect(betaSRS).toHaveLength(0);
+
+    // Beta saves their own Spanish progress
+    betaTrack.total_lessons_completed = 2;
+    StorageService.saveTrackState(betaTrack);
+
+    // 3. User Alpha switches back
+    StorageService.setCurrentUser('user_alpha');
+    const alphaFresh = StorageService.getTrackState('pt');
+    expect(alphaFresh.total_lessons_completed).toBe(10);
+    expect(alphaFresh.streak_days).toBe(5);
+
+    const alphaSRS = StorageService.getSRSItems('pt');
+    expect(alphaSRS).toHaveLength(1);
+    expect(alphaSRS[0].vocabulary_item_id).toBe('voc-alpha-1');
+
+    // 4. Return to guest mode
+    StorageService.setCurrentUser('guest');
+  });
+
+  it('safely migrates guest progress to newly registered user account', () => {
+    StorageService.setCurrentUser('guest');
+    const guestTrack = StorageService.getTrackState('pt');
+    guestTrack.total_lessons_completed = 3;
+    StorageService.saveTrackState(guestTrack);
+
+    // User signs up with ID usr_newbie
+    StorageService.migrateGuestData('usr_newbie');
+    StorageService.setCurrentUser('usr_newbie');
+
+    const migratedTrack = StorageService.getTrackState('pt');
+    expect(migratedTrack.total_lessons_completed).toBe(3);
+
+    // Reset guest scope
+    StorageService.setCurrentUser('guest');
+  });
 });

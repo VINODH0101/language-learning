@@ -80,9 +80,10 @@ class SyncEngine {
   /**
    * Queue an action to be synchronized locally first and then pushed to cloud when online.
    */
-  public async queueAction(action: string, payload: unknown): Promise<string> {
-    const id = await enqueueSyncAction(action, payload);
-    const pending = await getPendingSyncActions();
+  public async queueAction(action: string, payload: unknown, userId?: string): Promise<string> {
+    const effectiveUserId = userId || authService.getState().user?.id || 'guest';
+    const id = await enqueueSyncAction(action, payload, effectiveUserId);
+    const pending = await getPendingSyncActions(effectiveUserId);
     this.state.pendingCount = pending.length;
     this.notify();
 
@@ -107,7 +108,8 @@ class SyncEngine {
     }
 
     const auth = authService.getState();
-    const pendingActions = await getPendingSyncActions();
+    const currentUserId = auth.user?.id;
+    const pendingActions = await getPendingSyncActions(currentUserId);
     this.state.pendingCount = pendingActions.length;
 
     // If guest or no pending items or Supabase not configured, mark synced
@@ -124,6 +126,11 @@ class SyncEngine {
 
     try {
       for (const item of pendingActions) {
+        // Strict Account Isolation Guard: Never upload another user's queued action to this account
+        if (item.user_id && item.user_id !== 'guest' && item.user_id !== auth.user.id) {
+          continue;
+        }
+
         const success = await this.processSyncItem(item, auth.user.id);
         if (success) {
           await removeSyncAction(item.id);
@@ -132,7 +139,7 @@ class SyncEngine {
         }
       }
 
-      const remaining = await getPendingSyncActions();
+      const remaining = await getPendingSyncActions(currentUserId);
       this.state.pendingCount = remaining.length;
       this.state.status = remaining.length === 0 ? 'synced' : 'error';
       this.state.lastSyncedAt = new Date().toISOString();

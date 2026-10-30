@@ -8,6 +8,26 @@ from engine.models.progress import UserTrackState, SRSItemState, ExerciseAttempt
 from engine.models.lesson import DailyLessonPayload
 
 
+class StorageError(Exception):
+    """Base exception for storage persistence operations."""
+    pass
+
+
+class StorageConnectionError(StorageError):
+    """Network connection or timeout error communicating with storage backend."""
+    pass
+
+
+class StorageAuthenticationError(StorageError):
+    """Authentication or authorization failure against storage backend."""
+    pass
+
+
+class StorageSchemaError(StorageError):
+    """Table, column, or schema object missing in storage backend."""
+    pass
+
+
 class StorageRepository(ABC):
     """Abstract storage interface decoupling the engine from PostgreSQL / Supabase."""
 

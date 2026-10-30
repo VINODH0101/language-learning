@@ -1,8 +1,8 @@
 # Lexilume — Illuminate Your Words
 
 [![License: CC-BY-4.0](https://img.shields.io/badge/License-CC_BY_4.0-blue.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![Tests: 82 Python passing](https://img.shields.io/badge/Python_Tests-82_passing-success.svg)](#testing)
-[![Tests: 132+ Vitest passing](https://img.shields.io/badge/Vitest_Tests-132+_passing-success.svg)](#testing)
+[![Tests: 98 Python passing](https://img.shields.io/badge/Python_Tests-98_passing-success.svg)](#testing)
+[![Tests: 136 Vitest passing](https://img.shields.io/badge/Vitest_Tests-136_passing-success.svg)](#testing)
 [![Zero-Cost Guarantee](https://img.shields.io/badge/Stack-100%25_Free_Tier-emerald.svg)](#free-tier-operational-guarantees)
 
 **Lexilume** is an AI-powered multilingual learning platform for vocabulary mastery, daily lessons, reading comprehension, translation, grammar, spaced repetition, and personalized language development across Portuguese, Spanish, and English (CEFR A1–C1).
@@ -55,8 +55,20 @@ The application requires **zero paid runtime AI APIs**, operates seamlessly offl
 │   ├── 003_email_and_retention.sql # Delivery ledger & cleanup audit logs
 │   ├── 004_minimal_wikipedia_assignments.sql # Minimal daily reading assignments
 │   ├── 005_language_directions_and_saved_translations.sql # Trilingual directions & bookmarks
+│   ├── 009_schema_reconciliation_and_sync.sql # Schema reconciliation, sync & RLS
 │   └── rollback/               # Reversible migration rollback scripts
-├── tests/                      # Python pytest automated test suite (78 tests)
+├── tests/                      # Python pytest automated test suite (98 tests)
+├── docs/                       # Architectural guides & deep-dives
+│   ├── PROJECT_AUDIT.md        # Comprehensive architecture & security audit
+│   ├── DESIGN_SYSTEM.md        # UI/UX design tokens, typography & component inventory
+│   ├── MULTILINGUAL_MATRIX.md  # 4-way language decoupling & 9 direction matrix
+│   ├── CONTENT_AUTHORING.md    # Pedagogical content authoring guidelines
+│   ├── EXTERNAL_API_INTEGRATION.md # Central API integration layer & adapters
+│   └── SOURCE_ADAPTERS.md      # Python core content source adapters
+├── AGENTS.md                   # AI coding agent ground-truth instructions & invariants
+├── ARCHITECTURE.md             # Core system architecture & principles
+├── DATA_MODEL.md               # PostgreSQL schema & entity-relationship specifications
+├── ENGINEERING_SPEC.md         # Master engineering & pedagogical specification
 ├── API_CATALOG.md              # External API specifications & rate limits
 ├── DATA_LICENSES.md            # Provenance & content licensing compliance
 ├── DEPLOYMENT.md               # Production deployment step-by-step guide

@@ -17,19 +17,31 @@ export class SRSService {
     const interval = current.interval_days;
     const lapses = current.lapse_count;
 
+    const reviewDateStr = reviewDate.toISOString().split('T')[0];
+    const lastReviewDateStr = current.last_reviewed_at
+      ? current.last_reviewed_at.split('T')[0]
+      : null;
+    const isSameDay = lastReviewDateStr === reviewDateStr;
+
     let newRep: number;
     let newInterval: number;
     let newLapses: number;
     let newStatus: MasteryStatus;
 
-    if (q < 3) {
+    if (isSameDay && q >= 3 && rep > 0) {
+      // Idempotency Guard: Same-day successful review preserves repetition count and scheduled interval
+      newRep = rep;
+      newInterval = interval;
+      newLapses = lapses;
+      newStatus = current.mastery_status;
+    } else if (q < 3) {
       // Failed recall (lapse)
       newRep = 0;
       newInterval = 1;
-      newLapses = lapses + 1;
+      newLapses = (rep > 0 || !isSameDay) ? lapses + 1 : lapses;
       newStatus = 'learning';
     } else {
-      // Successful recall
+      // Successful recall on a new calendar day
       if (rep === 0) {
         newInterval = 1;
       } else if (rep === 1) {
@@ -58,15 +70,23 @@ export class SRSService {
     nextDate.setDate(nextDate.getDate() + newInterval);
     const nextDateStr = nextDate.toISOString().split('T')[0];
 
-    const newHistory = [
-      ...current.history,
-      {
-        review_date: reviewDate.toISOString().split('T')[0],
-        grade: q,
-        interval_days: newInterval,
-        ease_factor: newEf,
-      },
-    ];
+    const historyEntry = {
+      review_date: reviewDateStr,
+      grade: q,
+      interval_days: newInterval,
+      ease_factor: newEf,
+    };
+
+    const newHistory = [...current.history];
+    if (
+      isSameDay &&
+      newHistory.length > 0 &&
+      newHistory[newHistory.length - 1].review_date === reviewDateStr
+    ) {
+      newHistory[newHistory.length - 1] = historyEntry;
+    } else {
+      newHistory.push(historyEntry);
+    }
 
     return {
       vocabulary_item_id: current.vocabulary_item_id,

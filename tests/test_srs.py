@@ -88,6 +88,38 @@ def test_sm2_lapse_reset():
     assert lapsed.ease_factor < 2.60
 
 
+def test_sm2_same_day_review_idempotency():
+    today = date(2026, 10, 30)
+    initial = SRSItemState(
+        vocabulary_item_id="voc-idem-01",
+        language=Language.PORTUGUESE,
+        repetition_count=0,
+        ease_factor=2.50,
+        interval_days=0,
+        next_review_date=today,
+        mastery_status=MasteryStatus.PRESENTED,
+    )
+
+    # 1. First review today: rep goes to 1, interval to 1
+    s1 = SM2Calculator.calculate_next_state(initial, ReviewGrade.GOOD, today)
+    assert s1.repetition_count == 1
+    assert s1.interval_days == 1
+    assert s1.last_reviewed_at.date() == today
+
+    # 2. Duplicate same-day review with Easy (5): rep must NOT advance to 2, interval must NOT leap to 6
+    s2 = SM2Calculator.calculate_next_state(s1, ReviewGrade.EASY, today)
+    assert s2.repetition_count == 1
+    assert s2.interval_days == 1
+    assert s2.last_reviewed_at.date() == today
+
+    # 3. Third review on the next calendar day (tomorrow): rep legitimately advances to 2, interval to 6
+    tomorrow = today + timedelta(days=1)
+    s3 = SM2Calculator.calculate_next_state(s2, ReviewGrade.GOOD, tomorrow)
+    assert s3.repetition_count == 2
+    assert s3.interval_days == 6
+    assert s3.last_reviewed_at.date() == tomorrow
+
+
 def test_sm2_minimum_ease_factor():
     today = date(2026, 10, 29)
     state = SRSItemState(

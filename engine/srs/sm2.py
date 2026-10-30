@@ -1,6 +1,6 @@
 """SuperMemo SM-2 algorithm implementation with explicit mastery status progression."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Tuple, Dict, Any
 from engine.models.enums import ReviewGrade, MasteryStatus
 from engine.models.progress import SRSItemState
@@ -36,14 +36,29 @@ class SM2Calculator:
         interval = current_state.interval_days
         lapses = current_state.lapse_count
 
-        if q < 3:
+        is_same_day = False
+        if current_state.last_reviewed_at is not None:
+            last_date = (
+                current_state.last_reviewed_at.date()
+                if isinstance(current_state.last_reviewed_at, datetime)
+                else current_state.last_reviewed_at
+            )
+            is_same_day = (last_date == review_date)
+
+        if is_same_day and q >= 3 and rep > 0:
+            # Idempotency guard: Preserve repetition count and scheduled interval on same calendar day
+            new_rep = rep
+            new_interval = interval
+            new_lapses = lapses
+            new_status = current_state.mastery_status
+        elif q < 3:
             # Failed recall (lapse)
             new_rep = 0
             new_interval = 1
-            new_lapses = lapses + 1
+            new_lapses = lapses + 1 if (rep > 0 or not is_same_day) else lapses
             new_status = MasteryStatus.LEARNING
         else:
-            # Successful recall
+            # Successful recall on a new calendar day
             if rep == 0:
                 new_interval = 1
             elif rep == 1:
@@ -76,7 +91,14 @@ class SM2Calculator:
         }
 
         updated_history = list(current_state.history)
-        updated_history.append(history_entry)
+        if (
+            is_same_day
+            and updated_history
+            and updated_history[-1].get("review_date") == review_date.isoformat()
+        ):
+            updated_history[-1] = history_entry
+        else:
+            updated_history.append(history_entry)
 
         return SRSItemState(
             vocabulary_item_id=current_state.vocabulary_item_id,

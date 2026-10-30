@@ -77,4 +77,28 @@ describe('SRSService (SM-2 Spaced Repetition)', () => {
 
     expect(state.ease_factor).toBe(1.3);
   });
+
+  it('enforces same-day review idempotency to prevent intra-day repetition and interval inflation', () => {
+    const today = new Date('2026-10-30T09:00:00Z');
+    const initial = SRSService.createInitialState('pt-voc-idem', 'pt', '2026-10-30');
+
+    // 1. First review today: Grade 4 (Good) -> rep = 1, interval = 1
+    const s1 = SRSService.calculateNextState(initial, 4, today);
+    expect(s1.repetition_count).toBe(1);
+    expect(s1.interval_days).toBe(1);
+    expect(s1.last_reviewed_at?.startsWith('2026-10-30')).toBe(true);
+
+    // 2. Duplicate review 30 minutes later on the same day: Grade 5 (Easy)
+    // Must NOT advance repetition_count to 2 or leap interval to 6!
+    const laterToday = new Date('2026-10-30T09:30:00Z');
+    const s2 = SRSService.calculateNextState(s1, 5, laterToday);
+    expect(s2.repetition_count).toBe(1);
+    expect(s2.interval_days).toBe(1);
+
+    // 3. Review on the next calendar day (tomorrow): rep legitimately advances to 2, interval to 6
+    const tomorrow = new Date('2026-10-31T10:00:00Z');
+    const s3 = SRSService.calculateNextState(s2, 4, tomorrow);
+    expect(s3.repetition_count).toBe(2);
+    expect(s3.interval_days).toBe(6);
+  });
 });

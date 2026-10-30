@@ -95,26 +95,38 @@ class AuthService {
 
   constructor() {
     this.initAuth();
+    if (isSupabaseConfigured) {
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user && this.currentState.user?.auth_user_id !== session.user.id) {
+            const profile = await this.fetchLiveProfile(session.user.id, session.user.email || '');
+            if (profile) {
+              courseService.setUserId(profile.id);
+              StorageService.setCurrentUser(profile.id);
+              this.updateState({
+                user: profile,
+                role: profile.role,
+                isGuest: false,
+                isLoading: false,
+              });
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          courseService.setUserId('guest');
+          StorageService.setCurrentUser('guest');
+          this.updateState({
+            user: null,
+            role: 'guest',
+            isGuest: true,
+            isLoading: false,
+          });
+        }
+      });
+    }
   }
 
   private async initAuth() {
-    // 1. Check if mock user was saved
-    try {
-      const savedMock = localStorage.getItem(STORAGE_KEYS.MOCK_AUTH_USER);
-      if (savedMock) {
-        const parsed = JSON.parse(savedMock) as UserProfile;
-        courseService.setUserId(parsed.id);
-        this.updateState({
-          user: parsed,
-          role: parsed.role,
-          isGuest: false,
-          isLoading: false,
-        });
-        return;
-      }
-    } catch {}
-
-    // 2. If Supabase configured, check live session
+    // 1. Authoritative check: If Supabase configured, verify live session FIRST
     if (isSupabaseConfigured) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -122,6 +134,7 @@ class AuthService {
           const profile = await this.fetchLiveProfile(session.user.id, session.user.email || '');
           if (profile) {
             courseService.setUserId(profile.id);
+            StorageService.setCurrentUser(profile.id);
             this.updateState({
               user: profile,
               role: profile.role,
@@ -136,8 +149,29 @@ class AuthService {
       }
     }
 
+    // 2. Only if Supabase is NOT configured or during local mock offline testing, inspect mock auth
+    const allowMock = !isSupabaseConfigured || (typeof import.meta !== 'undefined' && import.meta.env?.DEV);
+    if (allowMock) {
+      try {
+        const savedMock = localStorage.getItem(STORAGE_KEYS.MOCK_AUTH_USER);
+        if (savedMock) {
+          const parsed = JSON.parse(savedMock) as UserProfile;
+          courseService.setUserId(parsed.id);
+          StorageService.setCurrentUser(parsed.id);
+          this.updateState({
+            user: parsed,
+            role: parsed.role,
+            isGuest: false,
+            isLoading: false,
+          });
+          return;
+        }
+      } catch {}
+    }
+
     // 3. Fallback to Guest Mode
     courseService.setUserId('guest');
+    StorageService.setCurrentUser('guest');
     this.updateState({
       user: null,
       role: 'guest',
@@ -256,12 +290,26 @@ class AuthService {
             email_daily_lesson_opt_in: false, // Strictly opt-in
           };
 
-          await supabase.from('user_profiles').insert([newProfilePayload]);
-          await supabase.from('user_roles').insert([{ user_id: data.user.id, role: 'user' }]);
+          try {
+            await supabase.from('user_profiles').insert([newProfilePayload]);
+          } catch (profileErr) {
+            console.warn('Profile insert warning', profileErr);
+          }
+
+          try {
+            await supabase.from('user_roles').upsert([{ user_id: data.user.id, role: 'user' }], {
+              onConflict: 'user_id',
+              ignoreDuplicates: true,
+            });
+          } catch (roleErr) {
+            console.warn('Role assignment warning', roleErr);
+          }
 
           const profile = await this.fetchLiveProfile(data.user.id, email);
           if (profile) {
             courseService.setUserId(profile.id);
+            StorageService.migrateGuestData(profile.id);
+            StorageService.setCurrentUser(profile.id);
             this.updateState({
               user: profile,
               role: profile.role,
@@ -313,6 +361,8 @@ class AuthService {
     localStorage.setItem(STORAGE_KEYS.MOCK_AUTH_USER, JSON.stringify(mockProfile));
 
     courseService.setUserId(mockProfile.id);
+    StorageService.migrateGuestData(mockProfile.id);
+    StorageService.setCurrentUser(mockProfile.id);
     this.updateState({
       user: mockProfile,
       role: 'user',
@@ -353,6 +403,7 @@ class AuthService {
             }
 
             courseService.setUserId(profile.id);
+            StorageService.setCurrentUser(profile.id);
             this.updateState({
               user: profile,
               role: profile.role,
@@ -381,6 +432,7 @@ class AuthService {
     localStorage.setItem(STORAGE_KEYS.MOCK_AUTH_USER, JSON.stringify(record.user));
 
     courseService.setUserId(record.user.id);
+    StorageService.setCurrentUser(record.user.id);
     this.updateState({
       user: record.user,
       role: record.user.role,
@@ -402,6 +454,7 @@ class AuthService {
     }
     localStorage.removeItem(STORAGE_KEYS.MOCK_AUTH_USER);
     courseService.setUserId('guest');
+    StorageService.setCurrentUser('guest');
 
     this.updateState({
       user: null,

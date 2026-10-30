@@ -20,6 +20,7 @@ export interface CachedLessonRecord {
 
 export interface SyncQueueRecord {
   id: string;
+  user_id?: string;
   action: string;
   payload: unknown;
   status: 'pending' | 'failed';
@@ -73,6 +74,9 @@ export class PolyglotLocalDatabase extends Dexie {
     });
     this.version(3).stores({
       apiCache: 'id, provider, cacheKey, expiresAt',
+    });
+    this.version(4).stores({
+      syncQueue: 'id, user_id, action, status, created_at',
     });
   }
 }
@@ -450,10 +454,11 @@ export async function isCulturalBookmarked(userId: string, articleId: string): P
 // 6. SYNC QUEUE OPERATIONS
 // ============================================================================
 
-export async function enqueueSyncAction(action: string, payload: unknown): Promise<string> {
+export async function enqueueSyncAction(action: string, payload: unknown, userId?: string): Promise<string> {
   const id = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   const record: SyncQueueRecord = {
     id,
+    user_id: userId || 'guest',
     action,
     payload,
     status: 'pending',
@@ -474,16 +479,19 @@ export async function enqueueSyncAction(action: string, payload: unknown): Promi
   return id;
 }
 
-export async function getPendingSyncActions(): Promise<SyncQueueRecord[]> {
+export async function getPendingSyncActions(userId?: string): Promise<SyncQueueRecord[]> {
   if (!isIndexedDBAvailable()) {
-    return Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'pending');
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'pending');
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
   }
 
   try {
-    return await localDb.syncQueue.where('status').equals('pending').toArray();
+    const all = await localDb.syncQueue.where('status').equals('pending').toArray();
+    return userId ? all.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : all;
   } catch (err) {
     console.warn('Error reading pending sync actions from IndexedDB', err);
-    return Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'pending');
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'pending');
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
   }
 }
 

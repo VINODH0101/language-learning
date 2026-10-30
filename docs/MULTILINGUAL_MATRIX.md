@@ -1,14 +1,14 @@
-# 05. Multilingual and Translation Consistency Architecture
+# Lexilume — Multilingual Architecture & 4-Way Language Decoupling Matrix
 
-> **Audit Date:** 2026-10-29  
-> **Repository:** `language-learning`  
+> **Document:** Linguistic Matrix & Decoupling Architecture  
+> **Repository:** `VINODH0101/language-learning` (Lexilume — Illuminate Your Words)  
 > **Scope:** Independent 4-dimension language matrix, 9 bidirectional language pairs, regional dialect invariants, and speech synthesis locale resolution.
 
 ---
 
 ## 1. The Four Decoupled Linguistic Dimensions
 
-The application strictly separates four distinct linguistic dimensions across both frontend and backend layers:
+Lexilume strictly separates four distinct linguistic dimensions across both frontend and backend layers:
 
 ```mermaid
 flowchart TD
@@ -84,5 +84,5 @@ The user's interface language and explanation language are completely excluded f
 
 ## 5. Automated Validation & Test Evidence
 
-- **Frontend Vitest (`src/tests/languageDecoupling.test.ts`):** 17 tests verifying 9 matrix combinations, regional dialect validation, speech audio scoping, and multi-course updates.
+- **Frontend Vitest (`frontend/src/tests/languageDecoupling.test.ts`):** 17 tests verifying 9 matrix combinations, regional dialect validation, speech audio scoping, and multi-course updates.
 - **Backend Pytest (`tests/test_language_separation.py`):** 5 tests verifying enum scoping, fallback normalization, and Pydantic `ValidationError` on mismatched varieties.

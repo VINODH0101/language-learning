@@ -77,9 +77,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         return;
       }
 
-      const res = await authService.signUp(email, password, fullName, {
-        interface_language: interfaceLanguage,
-      });
+      const res = await authService.signUp(
+        email,
+        password,
+        fullName,
+        {
+          interface_language: interfaceLanguage,
+        },
+        turnstileToken
+      );
 
       setLoading(false);
       if (res.error) {

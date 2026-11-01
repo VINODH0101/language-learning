@@ -89,6 +89,20 @@ export function useCourse(language: Language): UseCourseReturn {
       track.streak_days += 1;
       track.last_lesson_date = new Date().toISOString().split('T')[0];
       StorageService.saveTrackState(track);
+
+      // Synchronize course curriculum progress to cloud
+      const activeCourse = courseService.getCourseForLanguage(language);
+      if (activeCourse) {
+        const updatedCompletedNodes = Array.from(new Set([
+          ...(activeCourse.completed_curriculum_node_ids || []),
+          lesson.curriculum_node_id,
+        ]));
+        courseService.updateCourse(activeCourse.id, {
+          completed_curriculum_node_ids: updatedCompletedNodes,
+          total_lessons_completed: (activeCourse.total_lessons_completed || 0) + 1,
+          streak_days: (activeCourse.streak_days || 0) + 1,
+        });
+      }
     }
 
     clearActiveProgress(language);

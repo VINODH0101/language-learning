@@ -15,6 +15,7 @@ import { VocabularyItem, SRSItemState } from '../../types';
 import { SRSService } from '../../services/srs';
 import { StorageService } from '../../services/storage';
 import { SpeechService } from '../../services/speech';
+import { practiceVocabService } from '../../features/practice/services/practiceVocabService';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { ProgressBar } from '../common/ProgressBar';
@@ -32,6 +33,7 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isSessionFinished, setIsSessionFinished] = useState(false);
   const [sessionStats, setSessionStats] = useState({
     again: 0,
     hard: 0,
@@ -40,19 +42,16 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
     total: 0,
   });
 
-  // Today's completed reviews from localStorage
+  const hasVocab = Boolean(vocabularyList && vocabularyList.length > 0);
+  const safeIndex = Math.min(currentIndex, Math.max(0, (vocabularyList?.length || 1) - 1));
+  const currentVocab = hasVocab ? (vocabularyList[safeIndex] || vocabularyList[0]) : null;
+
+  // Today's completed reviews scoped by user & language with fallback
   const [todayCompletedCount, setTodayCompletedCount] = useState<number>(() => {
-    try {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const saved = localStorage.getItem(`lexilume_srs_reviews_today_${todayStr}`);
-      return saved ? parseInt(saved, 10) : 0;
-    } catch {
-      return 0;
-    }
+    if (!currentVocab) return 0;
+    return practiceVocabService.getTodayReviewCount(currentVocab.language);
   });
 
-  const hasVocab = Boolean(vocabularyList && vocabularyList.length > 0);
-  const currentVocab = hasVocab ? (vocabularyList[currentIndex] || vocabularyList[0]) : null;
   const currentSRS = useMemo(() => {
     if (!currentVocab) return null;
     const srsStates = StorageService.getSRSItems(currentVocab.language);
@@ -71,9 +70,77 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
     };
   }, [currentSRS]);
 
+  const handleRestartSession = () => {
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setIsSessionFinished(false);
+    setSessionStats({ again: 0, hard: 0, good: 0, easy: 0, total: 0 });
+  };
+
+  // Dedicated Session Completion View
+  if (isSessionFinished) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-6 shadow-xl max-w-xl mx-auto animate-fadeIn">
+        <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+          <CheckCircle2 className="w-8 h-8" />
+        </div>
+        <div>
+          <h3 className="text-xl font-black text-slate-100">Sessão de Revisão Concluída!</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 leading-relaxed">
+            Você revisou {sessionStats.total} {sessionStats.total === 1 ? 'cartão' : 'cartões'} nesta sessão.
+            O algoritmo SuperMemo SM-2 recalculou os intervalos ideais para evitar a curva de esquecimento.
+          </p>
+        </div>
+
+        {/* Breakdown by Grade */}
+        <div className="grid grid-cols-4 gap-2.5 max-w-md mx-auto">
+          <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-center">
+            <span className="text-[10px] text-rose-300 font-bold block uppercase tracking-wider">De Novo (1)</span>
+            <span className="text-xl font-black text-rose-200 mt-0.5 block">{sessionStats.again}</span>
+          </div>
+          <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/40 text-center">
+            <span className="text-[10px] text-amber-300 font-bold block uppercase tracking-wider">Difícil (3)</span>
+            <span className="text-xl font-black text-amber-200 mt-0.5 block">{sessionStats.hard}</span>
+          </div>
+          <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-center">
+            <span className="text-[10px] text-indigo-300 font-bold block uppercase tracking-wider">Bom (4)</span>
+            <span className="text-xl font-black text-indigo-200 mt-0.5 block">{sessionStats.good}</span>
+          </div>
+          <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-center">
+            <span className="text-[10px] text-emerald-300 font-bold block uppercase tracking-wider">Fácil (5)</span>
+            <span className="text-xl font-black text-emerald-200 mt-0.5 block">{sessionStats.easy}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<RotateCw className="w-4 h-4" />}
+            onClick={handleRestartSession}
+            className="text-xs cursor-pointer"
+          >
+            Revisar Novamente
+          </Button>
+          {onReviewFinished && (
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<ArrowRight className="w-4 h-4" />}
+              onClick={onReviewFinished}
+              className="text-xs cursor-pointer"
+            >
+              Voltar à Prática
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!vocabularyList || vocabularyList.length === 0 || !currentVocab || !currentSRS || !predictedNextStates) {
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-sm">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-sm max-w-xl mx-auto">
         <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
         <h3 className="text-lg font-bold text-slate-100">Deck em Dia!</h3>
         <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
@@ -83,6 +150,13 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
         <div className="pt-2 flex justify-center gap-4 text-xs font-mono text-slate-300">
           <span>Meta Diária: <strong>{todayCompletedCount}/{dailyTarget}</strong></span>
         </div>
+        {onReviewFinished && (
+          <div className="pt-2">
+            <Button variant="outline" size="sm" onClick={onReviewFinished} className="text-xs cursor-pointer">
+              Voltar à Prática
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -106,13 +180,9 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
     }
     StorageService.saveTrackState(track);
 
-    // Increment today's review count
-    const todayStr = new Date().toISOString().split('T')[0];
-    const newTodayCount = todayCompletedCount + 1;
-    setTodayCompletedCount(newTodayCount);
-    try {
-      localStorage.setItem(`lexilume_srs_reviews_today_${todayStr}`, String(newTodayCount));
-    } catch {}
+    // Increment today's review count scoped by user & language
+    const newCount = practiceVocabService.incrementTodayReviewCount(currentVocab.language);
+    setTodayCompletedCount(newCount);
 
     // Update session stats
     setSessionStats(prev => ({
@@ -126,9 +196,11 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
 
     setIsFlipped(false);
 
-    if (currentIndex < vocabularyList.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (safeIndex < vocabularyList.length - 1) {
+      setCurrentIndex(safeIndex + 1);
     } else {
+      // Completed last card: trigger finish callback and display session summary
+      setIsSessionFinished(true);
       onReviewFinished?.();
     }
   };
@@ -163,7 +235,7 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
 
       {/* Header Info */}
       <div className="flex items-center justify-between text-xs text-slate-400">
-        <span>Cartão {currentIndex + 1} de {vocabularyList.length}</span>
+        <span>Cartão {safeIndex + 1} de {vocabularyList.length}</span>
         <div className="flex items-center gap-2">
           <Badge
             variant={
@@ -199,7 +271,7 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
             </span>
             <button
               onClick={handleSpeak}
-              className="p-2 rounded-full bg-slate-800 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 transition-colors"
+              className="p-2 rounded-full bg-slate-800 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 transition-colors cursor-pointer"
               title="Ouvir Pronúncia"
               aria-label="Ouvir Pronúncia"
             >

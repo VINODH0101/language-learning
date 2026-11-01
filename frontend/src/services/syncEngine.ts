@@ -57,6 +57,10 @@ class SyncEngine {
     return { ...this.state };
   }
 
+  public getStatus(): SyncStatus {
+    return this.state.status;
+  }
+
   public subscribe(listener: SyncListener): () => void {
     this.listeners.add(listener);
     listener(this.getState());
@@ -144,9 +148,10 @@ class SyncEngine {
           continue;
         }
 
-        // Exponential backoff check: retry interval = min(30s, 1000 * 2^retry_count)
+        // Exponential backoff check with jitter: retry interval = min(30s, 1000 * 2^retry_count + jitter)
         if (item.retry_count > 0) {
-          const backoffMs = Math.min(30000, 1000 * Math.pow(2, item.retry_count));
+          const jitter = Math.floor(Math.random() * 500);
+          const backoffMs = Math.min(30000, 1000 * Math.pow(2, item.retry_count) + jitter);
           const itemAgeMs = Date.now() - new Date(item.created_at).getTime();
           if (itemAgeMs < backoffMs) {
             continue; // Skip until backoff window expires
@@ -250,7 +255,7 @@ class SyncEngine {
 
       if (item.action === 'SYNC_SAVED_VOCABULARY') {
         const vocab = item.payload as any;
-        const { error } = await supabase.from('saved_translations').insert({
+        const { error } = await supabase.from('saved_translations').upsert({
           user_id: userId,
           source_text: vocab.source_text,
           translated_text: vocab.translated_text,
@@ -258,18 +263,75 @@ class SyncEngine {
           target_lang: vocab.target_lang,
           provider_used: vocab.provider_used || 'dictionary',
           is_verified: true,
-        });
+        }, { onConflict: 'user_id, source_text, target_lang' });
 
         return !error;
       }
 
       if (item.action === 'DELETE_SAVED_VOCABULARY') {
         const vocab = item.payload as any;
-        const { error } = await supabase
+        let query = supabase
           .from('saved_translations')
           .delete()
           .eq('user_id', userId)
           .eq('source_text', vocab.source_text);
+
+        if (vocab.target_lang) {
+          query = query.eq('target_lang', vocab.target_lang);
+        }
+
+        const { error } = await query;
+        return !error;
+      }
+
+      if (item.action === 'SYNC_EXERCISE_ATTEMPT') {
+        const attempt = item.payload as any;
+        const attemptId = attempt.id || `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const { error } = await supabase.from('exercise_attempts').upsert({
+          id: attemptId,
+          user_id: userId,
+          exercise_id: attempt.exercise_id,
+          submitted_answer: attempt.submitted_answer,
+          is_correct: Boolean(attempt.is_correct),
+          feedback: attempt.feedback || '',
+          attempt_count: attempt.attempt_count || 1,
+          language: attempt.language || null,
+          exercise_type: attempt.exercise_type || null,
+          created_at: attempt.timestamp || attempt.created_at || new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_ACTIVITY_EVENT') {
+        const ev = item.payload as any;
+        const evId = ev.id || `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const { error } = await supabase.from('learning_activity_events').upsert({
+          id: evId,
+          user_id: userId,
+          learning_language: ev.learning_language,
+          activity_type: ev.activity_type,
+          content_id: ev.content_id || null,
+          content_version: ev.content_version || null,
+          title: ev.title || null,
+          cefr_level: ev.cefr_level || null,
+          completion_status: ev.completion_status || 'completed',
+          score: ev.score ?? null,
+          max_score: ev.max_score ?? null,
+          duration_minutes: ev.duration_minutes ?? null,
+          metadata: ev.metadata || {},
+          created_at: ev.timestamp || new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_USER_PROFILE') {
+        const updates = item.payload as any;
+        const { error } = await supabase
+          .from('user_profiles')
+          .update(updates)
+          .eq('auth_user_id', userId);
 
         return !error;
       }

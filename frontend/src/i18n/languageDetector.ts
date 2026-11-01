@@ -26,6 +26,17 @@ export class LanguageDetector {
    * 4. English fallback ('en')
    */
   public static detectLanguage(userProfileLanguage?: string | null): InterfaceLanguage {
+    // 0. URL Query Parameter override (useful for testing, automation, and direct links)
+    try {
+      if (typeof window !== 'undefined' && window.location?.search) {
+        const params = new URLSearchParams(window.location.search);
+        const queryLang = params.get('lang');
+        if (queryLang && this.isSupported(queryLang)) {
+          return queryLang as InterfaceLanguage;
+        }
+      }
+    } catch {}
+
     // 1. Explicit local storage preference
     try {
       if (typeof localStorage !== 'undefined') {
@@ -70,6 +81,16 @@ export class LanguageDetector {
    */
   public static isSupported(lang: string): boolean {
     return (SUPPORTED_INTERFACE_LANGUAGES as readonly string[]).includes(lang);
+  }
+
+  /**
+   * Normalizes any language code, safely falling back to 'en' for invalid or forbidden inputs.
+   */
+  public static normalize(lang: string | null | undefined): InterfaceLanguage {
+    if (lang && this.isSupported(lang)) {
+      return lang as InterfaceLanguage;
+    }
+    return 'en';
   }
 
   /**

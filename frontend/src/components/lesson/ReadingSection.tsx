@@ -19,6 +19,7 @@ import { AudioButton } from '../common/AudioButton';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { savePhrasebookWord } from '../../services/localDb';
+import { StorageService } from '../../services/storage';
 import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
@@ -106,7 +107,7 @@ export const ReadingSection: React.FC<ReadingSectionProps> = ({
   const handleSaveToPhrasebook = async (word: string, definition: string) => {
     try {
       await savePhrasebookWord({
-        user_id: 'learner',
+        user_id: StorageService.getCurrentUser(),
         source_text: word,
         translated_text: definition,
         source_lang: language,

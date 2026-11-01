@@ -19,7 +19,7 @@ export interface TatoebaSearchInput {
 export class TatoebaProvider extends BaseProvider<TatoebaSearchInput, NormalizedSentencePair[]> {
   public readonly metadata: ProviderMetadata = {
     id: 'tatoeba',
-    name: 'Tatoeba Project',
+    name: 'Tatoeba Example Sentences Corpus',
     description: 'Community-driven database of example sentences, translations, and audio recordings.',
     category: 'examples',
     attribution: 'Tatoeba Project — Creative Commons Attribution 2.0 France (CC-BY 2.0 FR)',

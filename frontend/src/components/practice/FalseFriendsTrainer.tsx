@@ -14,6 +14,7 @@ import { AudioButton } from '../common/AudioButton';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { logMistake } from '../../services/localDb';
+import { StorageService } from '../../services/storage';
 
 interface FalseFriendsTrainerProps {
   language: Language;
@@ -53,7 +54,7 @@ export const FalseFriendsTrainer: React.FC<FalseFriendsTrainerProps> = ({ langua
     } else {
       // Record error slip into local mistake notebook
       logMistake({
-        user_id: 'learner',
+        user_id: StorageService.getCurrentUser(),
         language,
         error_category: 'false_friend',
         prompt: `Qual o significado real de "${targetTerm}" (${isTargetPt ? 'ES' : 'PT'})?`,

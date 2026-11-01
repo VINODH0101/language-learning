@@ -25,8 +25,23 @@ const VALID_ROUTES = new Set<AppRoute>([
   'admin',
 ]);
 
-function getRouteFromLocation(): AppRoute {
-  if (typeof window === 'undefined') return 'dashboard';
+function getRouteFromLocation(): AppRoute | null {
+  if (typeof window === 'undefined') return null;
+
+  // 1. Check URL query parameters (e.g., ?tab=practice)
+  try {
+    if (window.location.search) {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab')?.trim().toLowerCase();
+      if (tabParam && VALID_ROUTES.has(tabParam as AppRoute)) {
+        return tabParam as AppRoute;
+      }
+      if (tabParam === 'culture') return 'explore';
+      if (tabParam === 'learn/pt' || tabParam === 'pt') return 'portuguese';
+      if (tabParam === 'learn/es' || tabParam === 'es') return 'spanish';
+      if (tabParam === 'learn/en' || tabParam === 'en') return 'english';
+    }
+  } catch {}
 
   const hash = window.location.hash.replace(/^#\/?/, '').trim().toLowerCase();
   
@@ -40,12 +55,12 @@ function getRouteFromLocation(): AppRoute {
   if (hash === 'learn/es' || hash === 'es') return 'spanish';
   if (hash === 'learn/en' || hash === 'en') return 'english';
 
-  return 'dashboard';
+  return null;
 }
 
-export function useAppRouter(initialRoute?: AppRoute) {
+export function useAppRouter(initialRoute: AppRoute = 'dashboard') {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
-    return initialRoute || getRouteFromLocation();
+    return getRouteFromLocation() || initialRoute;
   });
 
   // Handle browser Back / Forward events
@@ -53,13 +68,13 @@ export function useAppRouter(initialRoute?: AppRoute) {
     if (typeof window === 'undefined') return;
 
     const handleHashChange = () => {
-      const route = getRouteFromLocation();
+      const route = getRouteFromLocation() || initialRoute;
       setCurrentRoute(route);
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [initialRoute]);
 
   const navigate = useCallback((route: AppRoute) => {
     setCurrentRoute(route);

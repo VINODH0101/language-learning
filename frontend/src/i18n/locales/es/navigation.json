@@ -28,5 +28,11 @@
   "create_account": "Crear Cuenta",
   "guest_mode": "Modo Invitado",
   "menu_title": "Menú de Navegación",
-  "close_menu": "Cerrar Menú"
+  "close_menu": "Cerrar Menú",
+  "nav_guest_mode": "Modo Invitado",
+  "curriculum_tracks_header": "Rutas de Idiomas (CEFR)",
+  "study_tools_header": "Herramientas de Estudio",
+  "mobile_nav_aria": "Navegación Principal Móvil",
+  "open_menu": "Abrir Menú de Navegación",
+  "full_navigation": "Navegación Completa"
 }

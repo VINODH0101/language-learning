@@ -68,12 +68,12 @@ describe('Navigation Component & UX', () => {
     expect(learnButton).toBeDefined();
 
     // Initially dropdown items are not in the DOM
-    expect(screen.queryByText(/Trilhas de Idiomas/i)).toBeNull();
+    expect(screen.queryByText(/(Trilhas de Idiomas|Language Tracks)/i)).toBeNull();
 
     // Click to open dropdown
     fireEvent.click(learnButton);
-    expect(screen.getByText(/Trilhas de Idiomas/i)).toBeDefined();
-    expect(screen.getByText(/Ferramentas de Estudo/i)).toBeDefined();
+    expect(screen.getByText(/(Trilhas de Idiomas|Language Tracks)/i)).toBeDefined();
+    expect(screen.getByText(/(Ferramentas de Estudo|Study Tools)/i)).toBeDefined();
 
     // Click Portuguese track inside the open dropdown
     const ptTracks = screen.getAllByText(/(Trilha Imersiva|Immersive Track)/i);
@@ -108,17 +108,17 @@ describe('Navigation Component & UX', () => {
 
   it('opens and closes mobile drawer and toggles body scroll lock', () => {
     renderNav();
-    const hamburgerBtn = screen.getByLabelText('Abrir Menu de Navegação');
+    const hamburgerBtn = screen.getByLabelText(/(Abrir Menu de Navegação|Open Navigation Menu)/i);
     expect(hamburgerBtn).toBeDefined();
 
     // Open drawer
     fireEvent.click(hamburgerBtn);
     expect(document.body.style.overflow).toBe('hidden');
-    expect(screen.getByText('Navegação Completa')).toBeDefined();
+    expect(screen.getByText(/(Navegação Completa|Full Navigation)/i)).toBeDefined();
 
     // Close drawer via close button
-    const closeBtn = screen.getByLabelText('Fechar Menu');
-    fireEvent.click(closeBtn);
+    const closeBtns = screen.getAllByLabelText(/(Fechar Menu|Close Menu)/i);
+    fireEvent.click(closeBtns[0]);
     expect(document.body.style.overflow).not.toBe('hidden');
   });
 

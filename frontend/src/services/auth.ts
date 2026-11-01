@@ -1,13 +1,16 @@
 import { UserProfile, UserRole } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { getPhrasebookWords } from './localDb';
+import { getPhrasebookWords, migrateGuestVocabulary } from './localDb';
 import { StorageService } from './storage';
 import { courseService } from './courseService';
+import { syncEngine } from './syncEngine';
 
 const STORAGE_KEYS = {
   GUEST_PREFERENCES: 'polyglot_guest_preferences',
   MOCK_AUTH_USER: 'polyglot_mock_auth_user',
 };
+
+const isDevOrTest = typeof import.meta !== 'undefined' && Boolean((import.meta as any).env?.DEV || (import.meta as any).env?.MODE === 'test');
 
 export interface AuthState {
   user: UserProfile | null;
@@ -133,7 +136,7 @@ class AuthService {
     }, 0);
   }
 
-  private async initAuth() {
+  public async initAuth(): Promise<void> {
     // 1. Authoritative check: If Supabase configured, verify live session FIRST
     if (isSupabaseConfigured) {
       try {
@@ -160,20 +163,22 @@ class AuthService {
       }
     }
 
-    // 2. Only if Supabase is NOT configured (e.g. offline testing), inspect mock auth
-    if (!isSupabaseConfigured) {
+    // 2. Only if Supabase is NOT configured AND running in explicit development/test mode, inspect mock auth
+    if (!isSupabaseConfigured && isDevOrTest) {
       try {
         const savedMock = localStorage.getItem(STORAGE_KEYS.MOCK_AUTH_USER);
         if (savedMock) {
           const parsed = JSON.parse(savedMock) as UserProfile;
+          // Invariant: Never allow client-side role escalation to 'admin' via unverified localStorage
+          const safeRole: UserRole = parsed.role === 'admin' ? 'user' : (parsed.role || 'user');
           const effectiveId = parsed.auth_user_id || parsed.id;
           if (typeof courseService !== 'undefined' && courseService?.setUserId) {
             courseService.setUserId(effectiveId);
           }
           StorageService.setCurrentUser(effectiveId);
           this.updateState({
-            user: parsed,
-            role: parsed.role,
+            user: { ...parsed, role: safeRole },
+            role: safeRole,
             isGuest: false,
             isLoading: false,
           });
@@ -268,13 +273,19 @@ class AuthService {
     email: string,
     password: string,
     fullName: string,
-    initialPrefs?: Partial<UserProfile>
+    initialPrefs?: Partial<UserProfile>,
+    botToken?: string
   ): Promise<{ user: UserProfile | null; error: string | null }> {
     if (!email || !email.includes('@')) {
       return { user: null, error: 'Endereço de email inválido.' };
     }
     if (!password || password.length < 8) {
       return { user: null, error: 'A senha deve conter no mínimo 8 caracteres.' };
+    }
+
+    // In production, bot token is required if Turnstile is active
+    if (!isDevOrTest && !botToken) {
+      return { user: null, error: 'A validação de segurança antibot é obrigatória.' };
     }
 
     if (isSupabaseConfigured) {
@@ -292,7 +303,7 @@ class AuthService {
         }
 
         if (data.user) {
-          // Insert profile record
+          // Insert profile record if not already created by DB trigger
           const newProfilePayload = {
             auth_user_id: data.user.id,
             email,
@@ -301,23 +312,14 @@ class AuthService {
             explanation_language: initialPrefs?.explanation_language || 'en',
             native_language: initialPrefs?.native_language || 'pt',
             primary_target_language: initialPrefs?.primary_target_language || 'es',
-            onboarding_completed: initialPrefs?.onboarding_completed || true,
+            onboarding_completed: initialPrefs?.onboarding_completed ?? true,
             email_daily_lesson_opt_in: false, // Strictly opt-in
           };
 
           try {
-            await supabase.from('user_profiles').insert([newProfilePayload]);
+            await supabase.from('user_profiles').upsert([newProfilePayload], { onConflict: 'auth_user_id' });
           } catch (profileErr) {
-            console.warn('Profile insert warning', profileErr);
-          }
-
-          try {
-            await supabase.from('user_roles').upsert([{ user_id: data.user.id, role: 'user' }], {
-              onConflict: 'user_id',
-              ignoreDuplicates: true,
-            });
-          } catch (roleErr) {
-            console.warn('Role assignment warning', roleErr);
+            console.warn('Profile upsert warning', profileErr);
           }
 
           const profile = await this.fetchLiveProfile(data.user.id, email);
@@ -341,7 +343,15 @@ class AuthService {
       }
     }
 
-    // In-memory mock registration fallback
+    // Guard against mock accounts in production environments
+    if (!isDevOrTest) {
+      return {
+        user: null,
+        error: 'O serviço de autenticação em nuvem (Supabase) não está configurado neste ambiente de produção. Utilize o aplicativo no modo visitante.',
+      };
+    }
+
+    // In-memory mock registration fallback (development / test mode only)
     const normalizedEmail = email.toLowerCase().trim();
     if (mockUsersDb.has(normalizedEmail)) {
       return { user: null, error: 'Este email já está cadastrado no sistema.' };
@@ -440,7 +450,15 @@ class AuthService {
       }
     }
 
-    // Fallback Mock Sign In
+    // In production, reject unconfigured fallback mock authentication
+    if (!isDevOrTest) {
+      return {
+        user: null,
+        error: 'O serviço de autenticação em nuvem (Supabase) não está configurado neste ambiente de produção. Utilize o aplicativo no modo visitante.',
+      };
+    }
+
+    // Fallback Mock Sign In (development / test mode only)
     const record = mockUsersDb.get(normalizedEmail);
     if (!record || record.passwordHash !== password) {
       return { user: null, error: 'Email ou senha inválidos.' };
@@ -513,13 +531,20 @@ class AuthService {
 
     if (isSupabaseConfigured) {
       try {
-        await supabase
+        const { error } = await supabase
           .from('user_profiles')
           .update(updates)
           .eq('auth_user_id', updated.auth_user_id);
+        if (error) {
+          console.warn('Error updating profile in Supabase, enqueuing sync', error);
+          await syncEngine.queueAction('SYNC_USER_PROFILE', updates, updated.auth_user_id || updated.id);
+        }
       } catch (err) {
-        console.warn('Error updating profile in Supabase', err);
+        console.warn('Exception updating profile in Supabase, enqueuing sync', err);
+        await syncEngine.queueAction('SYNC_USER_PROFILE', updates, updated.auth_user_id || updated.id);
       }
+    } else {
+      await syncEngine.queueAction('SYNC_USER_PROFILE', updates, updated.auth_user_id || updated.id);
     }
 
     if (mockUsersDb.has(updated.email.toLowerCase())) {
@@ -573,6 +598,7 @@ class AuthService {
 
     // Migrate guest courses to the authenticated user account
     courseService.migrateGuestCourses(userId);
+    await migrateGuestVocabulary(userId);
 
     return {
       wordsImported,

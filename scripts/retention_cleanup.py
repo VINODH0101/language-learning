@@ -143,9 +143,9 @@ def run_cleanup(
     # 2. Audit detailed exercise attempts older than threshold
     if storage.is_connected:
         res = storage._rest_request(
-            "lesson_exercises",
+            "exercise_attempts",
             method="GET",
-            params={"completed_at": f"lt.{exercise_cutoff}", "limit": str(batch_size)},
+            params={"created_at": f"lt.{exercise_cutoff}", "limit": str(batch_size)},
         )
         results["eligible_exercise_attempts"] = len(res) if res else 0
     else:

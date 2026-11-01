@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { CountryProvider, NormalizedCountry } from '../../services/providers/countries/countryProvider';
 import { SpeechService } from '../../services/speech';
+import { activityService } from '../../services/activityService';
 import { Language } from '../../types';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
@@ -67,6 +68,12 @@ export const CountryExplorer: React.FC<CountryExplorerProps> = ({ onSelectLangua
     fetchCountries();
     return () => { isCancelled = true; };
   }, [searchQuery, selectedRegion]);
+
+  useEffect(() => {
+    if (selectedCountry?.code) {
+      activityService.recordCountryExplored(selectedCountry.code);
+    }
+  }, [selectedCountry?.code]);
 
   const getPrimaryNativeName = (country: NormalizedCountry): string => {
     const keys = Object.keys(country.nativeNames);

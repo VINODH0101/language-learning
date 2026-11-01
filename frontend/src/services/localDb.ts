@@ -8,6 +8,8 @@ import {
   SRSItemState,
 } from '../types';
 
+export type { SavedVocabularyRecord };
+
 export interface CachedLessonRecord {
   id: string; // `${language}_${lesson_date}`
   language: Language;
@@ -25,6 +27,7 @@ export interface SyncQueueRecord {
   payload: unknown;
   status: 'pending' | 'failed';
   retry_count: number;
+  error_message?: string;
   created_at: string;
 }
 
@@ -377,19 +380,20 @@ export async function savePhrasebookWord(
   return id;
 }
 
-export async function getPhrasebookWords(targetLang?: string): Promise<SavedVocabularyRecord[]> {
+export async function getPhrasebookWords(targetOrSourceLang?: string): Promise<SavedVocabularyRecord[]> {
   if (!isIndexedDBAvailable()) {
     let list = Array.from(memoryFallback.savedVocabulary.values());
-    if (targetLang) list = list.filter(v => v.target_lang === targetLang);
+    if (targetOrSourceLang) {
+      list = list.filter(v => v.target_lang === targetOrSourceLang || v.source_lang === targetOrSourceLang);
+    }
     return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
 
   try {
-    let collection = localDb.savedVocabulary.toCollection();
-    if (targetLang) {
-      collection = localDb.savedVocabulary.where('target_lang').equals(targetLang);
+    let list = await localDb.savedVocabulary.toArray();
+    if (targetOrSourceLang) {
+      list = list.filter(v => v.target_lang === targetOrSourceLang || v.source_lang === targetOrSourceLang);
     }
-    const list = await collection.toArray();
     return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   } catch (err) {
     console.warn('Error fetching phrasebook words', err);
@@ -518,17 +522,25 @@ export async function enqueueSyncAction(action: string, payload: unknown, userId
 }
 
 export async function getPendingSyncActions(userId?: string): Promise<SyncQueueRecord[]> {
+  const MAX_RETRIES = 5;
   if (!isIndexedDBAvailable()) {
-    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'pending');
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(
+      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
+    );
     return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
   }
 
   try {
-    const all = await localDb.syncQueue.where('status').equals('pending').toArray();
-    return userId ? all.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : all;
+    const all = await localDb.syncQueue.toArray();
+    const eligible = all.filter(
+      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
+    );
+    return userId ? eligible.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : eligible;
   } catch (err) {
     console.warn('Error reading pending sync actions from IndexedDB', err);
-    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'pending');
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(
+      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
+    );
     return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
   }
 }
@@ -545,11 +557,14 @@ export async function removeSyncAction(id: string): Promise<void> {
   }
 }
 
-export async function markSyncActionFailed(id: string): Promise<void> {
+export async function markSyncActionFailed(id: string, errorMessage?: string): Promise<void> {
   const inMem = memoryFallback.syncQueue.get(id);
   if (inMem) {
     inMem.status = 'failed';
-    inMem.retry_count += 1;
+    inMem.retry_count = (inMem.retry_count || 0) + 1;
+    if (errorMessage) {
+      inMem.error_message = errorMessage;
+    }
   }
 
   if (isIndexedDBAvailable()) {
@@ -558,12 +573,50 @@ export async function markSyncActionFailed(id: string): Promise<void> {
       if (item) {
         item.status = 'failed';
         item.retry_count = (item.retry_count || 0) + 1;
+        if (errorMessage) {
+          item.error_message = errorMessage;
+        }
         await localDb.syncQueue.put(item);
       }
     } catch (err) {
       console.warn('Error updating sync action failure in IndexedDB', err);
     }
   }
+}
+
+export async function updateSyncActionStatus(
+  id: string,
+  statusOrError?: string,
+  maybeErrorMessage?: string
+): Promise<void> {
+  const errorMsg = maybeErrorMessage || (statusOrError !== 'failed' && statusOrError !== 'pending' ? statusOrError : undefined);
+  await markSyncActionFailed(id, errorMsg);
+}
+
+export async function migrateGuestVocabulary(userId: string): Promise<number> {
+  let count = 0;
+  for (const [id, word] of memoryFallback.savedVocabulary.entries()) {
+    if (!word.user_id || word.user_id === 'guest') {
+      word.user_id = userId;
+      memoryFallback.savedVocabulary.set(id, word);
+      count++;
+    }
+  }
+
+  if (isIndexedDBAvailable()) {
+    try {
+      const guestWords = await localDb.savedVocabulary.filter(w => !w.user_id || w.user_id === 'guest').toArray();
+      for (const w of guestWords) {
+        w.user_id = userId;
+        await localDb.savedVocabulary.put(w);
+      }
+      count = Math.max(count, guestWords.length);
+    } catch (err) {
+      console.warn('Error migrating guest vocabulary in IndexedDB', err);
+    }
+  }
+
+  return count;
 }
 
 // ============================================================================

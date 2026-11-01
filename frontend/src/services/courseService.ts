@@ -7,10 +7,10 @@
  * cross-account data leakage on shared devices.
  */
 
-import { Course, CourseConfig, Language, RegionalVariety, CEFRLevel, ExplanationLanguage } from '../types';
-import { supabase } from './supabaseClient';
-import { enforceRegionalVariety, isValidRegionalVariety } from '../lib/languages/languageMatrix';
+import { Course, CourseConfig, Language, RegionalVariety, CEFRLevel, ExplanationLanguage, CurriculumNode } from '../types';
+import { enforceRegionalVariety } from '../lib/languages/languageMatrix';
 import { syncEngine } from './syncEngine';
+import { ptCurriculum, esCurriculum, enCurriculum } from '../data/seedData';
 
 function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -363,6 +363,17 @@ class CourseService {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  public getCurriculumForLanguage(language: Language): CurriculumNode[] {
+    if (language === 'pt') return ptCurriculum;
+    if (language === 'es') return esCurriculum;
+    if (language === 'en') return enCurriculum;
+    return [];
+  }
+
+  public getCurriculumTotalNodes(language: Language, _cefrLevel?: CEFRLevel): number {
+    return this.getCurriculumForLanguage(language).length;
   }
 
   private notify(): void {

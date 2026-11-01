@@ -251,6 +251,7 @@ class SupabaseStorageRepository(StorageRepository):
         if not self.is_connected:
             return
 
+        lesson_json = lesson.model_dump(mode="json")
         payload = {
             "id": lesson.lesson_id,
             "user_id": lesson.user_id,
@@ -261,7 +262,8 @@ class SupabaseStorageRepository(StorageRepository):
             "study_mode": lesson.study_mode.value,
             "estimated_minutes": lesson.estimated_study_minutes,
             "content_fingerprint": lesson.content_fingerprint,
-            "payload": lesson.model_dump(mode="json"),
+            "payload": lesson_json,
+            "content_payload": lesson_json,
         }
         self._rest_request("daily_lessons", method="POST", data=payload, prefer_upsert=True)
 
@@ -276,7 +278,7 @@ class SupabaseStorageRepository(StorageRepository):
         }
         res = self._rest_request("daily_lessons", method="GET", params=params)
         if res and len(res) > 0:
-            raw_payload = res[0].get("payload", {})
+            raw_payload = res[0].get("payload") or res[0].get("content_payload") or {}
             return DailyLessonPayload(**raw_payload)
 
         if self._mem:
@@ -292,8 +294,9 @@ class SupabaseStorageRepository(StorageRepository):
         if not self.is_connected:
             return
 
+        attempt_id = attempt.id or f"{user_id}_{attempt.exercise_id}_{int(attempt.timestamp.timestamp())}"
         payload = {
-            "id": attempt.id,
+            "id": attempt_id,
             "user_id": user_id,
             "exercise_id": attempt.exercise_id,
             "submitted_answer": attempt.submitted_answer,

@@ -84,9 +84,10 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
           renderWidget();
         };
         script.onerror = () => {
-          // Graceful fallback to test mode if network fails or adblocker blocks Turnstile
-          setIsTestMode(true);
-          onVerify('TEST_PASS_TOKEN');
+          // Fail closed: Never bypass bot verification if script fails to load
+          setErrorMsg('Não foi possível carregar a proteção antibot. Por favor, desative bloqueadores de script ou tente novamente.');
+          setIsLoaded(false);
+          onError?.('turnstile_script_blocked');
         };
         document.head.appendChild(script);
       }

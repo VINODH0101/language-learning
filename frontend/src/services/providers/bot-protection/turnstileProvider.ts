@@ -34,21 +34,28 @@ export class TurnstileProvider {
     return TurnstileProvider.instance;
   }
 
+  public isConfigured(): boolean {
+    return Boolean(this.getSiteKey());
+  }
+
   /**
    * Retrieves configured Cloudflare Turnstile public site key from Vite environment.
    */
   public getSiteKey(): string {
     const key = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_TURNSTILE_SITE_KEY) || '';
-    // Use Cloudflare's official always-passing test site key in development if none provided
-    return key || '1x00000000000000000000AA';
+    if (key) return key;
+    const isDevOrTest = typeof import.meta !== 'undefined' && Boolean((import.meta as any).env?.DEV || (import.meta as any).env?.MODE === 'test');
+    // Use Cloudflare's official always-passing test site key strictly in development / testing
+    return isDevOrTest ? '1x00000000000000000000AA' : '';
   }
 
   /**
-   * Checks if Turnstile is running with test keys.
+   * Checks if Turnstile is running with test keys strictly in development / test environments.
    */
   public isTestMode(): boolean {
+    const isDevOrTest = typeof import.meta !== 'undefined' && Boolean((import.meta as any).env?.DEV || (import.meta as any).env?.MODE === 'test');
     const key = this.getSiteKey();
-    return key.startsWith('1x00000000000000000000');
+    return Boolean(isDevOrTest && key.startsWith('1x00000000000000000000'));
   }
 
   /**
@@ -101,3 +108,5 @@ export class TurnstileProvider {
     }
   }
 }
+
+export const turnstileProvider = TurnstileProvider.getInstance();

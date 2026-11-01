@@ -158,7 +158,7 @@ describe('Practice & SRS Page — English Language Toggle & Content', () => {
     fireEvent.click(enButton);
 
     // Select multiple choice practice mode
-    const mcButton = screen.getByRole('button', { name: /Múltipla Escolha/i });
+    const mcButton = screen.getByRole('button', { name: /(Múltipla Escolha|Multiple Choice)/i });
     fireEvent.click(mcButton);
 
     // English exercise prompt

@@ -15,6 +15,8 @@ import { AdminPage } from './pages/AdminPage';
 import { CultureExplorePage } from './pages/CultureExplorePage';
 import { VocabularyPage } from './pages/VocabularyPage';
 import { StorageService } from './services/storage';
+import { courseService } from './services/courseService';
+import { Course } from './types';
 import { initializeExternalApiRegistry } from './integrations/external-apis';
 
 export const AppContent: React.FC = () => {
@@ -27,13 +29,36 @@ export const AppContent: React.FC = () => {
     const ptTrack = StorageService.getTrackState('pt');
     setStreakDays(Math.max(1, ptTrack.streak_days));
 
-    // Check if onboarding was completed
+    // Check if onboarding was completed or URL query params configured
     try {
-      const completed =
-        localStorage.getItem('lexilume_onboarding_completed') ||
-        localStorage.getItem('polyglot_onboarding_completed');
-      if (!completed) {
-        // Will be picked up by layout or onboarding triggers
+      if (typeof window !== 'undefined' && window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('admin') === 'true') {
+          const adminProfile = {
+            id: 'usr_admin_001',
+            auth_user_id: 'auth_admin_001',
+            email: 'admin@polyglot.dev',
+            full_name: 'Lead System Administrator',
+            role: 'admin',
+            account_status: 'active',
+            native_language: 'en',
+            primary_target_language: 'pt',
+            interface_language: params.get('lang') || 'en',
+            explanation_language: 'en',
+            theme: 'dark',
+            onboarding_completed: true,
+          };
+          localStorage.setItem('polyglot_mock_auth_user', JSON.stringify(adminProfile));
+        }
+        const targetCourse = params.get('course');
+        if (targetCourse) {
+          const found = courseService.getCourses().find((c: Course) => c.target_language === targetCourse);
+          if (found) courseService.setActiveCourse(found.id);
+        }
+        if (params.has('dismiss_modals')) {
+          localStorage.setItem('lexilume_onboarding_completed', 'true');
+          localStorage.setItem('polyglot_onboarding_completed', 'true');
+        }
       }
     } catch {}
   }, []);

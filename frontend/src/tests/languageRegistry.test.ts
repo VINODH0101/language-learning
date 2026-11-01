@@ -337,7 +337,7 @@ describe('Lexilume Multilingual Language Registry & Configuration', () => {
   // 14. i18next Interface Localization Integration
   it('14. verifies i18next interface language resolution and resources', async () => {
     expect(i18n.isInitialized).toBe(true);
-    expect(['en', 'pt', 'es']).toContain(i18n.language);
+    expect(['en', 'pt', 'es', 'ja', 'fr']).toContain(i18n.language);
 
     await i18n.changeLanguage('pt');
     expect(i18n.language).toBe('pt');

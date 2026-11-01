@@ -52,19 +52,23 @@ export class ProviderHealthTracker {
   }
 
   public registerProvider(providerId: string, name: string, category: string): void {
-    if (!this.records.has(providerId)) {
-      this.records.set(providerId, {
-        providerId,
-        name,
-        category,
-        status: 'healthy',
-        averageLatencyMs: 0,
-        totalRequests: 0,
-        successfulRequests: 0,
-        failedRequests: 0,
-        lastCheckedAt: new Date().toISOString(),
-      });
+    const existing = this.records.get(providerId);
+    if (existing) {
+      if (name) existing.name = name;
+      if (category) existing.category = category;
+      return;
     }
+    this.records.set(providerId, {
+      providerId,
+      name,
+      category,
+      status: 'healthy',
+      averageLatencyMs: 0,
+      totalRequests: 0,
+      successfulRequests: 0,
+      failedRequests: 0,
+      lastCheckedAt: new Date().toISOString(),
+    });
   }
 
   public recordSuccess(providerId: string, latencyMs: number): void {

@@ -28,5 +28,11 @@
   "create_account": "Crea Account",
   "guest_mode": "Modalità Ospite",
   "menu_title": "Menu di Navigazione",
-  "close_menu": "Chiudi Menu"
+  "close_menu": "Chiudi Menu",
+  "nav_guest_mode": "Guest Mode",
+  "curriculum_tracks_header": "Language Tracks (CEFR)",
+  "study_tools_header": "Study Tools",
+  "mobile_nav_aria": "Mobile Navigation",
+  "open_menu": "Open Navigation Menu",
+  "full_navigation": "Full Navigation"
 }

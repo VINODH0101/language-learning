@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Check, X, HelpCircle, ArrowRight, RotateCcw } from 'lucide-react';
-import { DailyLessonPayload, ExerciseAttempt, MistakeCategory, Language } from '../../types';
-import { StorageService } from '../../services/storage';
-import { logMistake } from '../../services/localDb';
+import { DailyLessonPayload, ExerciseAttempt, Language } from '../../types';
 import { Button } from '../common/Button';
 import { useI18n } from '../../i18n/i18nContext';
+import { PracticeEngine } from '../../features/practice/engine/practiceEngine';
 
 interface ExerciseSectionProps {
   exercises: DailyLessonPayload['section_9_exercises'];
@@ -35,73 +34,40 @@ export const ExerciseSection: React.FC<ExerciseSectionProps> = ({
     const currentAttempts = (attemptsCount[currentExercise.id] || 0) + 1;
     setAttemptsCount(prev => ({ ...prev, [currentExercise.id]: currentAttempts }));
 
-    // Clean inputs
-    const cleanSubmission = answer.toLowerCase().replace(/^[¿¡"'\s]+|[¿¡!?,.;:"'\s]+$/g, '');
-    const cleanSolutions = currentKey.acceptable_solutions.map(s =>
-      s.toLowerCase().replace(/^[¿¡"'\s]+|[¿¡!?,.;:"'\s]+$/g, '')
-    );
+    const distractorsList = currentKey.distractor_feedback
+      ? Object.entries(currentKey.distractor_feedback).map(([text, why_incorrect]) => ({
+          text,
+          why_incorrect,
+        }))
+      : [];
 
-    const isCorrect = cleanSolutions.includes(cleanSubmission);
-
-    let message = '';
-
-    if (isCorrect) {
-      message = t('lesson_exercise_correct', 'Excelente! Resposta correta.');
-    } else {
-      // Check if candidate matches a distractor
-      if (currentKey.distractor_feedback && currentKey.distractor_feedback[answer]) {
-        message = `${t('lesson_exercise_incorrect_prefix', 'Incorreto:')} ${currentKey.distractor_feedback[answer]}`;
-      } else {
-        message = `${t('lesson_exercise_expected_prefix', 'Incorreto. Resposta esperada:')} "${currentKey.acceptable_solutions[0]}"`;
-      }
-    }
+    const validation = PracticeEngine.evaluate({
+      submittedAnswer: answer,
+      acceptableSolutions: currentKey.acceptable_solutions,
+      distractors: distractorsList,
+      explanation: currentKey.explanation,
+      attemptNumber: currentAttempts,
+      exerciseType: currentExercise.exercise_type,
+    });
 
     setFeedback({
-      isCorrect,
-      message,
+      isCorrect: validation.isCorrect,
+      message: validation.feedback,
       explanation: currentKey.explanation,
     });
     setSubmitted(true);
 
-    // Save telemetry to storage
-    const attempt: ExerciseAttempt = {
-      id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      exercise_id: currentExercise.id,
-      submitted_answer: answer,
-      is_correct: isCorrect,
-      feedback: message,
-      attempt_count: currentAttempts,
-      timestamp: new Date().toISOString(),
-    };
-    StorageService.saveExerciseAttempt(attempt);
-
-    // Auto-record to Mistake Notebook if incorrect
-    if (!isCorrect) {
-      let category: MistakeCategory = 'grammar';
-      const promptCombined = (currentExercise.prompt + ' ' + (currentExercise.context_passage || '')).toLowerCase();
-      if (promptCombined.includes('falso') || promptCombined.includes('cognat') || promptCombined.includes('false friend')) {
-        category = 'false_friend';
-      } else if (promptCombined.includes('subjuntiv') || promptCombined.includes('subjunctive')) {
-        category = 'subjunctive_mood';
-      } else if (promptCombined.includes('preposi') || promptCombined.includes('preposition')) {
-        category = 'preposition';
-      } else if (promptCombined.includes('vocabul') || promptCombined.includes('léxico') || currentExercise.exercise_type === 'cloze') {
-        category = 'vocabulary';
-      } else if (promptCombined.includes('concordân') || promptCombined.includes('plural') || promptCombined.includes('gênero')) {
-        category = 'agreement';
-      }
-
-      logMistake({
-        user_id: 'learner',
-        language,
-        error_category: category,
-        prompt: currentExercise.prompt,
-        context_passage: currentExercise.context_passage,
-        user_answer: answer,
-        correct_answer: currentKey.acceptable_solutions[0] || '',
-        explanation: currentKey.explanation,
-      });
-    }
+    PracticeEngine.recordAttempt({
+      exerciseId: currentExercise.id,
+      submittedAnswer: answer,
+      validation,
+      attemptCount: currentAttempts,
+      language,
+      exerciseType: currentExercise.exercise_type,
+      prompt: currentExercise.prompt,
+      contextPassage: currentExercise.context_passage,
+      primarySolution: currentKey.acceptable_solutions[0] || '',
+    });
   };
 
   const handleNext = () => {

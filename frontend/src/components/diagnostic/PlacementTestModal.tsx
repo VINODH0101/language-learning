@@ -4,8 +4,10 @@ import { DiagnosticQuestion, DiagnosticResult, CEFRLevel, Language } from '../..
 import { diagnosticQuestions } from '../../data/seedData';
 import { StorageService } from '../../services/storage';
 import { courseService } from '../../services/courseService';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
+import { useI18n } from '../../i18n/i18nContext';
 
 interface PlacementTestModalProps {
   language: Language;
@@ -20,6 +22,7 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
   onClose,
   onComplete,
 }) => {
+  const { t, interfaceLanguage } = useI18n();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<DiagnosticResult | null>(null);
@@ -27,6 +30,39 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
   if (!isOpen) return null;
 
   const questions = diagnosticQuestions.filter(q => q.language === language);
+
+  if (questions.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-center">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="w-12 h-12 rounded-2xl bg-indigo-950/60 border border-indigo-800/60 flex items-center justify-center text-indigo-400 mx-auto mb-3">
+            <Award className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-100">
+            {t('progress:diagnostic_not_available_title', 'Placement Diagnostic In Preparation')}
+          </h3>
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+            {t(
+              'progress:diagnostic_not_available_desc',
+              'Interactive diagnostic questions for this language track are currently under calibration. Placement starts at A1, and your level can be configured in Course Settings.'
+            )}
+          </p>
+          <div className="mt-5">
+            <Button variant="outline" size="sm" onClick={onClose} className="w-full text-xs cursor-pointer">
+              {t('common:close', 'Close')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const currentQ = questions[currentIdx];
 
   const handleSelectOption = (optIdx: number) => {
@@ -79,7 +115,7 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
     const overallPct = Math.round((correctCount / questions.length) * 100);
 
     const diagResult: DiagnosticResult = {
-      user_id: StorageService.getSettings().user_id,
+      user_id: StorageService.getCurrentUser(),
       language,
       recommended_cefr_level: recommendedLevel,
       recommended_curriculum_node_id: `${language}-${recommendedLevel.toLowerCase()}-01`,
@@ -114,12 +150,14 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
     setResult(null);
   };
 
+  const localizedLangName = getLanguageName(language, interfaceLanguage);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+          className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -128,25 +166,25 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
           <div className="space-y-5">
             <div>
               <div className="flex items-center gap-2">
-                <Badge variant={language === 'pt' ? 'emerald' : 'amber'} size="sm">
-                  {language === 'pt' ? 'Português' : 'Español'}
+                <Badge variant="indigo" size="sm">
+                  {localizedLangName}
                 </Badge>
                 <span className="text-xs text-slate-400">
-                  Questão {currentIdx + 1} de {questions.length}
+                  {t('progress:question_num', 'Question')} {currentIdx + 1} {t('progress:question_of', 'of')} {questions.length}
                 </span>
               </div>
               <h2 className="text-lg font-bold text-slate-100 mt-1">
-                Teste Diagnóstico de Nivelamento CEFR
+                {t('progress:placement_test_title', 'CEFR Diagnostic Placement Test')}
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Responda com atenção para calibrar seu nível de entrada sem assumir perfil iniciante.
+                {t('progress:placement_test_desc', 'Calibrate your recommended entrance curriculum level from A1 to C1.')}
               </p>
             </div>
 
             {/* Question Prompt */}
             <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/80">
               <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">
-                Foco: {currentQ.grammatical_focus} ({currentQ.cefr_level})
+                {t('progress:focus', 'Focus')}: {currentQ.grammatical_focus} ({currentQ.cefr_level})
               </span>
               <p className="text-sm font-semibold text-slate-100">{currentQ.prompt}</p>
             </div>
@@ -174,7 +212,7 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
             {/* Footer Buttons */}
             <div className="flex justify-between items-center pt-3 border-t border-slate-800">
               <span className="text-xs text-slate-400 font-mono">
-                {Math.round(((currentIdx + 1) / questions.length) * 100)}% concluído
+                {Math.round(((currentIdx + 1) / questions.length) * 100)}% {t('common:completed', 'completed')}
               </span>
               <Button
                 variant="primary"
@@ -182,8 +220,11 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
                 disabled={selectedAnswers[currentQ.id] === undefined}
                 icon={<ChevronRight className="w-4 h-4" />}
                 onClick={handleNext}
+                className="cursor-pointer"
               >
-                {currentIdx < questions.length - 1 ? 'Próxima Questão' : 'Calcular Nível CEFR'}
+                {currentIdx < questions.length - 1
+                  ? t('progress:next_question_btn', 'Next Question')
+                  : t('progress:calculate_level_btn', 'Calculate CEFR Level')}
               </Button>
             </div>
           </div>
@@ -196,10 +237,10 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
 
             <div>
               <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
-                Nivelamento Concluído com Sucesso
+                {t('progress:placement_completed', 'Placement Test Completed')}
               </span>
               <h2 className="text-2xl font-extrabold text-slate-100 mt-1">
-                Seu Nível Inicial Recomendado: {result.recommended_cefr_level}
+                {t('progress:recommended_entry_level', 'Recommended Entrance Level')}: {result.recommended_cefr_level}
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto">
                 {result.feedback_summary}
@@ -220,11 +261,11 @@ export const PlacementTestModal: React.FC<PlacementTestModalProps> = ({
 
             {/* Actions */}
             <div className="flex justify-center gap-3 pt-4 border-t border-slate-800">
-              <Button variant="outline" size="sm" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={handleReset}>
-                Refazer Teste
+              <Button variant="outline" size="sm" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={handleReset} className="cursor-pointer">
+                {t('progress:retake_btn', 'Retake Test')}
               </Button>
-              <Button variant="primary" size="sm" onClick={onClose}>
-                Aplicar e Iniciar Estudos
+              <Button variant="primary" size="sm" onClick={onClose} className="cursor-pointer">
+                {t('progress:apply_and_study_btn', 'Apply & Start Learning')}
               </Button>
             </div>
           </div>

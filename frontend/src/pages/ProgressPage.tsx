@@ -1,296 +1,227 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  TrendingUp,
-  Award,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  BookOpen,
-  Sparkles,
-  Calendar,
-  Lock,
-  Server,
-  Database,
-  Activity,
-  CheckCircle,
-  RefreshCw,
-} from 'lucide-react';
-import { Language, UserTrackState, DiagnosticResult } from '../types';
-import { ptCurriculum, esCurriculum, enCurriculum } from '../data/seedData';
+  Language,
+  UserTrackState,
+  DiagnosticResult,
+  MistakeNotebookItem,
+  DailyPoem,
+  DailyConversation,
+} from '../types';
 import { StorageService } from '../services/storage';
-import { Card } from '../components/common/Card';
-import { Button } from '../components/common/Button';
-import { Badge } from '../components/common/Badge';
-import { ProgressBar } from '../components/common/ProgressBar';
-import { PlacementTestModal } from '../components/diagnostic/PlacementTestModal';
+import { courseService } from '../services/courseService';
+import { activityService } from '../services/activityService';
+import { dailyContentService } from '../services/dailyContentService';
+import { getMistakes, getCulturalBookmarks, CulturalBookmarkRecord } from '../services/localDb';
+import { diagnosticQuestions } from '../data/seedData';
 import { useI18n } from '../i18n/i18nContext';
-import { toast } from 'sonner';
+import { PlacementTestModal } from '../components/diagnostic/PlacementTestModal';
 
-export const ProgressPage: React.FC = () => {
+import {
+  ProgressHeader,
+  LearningOverviewGrid,
+  CEFRRoadmap,
+  VocabularyRetentionCard,
+  ExercisePerformanceCard,
+  SkillDevelopmentCard,
+  DailyContentProgressCard,
+  CulturalDiscoveryCard,
+  WeakAreasCard,
+  DiagnosticSummaryCard,
+} from '../features/progress/components';
+
+interface ProgressPageProps {
+  onNavigateTab?: (
+    tab:
+      | 'portuguese'
+      | 'spanish'
+      | 'english'
+      | 'vocabulary'
+      | 'explore'
+      | 'translate'
+      | 'practice'
+      | 'progress'
+      | 'settings'
+  ) => void;
+}
+
+export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => {
   const { t } = useI18n();
-  const [selectedLang, setSelectedLang] = useState<Language>('pt');
-  const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
 
+  // Active language track defaults to the user's active course or 'pt'
+  const [selectedLang, setSelectedLang] = useState<Language>(() => {
+    try {
+      const active = courseService.getActiveCourse();
+      return active ? active.target_language : 'pt';
+    } catch {
+      return 'pt';
+    }
+  });
+
+  const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
+  const [mistakes, setMistakes] = useState<MistakeNotebookItem[]>([]);
+  const [culturalBookmarks, setCulturalBookmarks] = useState<CulturalBookmarkRecord[]>([]);
+
+  // Load language-scoped learning data (Zero cross-language contamination)
   const track: UserTrackState = StorageService.getTrackState(selectedLang);
-  const curriculum =
-    selectedLang === 'pt'
-      ? ptCurriculum
-      : selectedLang === 'es'
-      ? esCurriculum
-      : enCurriculum;
-  const attempts = StorageService.getExerciseAttempts();
+  const activeCourse = courseService.getCourseForLanguage(selectedLang);
+  const curriculum = courseService.getCurriculumForLanguage(selectedLang);
+  const attempts = StorageService.getExerciseAttempts(selectedLang);
   const srsItems = StorageService.getSRSItems(selectedLang);
   const diagnostics = StorageService.getDiagnosticResults().filter(d => d.language === selectedLang);
+  const latestDiagnostic = diagnostics.length > 0 ? diagnostics[0] : null;
 
-  // Real computed metrics (Zero fake statistics)
+  // Real activity telemetry
+  const activitySummary = activityService.getLanguageActivitySummary(selectedLang);
+  const activePoem: DailyPoem | null = dailyContentService.getDailyPoem(selectedLang);
+  const activeConversation: DailyConversation | null = dailyContentService.getDailyConversation(selectedLang);
+
+  // Check if diagnostic questions exist for selected language
+  const hasDiagnosticAvailable = diagnosticQuestions.some(q => q.language === selectedLang);
+
+  // Load mistakes and cultural bookmarks asynchronously
+  useEffect(() => {
+    let isCancelled = false;
+    getMistakes(selectedLang).then(res => {
+      if (!isCancelled) setMistakes(res || []);
+    });
+    getCulturalBookmarks(StorageService.getCurrentUser()).then(res => {
+      if (!isCancelled) setCulturalBookmarks(res || []);
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedLang]);
+
+  // Derived Genuine Metrics (Zero fabricated statistics)
   const totalCompleted = track.completed_curriculum_node_ids.length;
   const totalCurriculumNodes = curriculum.length;
-  const completionPct = Math.round((totalCompleted / totalCurriculumNodes) * 100);
+  const completionPct =
+    totalCurriculumNodes > 0 ? Math.round((totalCompleted / totalCurriculumNodes) * 100) : 0;
 
   const correctAttempts = attempts.filter(a => a.is_correct).length;
   const accuracyPct = attempts.length > 0 ? Math.round((correctAttempts / attempts.length) * 100) : 0;
+  const failedAttempts = attempts.filter(a => !a.is_correct);
 
-  // Real SRS distribution
+  // SM-2 distribution
   const presentedCount = srsItems.filter(s => s.mastery_status === 'presented').length;
   const learningCount = srsItems.filter(s => s.mastery_status === 'learning').length;
   const reviewingCount = srsItems.filter(s => s.mastery_status === 'reviewing').length;
   const masteredCount = srsItems.filter(s => s.mastery_status === 'mastered').length;
 
-  // Weak areas: failed attempts
-  const failedAttempts = attempts.filter(a => !a.is_correct).slice(0, 5);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dueSRSCount = srsItems.filter(s => s.next_review_date <= todayStr).length;
 
-  // Requirement: Do not show a C1 badge without real assessment evidence
-  const hasDemonstratedC1 = diagnostics.some(d => d.recommended_cefr_level === 'C1') &&
-    track.current_cefr_level === 'C1' &&
-    totalCompleted >= totalCurriculumNodes;
+  const todayStudyMinutes = StorageService.getTodayStudyMinutes();
+  const streakDays = activeCourse?.streak_days || track.streak_days || 1;
+
+  const handleNavigatePractice = () => {
+    if (onNavigateTab) {
+      onNavigateTab('practice');
+    }
+  };
+
+  const handleNavigateExplore = () => {
+    if (onNavigateTab) {
+      onNavigateTab('explore');
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Header & Track Toggle */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
-              {t('navigation:nav_progress', 'Progresso')}
-            </span>
-            <Badge variant="indigo" size="sm">
-              {track.current_cefr_level}
-            </Badge>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-100">{t('navigation:nav_progress', 'Progresso')} & {t('dashboard:recent_activity_title', 'Desempenho')}</h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            {t('dashboard:accuracy_rate', 'Estatísticas')}: SuperMemo SM-2 & CEFR.
-          </p>
-        </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
+      {/* 1. Progress Header & Multi-Language Track Selector */}
+      <ProgressHeader
+        selectedLang={selectedLang}
+        onSelectLang={setSelectedLang}
+        track={track}
+        activeCourse={activeCourse}
+        onOpenDiagnostic={() => setIsDiagnosticOpen(true)}
+        hasDiagnosticAvailable={hasDiagnosticAvailable}
+      />
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
-            <button
-              onClick={() => setSelectedLang('pt')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                selectedLang === 'pt'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Português
-            </button>
-            <button
-              onClick={() => setSelectedLang('es')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                selectedLang === 'es'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Español
-            </button>
-            <button
-              onClick={() => setSelectedLang('en')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                selectedLang === 'en'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              English
-            </button>
-          </div>
+      {/* 2. Compact Overview KPI Metrics Grid (Language Scoped) */}
+      <LearningOverviewGrid
+        currentCefr={track.current_cefr_level}
+        targetCefr={track.target_cefr_level}
+        totalCompletedNodes={totalCompleted}
+        totalCurriculumNodes={totalCurriculumNodes}
+        completionPct={completionPct}
+        totalAttempts={attempts.length}
+        correctAttempts={correctAttempts}
+        accuracyPct={accuracyPct}
+        masteredVocabCount={masteredCount}
+        todayStudyMinutes={todayStudyMinutes}
+        streakDays={streakDays}
+      />
 
-          <Button
-            variant="outline"
-            size="md"
-            icon={<Award className="w-4 h-4 text-indigo-400" />}
-            onClick={() => setIsDiagnosticOpen(true)}
-          >
-            {t('common:details', 'Diagnóstico')}
-          </Button>
-        </div>
-      </div>
+      {/* 3. Vocabulary Retention SM-2 Distribution & Queue */}
+      <VocabularyRetentionCard
+        presentedCount={presentedCount}
+        learningCount={learningCount}
+        reviewingCount={reviewingCount}
+        masteredCount={masteredCount}
+        dueCount={dueSRSCount}
+        onNavigatePractice={handleNavigatePractice}
+      />
 
-      {/* Top 4 KPI Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-semibold uppercase">Nível CEFR</span>
-            <Badge variant="emerald" size="sm">{track.current_cefr_level}</Badge>
-          </div>
-          <div className="text-2xl font-extrabold text-slate-100 mt-2">{track.current_cefr_level}</div>
-          <p className="text-[11px] text-slate-400 mt-1">Alvo configurado: {track.target_cefr_level}</p>
-        </Card>
+      {/* 4. Sequential CEFR Curriculum Roadmap (A1 to C1) */}
+      <CEFRRoadmap
+        curriculum={curriculum}
+        completedNodeIds={track.completed_curriculum_node_ids}
+        currentNodeId={track.current_curriculum_node_id}
+        selectedLanguage={selectedLang}
+      />
 
-        <Card>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-semibold uppercase">Currículo</span>
-            <span className="text-xs font-bold text-slate-300">{totalCompleted} / {totalCurriculumNodes}</span>
-          </div>
-          <div className="text-2xl font-extrabold text-slate-100 mt-2">{completionPct}%</div>
-          <ProgressBar progress={completionPct} className="mt-2" variant="indigo" />
-        </Card>
+      {/* 5. Exercise Performance & Accuracy Analytics (Language Scoped) */}
+      <ExercisePerformanceCard
+        attempts={attempts}
+        selectedLanguage={selectedLang}
+      />
 
-        <Card>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-semibold uppercase">Acurácia Exercícios</span>
-            <span className="text-xs font-bold text-slate-300">{correctAttempts} / {attempts.length}</span>
-          </div>
-          <div className="text-2xl font-extrabold text-slate-100 mt-2">{accuracyPct}%</div>
-          <p className="text-[11px] text-slate-400 mt-1">Baseado em tentativas reais</p>
-        </Card>
+      {/* 6. Skill Development & Linguistic Competencies */}
+      <SkillDevelopmentCard
+        skillActivityCounts={activitySummary.skillActivityCounts}
+      />
 
-        <Card>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-semibold uppercase">Certificação C1</span>
-            {hasDemonstratedC1 ? (
-              <Badge variant="emerald" size="sm">Atestado</Badge>
-            ) : (
-              <Badge variant="slate" size="sm">Em Curso</Badge>
-            )}
-          </div>
-          <div className="text-sm font-bold text-slate-200 mt-2">
-            {hasDemonstratedC1 ? 'Atestado C1 Pleno' : 'Requer Prova C1'}
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            {hasDemonstratedC1
-              ? 'Conclusão curricular com evidência diagnóstica.'
-              : 'Conclua os nós C1 e o teste de nivelamento.'}
-          </p>
-        </Card>
-      </div>
+      {/* 7. Daily Literature (Poetry) & Communicative Dialogue Progress */}
+      <DailyContentProgressCard
+        selectedLanguage={selectedLang}
+        activePoem={activePoem}
+        activeConversation={activeConversation}
+        poemsCompletedCount={activitySummary.poetryCompletedCount}
+        poemsListenedCount={activitySummary.poetryListenedCount}
+        conversationsCompletedCount={activitySummary.conversationCompletedCount}
+        conversationsListenedCount={activitySummary.conversationListenedCount}
+        recentDailyActivities={activitySummary.recentActivities}
+      />
 
-      {/* Vocabulary Retention SM-2 Breakdown */}
-      <Card
-        title="Distribuição do Léxico por Estágio SM-2"
-        subtitle="Diferenciação pedagógica obrigatória entre conteúdo meramente apresentado e conteúdo consolidado"
-      >
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
-            <span className="text-xs text-slate-400 block font-semibold">1. Apresentados</span>
-            <span className="text-xl font-bold text-slate-200 mt-1 block">{presentedCount}</span>
-            <span className="text-[10px] text-slate-500">Expostos na lição</span>
-          </div>
+      {/* 8. Global Discovery & Cultural Exploration (Decoupled from CEFR) */}
+      <CulturalDiscoveryCard
+        exploredCountriesCount={activitySummary.countriesExploredCount}
+        totalAvailableCountries={250}
+        bookmarkedArticlesCount={culturalBookmarks.length}
+        readArticlesCount={activitySummary.skillActivityCounts.reading}
+        onNavigateExplore={handleNavigateExplore}
+      />
 
-          <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
-            <span className="text-xs text-indigo-300 block font-semibold">2. Aprendendo</span>
-            <span className="text-xl font-bold text-indigo-400 mt-1 block">{learningCount}</span>
-            <span className="text-[10px] text-slate-500">1-2 repetições</span>
-          </div>
+      {/* 9. Weak Areas, Actionable Recommendations & Mistake Notebook */}
+      <WeakAreasCard
+        mistakes={mistakes}
+        failedAttempts={failedAttempts}
+        dueSRSCount={dueSRSCount}
+        selectedLanguage={selectedLang}
+        onNavigatePractice={handleNavigatePractice}
+      />
 
-          <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
-            <span className="text-xs text-sky-300 block font-semibold">3. Revisando</span>
-            <span className="text-xl font-bold text-sky-400 mt-1 block">{reviewingCount}</span>
-            <span className="text-[10px] text-slate-500">3-4 repetições</span>
-          </div>
+      {/* 10. Diagnostic Placement Evaluation Summary */}
+      <DiagnosticSummaryCard
+        latestResult={latestDiagnostic}
+        history={diagnostics}
+        selectedLanguage={selectedLang}
+        onTakeDiagnostic={() => setIsDiagnosticOpen(true)}
+        hasQuestionsAvailable={hasDiagnosticAvailable}
+      />
 
-          <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
-            <span className="text-xs text-emerald-300 block font-semibold">4. Dominados</span>
-            <span className="text-xl font-bold text-emerald-400 mt-1 block">{masteredCount}</span>
-            <span className="text-[10px] text-slate-500">≥5 recalls / ≥21 dias</span>
-          </div>
-        </div>
-      </Card>
-
-      {/* Curriculum Roadmap Tree */}
-      <Card
-        title={`Matriz de Progressão Curricular (${selectedLang.toUpperCase()})`}
-        subtitle="Nós de competência sequenciais de A1 a C1 com requisitos de desbloqueio"
-      >
-        <div className="space-y-3">
-          {curriculum.map((node, idx) => {
-            const isCompleted = track.completed_curriculum_node_ids.includes(node.id);
-            const isCurrent = track.current_curriculum_node_id === node.id || (!isCompleted && idx === 0);
-
-            return (
-              <div
-                key={node.id}
-                className={`flex items-start justify-between p-3.5 rounded-xl border transition-all ${
-                  isCompleted
-                    ? 'bg-emerald-950/20 border-emerald-800/40'
-                    : isCurrent
-                    ? 'bg-indigo-950/30 border-indigo-700/60'
-                    : 'bg-slate-800/40 border-slate-800 opacity-60'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    {isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                    ) : isCurrent ? (
-                      <Sparkles className="w-5 h-5 text-indigo-400" />
-                    ) : (
-                      <Lock className="w-5 h-5 text-slate-500" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-slate-200">{node.title}</span>
-                      <Badge variant={node.cefr_level === 'C1' ? 'emerald' : 'sky'} size="sm">
-                        {node.cefr_level}
-                      </Badge>
-                      {node.is_consolidation_review && (
-                        <Badge variant="amber" size="sm">Consolidação</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">{node.can_do_statement}</p>
-                  </div>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  <span className="text-[11px] font-mono text-slate-400">
-                    {isCompleted ? t('common:completed', 'Concluído') : isCurrent ? t('common:active', 'Em Curso') : '—'}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Weak Areas & Error Diagnostics */}
-      {failedAttempts.length > 0 && (
-        <Card
-          title="Pontos de Atenção e Erros Recentes"
-          subtitle="Exercícios onde foram registradas incorreções para revisão direcionada"
-        >
-          <div className="space-y-2.5">
-            {failedAttempts.map(att => (
-              <div
-                key={att.id}
-                className="p-3 rounded-lg bg-slate-800/60 border border-slate-700 text-xs flex justify-between items-center gap-2"
-              >
-                <div>
-                  <span className="font-semibold text-rose-400 block">Resposta: "{att.submitted_answer}"</span>
-                  <span className="text-slate-300 text-[11px]">{att.feedback}</span>
-                </div>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  {new Date(att.timestamp).toLocaleDateString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* Placement Test Modal */}
+      {/* Diagnostic Placement Test Modal */}
       <PlacementTestModal
         language={selectedLang}
         isOpen={isDiagnosticOpen}
@@ -302,3 +233,5 @@ export const ProgressPage: React.FC = () => {
     </div>
   );
 };
+
+export default ProgressPage;

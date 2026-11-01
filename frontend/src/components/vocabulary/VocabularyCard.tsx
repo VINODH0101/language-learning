@@ -4,6 +4,7 @@ import { VocabularyEntry } from '../../types/vocabulary';
 import { Language } from '../../types';
 import { AudioButton } from '../common/AudioButton';
 import { savePhrasebookWord } from '../../services/localDb';
+import { StorageService } from '../../services/storage';
 import { toast } from 'sonner';
 
 interface VocabularyCardProps {
@@ -16,7 +17,7 @@ interface VocabularyCardProps {
 export const VocabularyCard: React.FC<VocabularyCardProps> = ({
   entry,
   explanationLanguage,
-  userId = 'learner_guest',
+  userId = StorageService.getCurrentUser(),
   defaultExpanded = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);

@@ -22,6 +22,7 @@ class SRSItemState(BaseModel):
 
 class ExerciseAttempt(BaseModel):
     """Record of a learner's answer attempt for an exercise."""
+    id: Optional[str] = None
     exercise_id: str
     submitted_answer: str
     is_correct: bool

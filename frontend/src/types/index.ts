@@ -373,6 +373,43 @@ export interface ExerciseAttempt {
   feedback: string;
   attempt_count: number;
   timestamp: string;
+  language?: Language;
+  exercise_type?: string;
+  score?: number;
+  max_score?: number;
+}
+
+export type ActivityType =
+  | 'lesson_completed'
+  | 'exercise_attempted'
+  | 'exercise_completed'
+  | 'vocabulary_reviewed'
+  | 'vocabulary_mastered'
+  | 'poetry_opened'
+  | 'poetry_listened'
+  | 'poetry_completed'
+  | 'conversation_started'
+  | 'conversation_listened'
+  | 'conversation_completed'
+  | 'diagnostic_completed'
+  | 'country_explored'
+  | 'cultural_article_read';
+
+export interface UnifiedActivityEvent {
+  id: string;
+  user_id: string;
+  learning_language?: Language;
+  activity_type: ActivityType;
+  content_id?: string;
+  content_version?: string;
+  title?: string;
+  cefr_level?: CEFRLevel;
+  completion_status: 'started' | 'in_progress' | 'completed' | 'abandoned';
+  score?: number;
+  max_score?: number;
+  duration_minutes?: number;
+  timestamp: string;
+  metadata?: Record<string, any>;
 }
 
 export interface UserTrackState {
@@ -562,3 +599,6 @@ export interface DailyLessonPayload {
   false_friend_alerts: FalseFriendItem[];
   attributions: Attribution[];
 }
+
+export * from './dailyContent';
+export * from './admin';

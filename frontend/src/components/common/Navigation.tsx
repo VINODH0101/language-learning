@@ -24,6 +24,7 @@ import { authService, AuthState } from '../../services/auth';
 import { courseService } from '../../services/courseService';
 import { Logo } from './Logo';
 import { InterfaceLanguageSelector } from './InterfaceLanguageSelector';
+import { SyncStatusBadge } from './SyncStatusBadge';
 import { BRANDING } from '../../config/branding';
 
 export type NavTab =
@@ -57,7 +58,14 @@ export const Navigation: React.FC<NavigationProps> = ({
   const [authState, setAuthState] = useState<AuthState>(authService.getState());
   const [isLearnDropdownOpen, setIsLearnDropdownOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.location.search) {
+        return new URLSearchParams(window.location.search).get('open_drawer') === 'true';
+      }
+    } catch {}
+    return false;
+  });
   const learnDropdownRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -228,7 +236,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* CENTER: Desktop Navigation Menu */}
-            <nav className="hidden lg:flex items-center gap-1 xl:gap-2 mx-auto" aria-label="Navegação Principal">
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-2 mx-auto" aria-label={t('navigation:menu_title', 'Main Navigation')}>
               {/* 1. Home / Dashboard */}
               <button
                 onClick={() => handleSelectNavTab('dashboard')}
@@ -270,7 +278,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     {/* Curriculum Tracks Section */}
                     <div>
                       <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Trilhas de Idiomas (CEFR)
+                        {t('navigation:curriculum_tracks_header', 'Language Tracks (CEFR)')}
                       </div>
                       <div className="space-y-1 mt-0.5">
                         {curriculumTracks.map((sub) => (
@@ -310,7 +318,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     {/* Reference & Practice Tools Section */}
                     <div>
                       <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Ferramentas de Estudo
+                        {t('navigation:study_tools_header', 'Study Tools')}
                       </div>
                       <div className="space-y-1 mt-0.5">
                         {studyTools.map((tool) => {
@@ -383,8 +391,11 @@ export const Navigation: React.FC<NavigationProps> = ({
               </button>
             </nav>
 
-            {/* RIGHT CORNER ALWAYS: Language Switcher, Sign In Button & Controls */}
+            {/* RIGHT CORNER ALWAYS: Sync Status, Language Switcher, Sign In Button & Controls */}
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              {/* Truthful Live Synchronization Status Indicator */}
+              <SyncStatusBadge />
+
               {/* Centralized Accessible 15-Locale Interface Language Selector */}
               <InterfaceLanguageSelector />
 
@@ -514,7 +525,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
                 className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 border border-slate-700/70 transition min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer shrink-0 z-10"
-                aria-label={isMobileDrawerOpen ? 'Fechar Menu de Navegação' : 'Abrir Menu de Navegação'}
+                aria-label={isMobileDrawerOpen ? t('navigation:close_menu', 'Close Menu') : t('navigation:open_menu', 'Open Navigation Menu')}
                 aria-expanded={isMobileDrawerOpen}
               >
                 {isMobileDrawerOpen ? <X className="w-5 h-5 text-indigo-400" /> : <Menu className="w-5 h-5" />}
@@ -527,7 +538,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       {/* Accessible Mobile Bottom Navigation Dock (< 1024px) */}
       <nav
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/90 flex items-center justify-around py-1.5 px-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-2xl"
-        aria-label="Navegação Principal Móvel"
+        aria-label={t('navigation:mobile_nav_aria', 'Mobile Navigation')}
       >
         {/* 1. Home */}
         <button
@@ -590,12 +601,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div>
                   <Logo size="sm" />
-                  <p className="text-[10px] text-slate-400 mt-1">Navegação Completa</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{t('navigation:full_navigation', 'Full Navigation')}</p>
                 </div>
                 <button
                   onClick={() => setIsMobileDrawerOpen(false)}
                   className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer transition"
-                  aria-label="Fechar Menu"
+                  aria-label={t('navigation:close_menu', 'Close Menu')}
                 >
                   <X className="w-5 h-5" />
                 </button>

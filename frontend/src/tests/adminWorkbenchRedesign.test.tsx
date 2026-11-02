@@ -12,11 +12,9 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AdminPage } from '../pages/AdminPage';
-import { AdminWorkbench } from '../features/admin/AdminWorkbench';
-import { AdminDailyContentStudio } from '../features/admin/AdminDailyContentStudio';
 import { adminService } from '../services/adminService';
 import { authService } from '../services/auth';
 import { dailyContentService } from '../services/dailyContentService';

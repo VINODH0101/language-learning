@@ -14,7 +14,7 @@ describe('Step 8: Advanced Learning Features — Conversation & Discover Hub', (
 
   describe('8. Conversation Practice Studio', () => {
     it('renders structured roleplay, handles turn-taking, enforces bounded limits, and saves vocabulary', async () => {
-      const speakSpy = vi.spyOn(SpeechService, 'speak').mockResolvedValue();
+      vi.spyOn(SpeechService, 'speak').mockResolvedValue();
       const saveVocabSpy = vi.spyOn(localDb, 'savePhrasebookWord').mockResolvedValue('mock-vocab-id');
 
       render(<ConversationStudio language="pt" />);

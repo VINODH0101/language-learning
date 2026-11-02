@@ -18,7 +18,6 @@ import {
   isLanguageSupported,
   isForbiddenLanguage,
   getDefaultVariant,
-  getRegionalVariants,
   isValidRegionalVariant,
   enforceRegionalVariant,
 } from '../config/languages/languageRegistry';

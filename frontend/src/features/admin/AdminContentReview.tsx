@@ -8,16 +8,12 @@ import {
   Layers,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
   Plus,
   RefreshCw,
   Search,
-  Filter,
-  Eye,
   Database,
-  FileCheck,
 } from 'lucide-react';
-import { PendingContentItem, ContentReviewStatus, ContentReviewType, Language, CEFRLevel } from '../../types';
+import { PendingContentItem, ContentReviewType, Language, CEFRLevel } from '../../types';
 import { adminService } from '../../services/adminService';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';

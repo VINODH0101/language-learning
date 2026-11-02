@@ -15,11 +15,9 @@ import {
   Menu,
   X,
   ChevronDown,
-  Library,
   BookMarked,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/i18nContext';
-import { InterfaceLanguage } from '../../i18n/translations';
 import { authService, AuthState } from '../../services/auth';
 import { courseService } from '../../services/courseService';
 import { Logo } from './Logo';
@@ -54,7 +52,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenAuth,
   onOpenOnboarding,
 }) => {
-  const { t, interfaceLanguage, setInterfaceLanguage } = useI18n();
+  const { t } = useI18n();
   const [authState, setAuthState] = useState<AuthState>(authService.getState());
   const [isLearnDropdownOpen, setIsLearnDropdownOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);

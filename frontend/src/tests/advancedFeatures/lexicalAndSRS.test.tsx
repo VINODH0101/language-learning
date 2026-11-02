@@ -4,7 +4,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { VocabularyExplorer } from '../../features/vocabulary/VocabularyExplorer';
 import { FlashcardDeck } from '../../components/practice/FlashcardDeck';
 import { VocabularyItem } from '../../types';
-import { SRSService } from '../../services/srs';
 import { StorageService } from '../../services/storage';
 import { getPhrasebookWords } from '../../services/localDb';
 

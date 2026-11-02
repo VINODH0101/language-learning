@@ -6,9 +6,7 @@ import {
   isValidLearningLanguage,
   isValidExplanationLanguage,
   enforceDecoupledLanguageMatrix,
-  REGIONAL_VARIETIES_BY_LANGUAGE,
   DEFAULT_REGIONAL_VARIETY,
-  getLanguageName,
   getRegionalVarietyLabel,
 } from '../lib/languages/languageMatrix';
 import { courseService } from '../services/courseService';

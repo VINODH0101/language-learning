@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { VocabularyService } from '../services/vocabularyService';
 import { PdfService } from '../services/pdfService';
-import { jsPDF } from 'jspdf';
 import { Language } from '../types';
 
 describe('Multilingual Vocabulary Service', () => {

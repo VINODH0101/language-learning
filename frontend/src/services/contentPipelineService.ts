@@ -36,6 +36,7 @@ import { Language, ExplanationLanguage, CEFRLevel } from '../types';
 import { contentCentredService } from './contentCentredService';
 import { saveProcessingJobLocal, getProcessingJobLocal } from './localDb';
 import { supabase } from './supabaseClient';
+import { authService } from './auth';
 
 export interface PipelineExecutionInput {
   title: string;
@@ -92,12 +93,22 @@ export class ContentPipelineService {
   /**
    * Run the full 8-stage pipeline from intake to activity generation.
    */
-  public async executePipeline(input: PipelineExecutionInput): Promise<{
+  public async executePipeline(
+    input: PipelineExecutionInput,
+    options?: { systemBypass?: boolean }
+  ): Promise<{
     item: ContentItem;
     version: ContentVersion;
     activities: LearningActivity[];
     job: ContentProcessingJob;
   }> {
+    if (!options?.systemBypass) {
+      const auth = authService.getState();
+      if (auth.role !== 'admin') {
+        throw new Error('Access denied: Administrative privileges required to execute content processing pipeline.');
+      }
+    }
+
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const startTime = Date.now();
 
@@ -121,7 +132,7 @@ export class ContentPipelineService {
       attribution_notice: input.sourceAttribution || 'Original text',
       source_url: input.sourceUrl,
       author: input.author || 'Author',
-    });
+    }, { systemBypass: true });
 
     // 2. Initialize processing job
     let job: ContentProcessingJob = {
@@ -217,7 +228,7 @@ export class ContentPipelineService {
         sentence_count: sentenceCount,
         lexical_density: 0.52,
         is_published: false,
-      });
+      }, { systemBypass: true });
 
       // 4. Save generated activities
       const generatedQuestions = (outputs['stage_7_generate_activities']?.questions || []) as ActivityQuestion[];
@@ -231,14 +242,14 @@ export class ContentPipelineService {
           instructions: 'Read the text carefully and answer the following questions.',
           questions: generatedQuestions,
         },
-      });
+      }, { systemBypass: true });
 
       // 5. Update content item status to review_required
       contentItem.status = 'review_required';
       contentItem.current_version_id = version.id;
       contentItem.primary_cefr = cefr;
       contentItem.estimated_read_minutes = Math.max(1, Math.round(wordCount / 120));
-      await contentCentredService.saveContentItem(contentItem);
+      await contentCentredService.saveContentItem(contentItem, { systemBypass: true });
 
       // 6. Mark job completed
       job.status = 'completed';
@@ -258,7 +269,7 @@ export class ContentPipelineService {
       await this.persistJob(job);
 
       contentItem.status = 'draft';
-      await contentCentredService.saveContentItem(contentItem);
+      await contentCentredService.saveContentItem(contentItem, { systemBypass: true });
 
       throw err;
     }

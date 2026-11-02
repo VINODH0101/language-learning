@@ -1,8 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { contentCentredService } from '../services/contentCentredService';
 import { validateStructuredPayload, validateActivityConfiguration } from '../types/contentCentred';
+import { authService } from '../services/auth';
 
 describe('Lexilume Database Integrity & Immutability Suite (Milestone 8.1)', () => {
+  beforeEach(async () => {
+    await authService.signIn('admin@polyglot.dev', 'AdminPass123!');
+  });
+
+  afterEach(async () => {
+    await authService.signOut();
+  });
   it('1. Rejects payload alteration on already-published version (RISK-804)', async () => {
     // Create draft version
     const item = await contentCentredService.saveContentItem({

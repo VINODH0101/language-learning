@@ -1,8 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { contentPipelineService } from '../services/contentPipelineService';
 import { contentCentredService } from '../services/contentCentredService';
+import { authService } from '../services/auth';
 
 describe('Lexilume Content-Centred Pipeline (Phase 7)', () => {
+  beforeEach(async () => {
+    await authService.signIn('admin@polyglot.dev', 'AdminPass123!');
+  });
+
+  afterEach(async () => {
+    await authService.signOut();
+  });
   const sampleDublinText = `
 The barista poured the velvety flat white into a warm ceramic cup with gentle precision.
 Outside, morning rain tapped rhythmic patterns against the tall Victorian window panes.

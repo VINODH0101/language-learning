@@ -46,6 +46,7 @@ import {
 } from './localDb';
 import { SRSService } from './srs';
 import { syncEngine } from './syncEngine';
+import { authService } from './auth';
 
 // ============================================================================
 // SEED AUTHENTIC LEARNING CONTENT
@@ -760,10 +761,26 @@ export class ContentCentredService {
   }
 
   // ==========================================================================
-  // 2. ADMIN CREATION & PUBLICATION (Immutability Enforced)
+  // 2. ADMIN CREATION & PUBLICATION (Immutability & Role Enforced)
   // ==========================================================================
 
-  public async saveContentItem(item: Partial<ContentItem>): Promise<ContentItem> {
+  private assertAdminRole(systemBypass: boolean = false): void {
+    if (systemBypass) return;
+    const auth = authService.getState();
+    if (auth.role !== 'admin') {
+      throw new Error('Access denied: Administrative privileges required to modify learning content catalog.');
+    }
+  }
+
+  private assertUserAccess(targetUserId: string): void {
+    const auth = authService.getState();
+    if (!auth.isGuest && auth.user && auth.role !== 'admin' && auth.user.id !== targetUserId) {
+      throw new Error(`Access denied: Cross-tenant access violation. User ${auth.user.id} cannot access data belonging to ${targetUserId}.`);
+    }
+  }
+
+  public async saveContentItem(item: Partial<ContentItem>, options?: { systemBypass?: boolean }): Promise<ContentItem> {
+    this.assertAdminRole(options?.systemBypass);
     const id = item.id || `ci_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const fullItem: ContentItem = {
       id,
@@ -802,7 +819,8 @@ export class ContentCentredService {
     return fullItem;
   }
 
-  public async saveContentVersion(version: Partial<ContentVersion>): Promise<ContentVersion> {
+  public async saveContentVersion(version: Partial<ContentVersion>, options?: { systemBypass?: boolean }): Promise<ContentVersion> {
+    this.assertAdminRole(options?.systemBypass);
     if (!version.content_item_id) {
       throw new Error('content_item_id is required to create a content version');
     }
@@ -875,7 +893,8 @@ export class ContentCentredService {
     return fullVersion;
   }
 
-  public async publishContentVersion(itemId: string, versionId: string): Promise<void> {
+  public async publishContentVersion(itemId: string, versionId: string, options?: { systemBypass?: boolean }): Promise<void> {
+    this.assertAdminRole(options?.systemBypass);
     const version = await this.getContentVersion(versionId);
     if (!version) throw new Error(`Content version ${versionId} not found`);
 
@@ -910,7 +929,8 @@ export class ContentCentredService {
     }
   }
 
-  public async saveLearningActivity(activity: Partial<LearningActivity>): Promise<LearningActivity> {
+  public async saveLearningActivity(activity: Partial<LearningActivity>, options?: { systemBypass?: boolean }): Promise<LearningActivity> {
+    this.assertAdminRole(options?.systemBypass);
     if (!activity.content_version_id) {
       throw new Error('content_version_id is required');
     }
@@ -958,6 +978,7 @@ export class ContentCentredService {
   // ==========================================================================
 
   public async getLearnerProgress(userId: string, contentItemId: string): Promise<LearnerContentProgress | null> {
+    this.assertUserAccess(userId);
     const local = await getLearnerProgressLocal(userId, contentItemId);
     if (local) return local;
 
@@ -983,6 +1004,7 @@ export class ContentCentredService {
   }
 
   public async getAllLearnerProgress(userId: string): Promise<LearnerContentProgress[]> {
+    this.assertUserAccess(userId);
     const local = await getAllLearnerProgressLocal(userId);
     if (local.length > 0) return local;
 
@@ -1010,6 +1032,7 @@ export class ContentCentredService {
   public async updateLearnerProgress(
     progress: Partial<LearnerContentProgress> & { user_id: string; content_item_id: string }
   ): Promise<LearnerContentProgress> {
+    this.assertUserAccess(progress.user_id);
     const existing = await this.getLearnerProgress(progress.user_id, progress.content_item_id);
     const id = existing?.id || progress.id || `lcp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
@@ -1050,6 +1073,7 @@ export class ContentCentredService {
   // ==========================================================================
 
   public async getUserSavedWords(userId: string, targetLanguage?: Language): Promise<UserSavedWord[]> {
+    this.assertUserAccess(userId);
     const localWords = await getUserSavedWordsLocal(userId, targetLanguage);
     if (localWords.length > 0) return localWords;
 
@@ -1083,6 +1107,7 @@ export class ContentCentredService {
       definition: string;
     }
   ): Promise<UserSavedWord> {
+    this.assertUserAccess(word.user_id);
     const existingWords = await this.getUserSavedWords(word.user_id, word.target_language);
     const pos = word.pos || 'other';
     const existing = existingWords.find(
@@ -1138,6 +1163,7 @@ export class ContentCentredService {
   }
 
   public async recordWordReview(userId: string, wordId: string, rating: number): Promise<UserSavedWord> {
+    this.assertUserAccess(userId);
     const words = await this.getUserSavedWords(userId);
     const word = words.find(w => w.id === wordId);
     if (!word) throw new Error(`Saved word ${wordId} not found`);
@@ -1220,6 +1246,7 @@ export class ContentCentredService {
     status?: MistakeStatus,
     category?: ErrorCategory
   ): Promise<UserMistake[]> {
+    this.assertUserAccess(userId);
     const local = await getUserMistakesLocal(userId);
     let filtered = local;
     if (status) filtered = filtered.filter(m => m.status === status);
@@ -1257,6 +1284,7 @@ export class ContentCentredService {
       pedagogical_explanation: string;
     }
   ): Promise<UserMistake> {
+    this.assertUserAccess(mistake.user_id);
     const allMistakes = await this.getUserMistakes(mistake.user_id);
     const existing = allMistakes.find(
       m => m.stimulus === mistake.stimulus && m.status !== 'dismissed' && m.status !== 'mastered'
@@ -1304,6 +1332,7 @@ export class ContentCentredService {
     if (!mistake) {
       throw new Error(`Mistake ${mistakeId} not found`);
     }
+    this.assertUserAccess(mistake.user_id);
 
     mistake.status = status;
     mistake.resolved_at = new Date().toISOString();

@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { contentPipelineService } from '../services/contentPipelineService';
 import { contentCentredService } from '../services/contentCentredService';
+import { authService } from '../services/auth';
 
 describe('Lexilume Phase 7 — Full End-to-End Pipeline & Learner Flow (Milestone 7.9)', () => {
   const learnerUserId = 'usr_learner_tester_02';
 
   it('executes full workflow: Admin Import -> Pipeline -> Publication -> Learner Reader -> Word Lookup -> SM-2 Review -> Mistake Notebook', async () => {
+    // Authenticate as Admin for Content Studio Ingestion
+    await authService.signIn('admin@polyglot.dev', 'AdminPass123!');
+
     // ------------------------------------------------------------------------
     // STAGE 1 & 2: Admin Imports Raw Text & 8-Stage Pedagogical Pipeline Runs
     // ------------------------------------------------------------------------
@@ -37,6 +41,9 @@ describe('Lexilume Phase 7 — Full End-to-End Pipeline & Learner Flow (Mileston
     const publishedItem = await contentCentredService.getContentItemById(createdItem.id);
     expect(publishedItem?.status).toBe('published');
     expect(publishedItem?.current_version_id).toBe(draftVersion.id);
+
+    // Transition to learner context
+    await authService.signOut();
 
     // ------------------------------------------------------------------------
     // STAGE 4: Learner Browses Catalog & Progress Telemetry

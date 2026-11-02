@@ -144,6 +144,7 @@ export interface ContentItem {
   source_id?: string;
   rights_status: RightsStatus;
   rights_notes?: string;
+  attribution_notice?: string;
   source_url?: string;
   author?: string;
   created_by?: string;

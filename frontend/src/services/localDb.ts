@@ -8,7 +8,17 @@ import {
   SRSItemState,
 } from '../types';
 
+import {
+  ContentItem,
+  ContentVersion,
+  LearnerContentProgress,
+  UserSavedWord,
+  UserMistake,
+  ContentProcessingJob,
+} from '../types/contentCentred';
+
 export type { SavedVocabularyRecord };
+export type CachedContentItemRecord = ContentItem & { version?: ContentVersion };
 
 export interface CachedLessonRecord {
   id: string; // `${language}_${lesson_date}`
@@ -61,6 +71,11 @@ export class PolyglotLocalDatabase extends Dexie {
   syncQueue!: EntityTable<SyncQueueRecord, 'id'>;
   culturalBookmarks!: EntityTable<CulturalBookmarkRecord, 'id'>;
   apiCache!: EntityTable<ApiCacheRecord, 'id'>;
+  cachedContentItems!: EntityTable<CachedContentItemRecord, 'id'>;
+  learnerContentProgress!: EntityTable<LearnerContentProgress, 'id'>;
+  userSavedWords!: EntityTable<UserSavedWord, 'id'>;
+  userMistakes!: EntityTable<UserMistake, 'id'>;
+  contentProcessingJobs!: EntityTable<ContentProcessingJob, 'id'>;
 
   constructor() {
     super('PolyglotLocalDatabase');
@@ -81,6 +96,23 @@ export class PolyglotLocalDatabase extends Dexie {
     this.version(4).stores({
       syncQueue: 'id, user_id, action, status, created_at',
     });
+    this.version(5).stores({
+      cachedLessons: 'id, language, lesson_date, cefr_level, expires_at',
+      activeLessonProgress: 'id, language, curriculum_node_id, updated_at',
+      savedVocabulary: 'id, user_id, source_text, target_lang, created_at',
+      srsReviews: 'id, user_id, language, vocabulary_item_id, next_review_date',
+      mistakeNotebook: 'id, user_id, language, error_category, timestamp, is_resolved',
+      culturalBookmarks: 'id, user_id, article_id, content_language, origin_country, topic, cefr_level, created_at',
+      apiCache: 'id, provider, cacheKey, expiresAt',
+      syncQueue: 'id, user_id, action, status, created_at',
+
+      // Version 5 Content-Centred Stores
+      cachedContentItems: 'id, slug, status, primary_cefr, genre, target_language, updated_at',
+      learnerContentProgress: 'id, user_id, content_item_id, status, percent_complete, last_studied_at, client_mutation_id',
+      userSavedWords: 'id, user_id, target_language, lemma, explanation_language, next_review, state, updated_at, client_mutation_id',
+      userMistakes: 'id, user_id, content_item_id, error_category, status, last_occurred_at, client_mutation_id',
+      contentProcessingJobs: 'id, content_item_id, status, current_stage, updated_at',
+    });
   }
 }
 
@@ -95,6 +127,11 @@ const memoryFallback = {
   culturalBookmarks: new Map<string, CulturalBookmarkRecord>(),
   syncQueue: new Map<string, SyncQueueRecord>(),
   apiCache: new Map<string, ApiCacheRecord>(),
+  cachedContentItems: new Map<string, CachedContentItemRecord>(),
+  learnerContentProgress: new Map<string, LearnerContentProgress>(),
+  userSavedWords: new Map<string, UserSavedWord>(),
+  userMistakes: new Map<string, UserMistake>(),
+  contentProcessingJobs: new Map<string, ContentProcessingJob>(),
 };
 
 function isIndexedDBAvailable(): boolean {
@@ -867,3 +904,162 @@ export async function getReadingHistory(userId: string = 'guest'): Promise<Readi
 }
 
 
+
+
+// ============================================================================
+// 10. CONTENT-CENTRED LOCAL STORAGE HELPERS (Phase 7)
+// ============================================================================
+
+export async function cacheContentItemLocal(item: CachedContentItemRecord): Promise<void> {
+  memoryFallback.cachedContentItems.set(item.id, item);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.cachedContentItems.put(item);
+  } catch (err) {
+    console.warn('Error caching content item in localDb', err);
+  }
+}
+
+export async function getCachedContentItemsLocal(): Promise<CachedContentItemRecord[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.cachedContentItems.values());
+  }
+  try {
+    return await localDb.cachedContentItems.toArray();
+  } catch (err) {
+    console.warn('Error reading content items from localDb', err);
+    return Array.from(memoryFallback.cachedContentItems.values());
+  }
+}
+
+export async function getCachedContentItemLocal(id: string): Promise<CachedContentItemRecord | null> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.cachedContentItems.get(id) || null;
+  }
+  try {
+    const item = await localDb.cachedContentItems.get(id);
+    return item || memoryFallback.cachedContentItems.get(id) || null;
+  } catch (err) {
+    console.warn('Error reading content item by id from localDb', err);
+    return memoryFallback.cachedContentItems.get(id) || null;
+  }
+}
+
+export async function saveLearnerProgressLocal(progress: LearnerContentProgress): Promise<void> {
+  memoryFallback.learnerContentProgress.set(progress.id, progress);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.learnerContentProgress.put(progress);
+  } catch (err) {
+    console.warn('Error saving learner progress to localDb', err);
+  }
+}
+
+export async function getLearnerProgressLocal(userId: string, contentItemId: string): Promise<LearnerContentProgress | null> {
+  if (!isIndexedDBAvailable()) {
+    for (const p of memoryFallback.learnerContentProgress.values()) {
+      if (p.user_id === userId && p.content_item_id === contentItemId) return p;
+    }
+    return null;
+  }
+  try {
+    const item = await localDb.learnerContentProgress
+      .where({ user_id: userId, content_item_id: contentItemId })
+      .first();
+    return item || null;
+  } catch (err) {
+    console.warn('Error querying learner progress in localDb', err);
+    for (const p of memoryFallback.learnerContentProgress.values()) {
+      if (p.user_id === userId && p.content_item_id === contentItemId) return p;
+    }
+    return null;
+  }
+}
+
+export async function getAllLearnerProgressLocal(userId: string): Promise<LearnerContentProgress[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.learnerContentProgress.values()).filter(p => p.user_id === userId);
+  }
+  try {
+    return await localDb.learnerContentProgress.where('user_id').equals(userId).toArray();
+  } catch (err) {
+    console.warn('Error reading all learner progress from localDb', err);
+    return Array.from(memoryFallback.learnerContentProgress.values()).filter(p => p.user_id === userId);
+  }
+}
+
+export async function saveUserWordLocal(word: UserSavedWord): Promise<void> {
+  memoryFallback.userSavedWords.set(word.id, word);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.userSavedWords.put(word);
+  } catch (err) {
+    console.warn('Error saving user word to localDb', err);
+  }
+}
+
+export async function getUserSavedWordsLocal(userId: string, targetLanguage?: Language): Promise<UserSavedWord[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.userSavedWords.values()).filter(
+      w => w.user_id === userId && (!targetLanguage || w.target_language === targetLanguage)
+    );
+  }
+  try {
+    let collection = localDb.userSavedWords.where('user_id').equals(userId);
+    const words = await collection.toArray();
+    if (targetLanguage) {
+      return words.filter(w => w.target_language === targetLanguage);
+    }
+    return words;
+  } catch (err) {
+    console.warn('Error fetching saved words from localDb', err);
+    return Array.from(memoryFallback.userSavedWords.values()).filter(
+      w => w.user_id === userId && (!targetLanguage || w.target_language === targetLanguage)
+    );
+  }
+}
+
+export async function saveUserMistakeLocal(mistake: UserMistake): Promise<void> {
+  memoryFallback.userMistakes.set(mistake.id, mistake);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.userMistakes.put(mistake);
+  } catch (err) {
+    console.warn('Error saving user mistake to localDb', err);
+  }
+}
+
+export async function getUserMistakesLocal(userId: string): Promise<UserMistake[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.userMistakes.values()).filter(m => m.user_id === userId);
+  }
+  try {
+    return await localDb.userMistakes.where('user_id').equals(userId).toArray();
+  } catch (err) {
+    console.warn('Error fetching user mistakes from localDb', err);
+    return Array.from(memoryFallback.userMistakes.values()).filter(m => m.user_id === userId);
+  }
+}
+
+export async function saveProcessingJobLocal(job: ContentProcessingJob): Promise<void> {
+  memoryFallback.contentProcessingJobs.set(job.id, job);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.contentProcessingJobs.put(job);
+  } catch (err) {
+    console.warn('Error saving processing job to localDb', err);
+  }
+}
+
+export async function getProcessingJobLocal(id: string): Promise<ContentProcessingJob | null> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.contentProcessingJobs.get(id) || null;
+  }
+  try {
+    const job = await localDb.contentProcessingJobs.get(id);
+    return job || memoryFallback.contentProcessingJobs.get(id) || null;
+  } catch (err) {
+    console.warn('Error reading processing job from localDb', err);
+    return memoryFallback.contentProcessingJobs.get(id) || null;
+  }
+}

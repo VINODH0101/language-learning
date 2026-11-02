@@ -53,11 +53,13 @@ import { AdminOverview } from './AdminOverview';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminDailyContentStudio } from './AdminDailyContentStudio';
 import { AdminAuditLogs } from './AdminAuditLogs';
+import { AdminContentStudio } from './content-studio/AdminContentStudio';
 import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 export type AdminWorkbenchTab =
   | 'overview'
+  | 'content_studio'
   | 'users'
   | 'review'
   | 'languages'
@@ -190,6 +192,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar border-b border-slate-800">
           {[
             { id: 'overview', label: t('admin:tab_overview', 'Visão Geral') },
+            { id: 'content_studio', label: 'Content Studio (Phase 7)' },
             { id: 'users', label: t('admin:tab_users', 'Gestão de Usuários') },
             { id: 'review', label: t('admin:tab_review', 'Fila de Moderação'), count: reviewItems.filter(i => i.status === 'pending').length },
             { id: 'languages', label: t('admin:tab_languages', 'Matriz de Idiomas (13)'), count: 13 },
@@ -225,6 +228,9 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
       {activeTab === 'overview' && (
         <AdminOverview onNavigateTab={tab => setActiveTab(tab as AdminWorkbenchTab)} />
       )}
+
+      {/* 0.0 Content Studio Tab (Phase 7) */}
+      {activeTab === 'content_studio' && <AdminContentStudio />}
 
       {/* 0.1 Users Tab */}
       {activeTab === 'users' && <AdminUserManagement />}

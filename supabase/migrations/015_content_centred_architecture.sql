@@ -343,10 +343,12 @@ ALTER TABLE public.content_processing_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.migration_exception_logs ENABLE ROW LEVEL SECURITY;
 
 -- 12.1 Content Sources: Public read; Admin write
+DROP POLICY IF EXISTS "Public read access on content_sources" ON public.content_sources;
 CREATE POLICY "Public read access on content_sources"
     ON public.content_sources FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Admin write access on content_sources" ON public.content_sources;
 CREATE POLICY "Admin write access on content_sources"
     ON public.content_sources FOR ALL
     TO authenticated
@@ -354,10 +356,12 @@ CREATE POLICY "Admin write access on content_sources"
     WITH CHECK (public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.2 Content Items: Public read for published; Admin full access
+DROP POLICY IF EXISTS "Public read published content_items" ON public.content_items;
 CREATE POLICY "Public read published content_items"
     ON public.content_items FOR SELECT
     USING (status = 'published' OR public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "Admin write access on content_items" ON public.content_items;
 CREATE POLICY "Admin write access on content_items"
     ON public.content_items FOR ALL
     TO authenticated
@@ -365,10 +369,12 @@ CREATE POLICY "Admin write access on content_items"
     WITH CHECK (public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.3 Content Versions: Public read for published; Admin full access
+DROP POLICY IF EXISTS "Public read published content_versions" ON public.content_versions;
 CREATE POLICY "Public read published content_versions"
     ON public.content_versions FOR SELECT
     USING (is_published = true OR public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "Admin write access on content_versions" ON public.content_versions;
 CREATE POLICY "Admin write access on content_versions"
     ON public.content_versions FOR ALL
     TO authenticated
@@ -376,6 +382,7 @@ CREATE POLICY "Admin write access on content_versions"
     WITH CHECK (public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.4 Learning Activities: Public read for published versions; Admin full access
+DROP POLICY IF EXISTS "Public read learning_activities for published content" ON public.learning_activities;
 CREATE POLICY "Public read learning_activities for published content"
     ON public.learning_activities FOR SELECT
     USING (
@@ -387,6 +394,7 @@ CREATE POLICY "Public read learning_activities for published content"
         OR auth.jwt() ->> 'role' = 'service_role'
     );
 
+DROP POLICY IF EXISTS "Admin write access on learning_activities" ON public.learning_activities;
 CREATE POLICY "Admin write access on learning_activities"
     ON public.learning_activities FOR ALL
     TO authenticated
@@ -394,83 +402,98 @@ CREATE POLICY "Admin write access on learning_activities"
     WITH CHECK (public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.5 Learner Content Progress: Strictly User-Owned
+DROP POLICY IF EXISTS "Learner reads own progress" ON public.learner_content_progress;
 CREATE POLICY "Learner reads own progress"
     ON public.learner_content_progress FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "Learner inserts own progress" ON public.learner_content_progress;
 CREATE POLICY "Learner inserts own progress"
     ON public.learner_content_progress FOR INSERT
     TO authenticated
     WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "Learner updates own progress" ON public.learner_content_progress;
 CREATE POLICY "Learner updates own progress"
     ON public.learner_content_progress FOR UPDATE
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role')
     WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "Learner deletes own progress" ON public.learner_content_progress;
 CREATE POLICY "Learner deletes own progress"
     ON public.learner_content_progress FOR DELETE
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.6 User Saved Words: Strictly User-Owned
+DROP POLICY IF EXISTS "User reads own saved words" ON public.user_saved_words;
 CREATE POLICY "User reads own saved words"
     ON public.user_saved_words FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "User inserts own saved words" ON public.user_saved_words;
 CREATE POLICY "User inserts own saved words"
     ON public.user_saved_words FOR INSERT
     TO authenticated
     WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "User updates own saved words" ON public.user_saved_words;
 CREATE POLICY "User updates own saved words"
     ON public.user_saved_words FOR UPDATE
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role')
     WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "User deletes own saved words" ON public.user_saved_words;
 CREATE POLICY "User deletes own saved words"
     ON public.user_saved_words FOR DELETE
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.7 User Word Review Events: Strictly User-Owned
+DROP POLICY IF EXISTS "User reads own review events" ON public.user_word_review_events;
 CREATE POLICY "User reads own review events"
     ON public.user_word_review_events FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "User inserts own review events" ON public.user_word_review_events;
 CREATE POLICY "User inserts own review events"
     ON public.user_word_review_events FOR INSERT
     TO authenticated
     WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.8 User Mistakes: Strictly User-Owned
+DROP POLICY IF EXISTS "User reads own mistakes" ON public.user_mistakes;
 CREATE POLICY "User reads own mistakes"
     ON public.user_mistakes FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "User inserts own mistakes" ON public.user_mistakes;
 CREATE POLICY "User inserts own mistakes"
     ON public.user_mistakes FOR INSERT
     TO authenticated
     WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "User updates own mistakes" ON public.user_mistakes;
 CREATE POLICY "User updates own mistakes"
     ON public.user_mistakes FOR UPDATE
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role')
     WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "User deletes own mistakes" ON public.user_mistakes;
 CREATE POLICY "User deletes own mistakes"
     ON public.user_mistakes FOR DELETE
     TO authenticated
     USING (auth.uid() = user_id OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.9 Content Processing Jobs: Admin & Service Role Only
+DROP POLICY IF EXISTS "Admin access on content_processing_jobs" ON public.content_processing_jobs;
 CREATE POLICY "Admin access on content_processing_jobs"
     ON public.content_processing_jobs FOR ALL
     TO authenticated
@@ -478,6 +501,7 @@ CREATE POLICY "Admin access on content_processing_jobs"
     WITH CHECK (public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
 -- 12.10 Migration Exception Logs: Admin & Service Role Only
+DROP POLICY IF EXISTS "Admin access on migration_exception_logs" ON public.migration_exception_logs;
 CREATE POLICY "Admin access on migration_exception_logs"
     ON public.migration_exception_logs FOR ALL
     TO authenticated
@@ -485,7 +509,7 @@ CREATE POLICY "Admin access on migration_exception_logs"
     WITH CHECK (public.is_admin() OR auth.jwt() ->> 'role' = 'service_role');
 
 -- ==============================================================================
--- 13. Idempotent Triggers for updated_at
+-- 13. Idempotent Triggers for updated_at & Immutability
 -- ==============================================================================
 
 DO $$
@@ -530,3 +554,31 @@ DROP TRIGGER IF EXISTS trg_content_jobs_updated_at ON public.content_processing_
 CREATE TRIGGER trg_content_jobs_updated_at
     BEFORE UPDATE ON public.content_processing_jobs
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- 13.2 Idempotent Database Trigger for Content Version Immutability
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'prevent_published_version_mutation') THEN
+        CREATE FUNCTION public.prevent_published_version_mutation()
+        RETURNS TRIGGER AS $immut$
+        BEGIN
+            -- If already published, reject any alterations to pedagogical payload or core metrics
+            IF OLD.is_published = true THEN
+                IF NEW.structured_payload IS DISTINCT FROM OLD.structured_payload OR
+                   NEW.cefr_level IS DISTINCT FROM OLD.cefr_level OR
+                   NEW.word_count IS DISTINCT FROM OLD.word_count OR
+                   NEW.sentence_count IS DISTINCT FROM OLD.sentence_count THEN
+                    RAISE EXCEPTION 'Published content versions are immutable. Create a new version edition instead (version_number + 1).'
+                        USING ERRCODE = '23514';
+                END IF;
+            END IF;
+            RETURN NEW;
+        END;
+        $immut$ LANGUAGE plpgsql;
+    END IF;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_prevent_published_version_mutation ON public.content_versions;
+CREATE TRIGGER trg_prevent_published_version_mutation
+    BEFORE UPDATE ON public.content_versions
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_published_version_mutation();

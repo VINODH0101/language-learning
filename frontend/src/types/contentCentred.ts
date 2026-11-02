@@ -228,6 +228,81 @@ export interface ContentVersion {
   created_at: string;
 }
 
+/**
+ * Validates a structured content payload against domain bounds and memory limits.
+ */
+export function validateStructuredPayload(payload: unknown): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  if (!payload || typeof payload !== 'object') {
+    return { valid: false, errors: ['Structured payload must be a non-null object'] };
+  }
+
+  const p = payload as any;
+  if (!p.title || typeof p.title !== 'string') {
+    errors.push('Structured payload title is required and must be a string');
+  }
+
+  if (!Array.isArray(p.paragraphs)) {
+    errors.push('Structured payload must contain a paragraphs array');
+  } else {
+    if (p.paragraphs.length > 200) {
+      errors.push('Exceeded maximum allowed paragraphs limit (200)');
+    }
+    for (let i = 0; i < p.paragraphs.length; i++) {
+      const para = p.paragraphs[i];
+      if (!para || typeof para !== 'object' || !Array.isArray(para.sentences)) {
+        errors.push(`Paragraph at index ${i} must have a valid sentences array`);
+        break;
+      }
+      if (para.sentences.length > 100) {
+        errors.push(`Paragraph at index ${i} exceeded maximum sentences limit (100)`);
+        break;
+      }
+    }
+  }
+
+  try {
+    const serialized = JSON.stringify(payload);
+    if (serialized.length > 500_000) {
+      errors.push('Structured payload exceeds maximum size limit (500 KB)');
+    }
+  } catch (e) {
+    errors.push('Structured payload cannot be serialized to JSON');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Validates an activity configuration payload.
+ */
+export function validateActivityConfiguration(config: unknown): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  if (!config || typeof config !== 'object') {
+    return { valid: false, errors: ['Activity configuration must be a non-null object'] };
+  }
+
+  const c = config as any;
+  if (!Array.isArray(c.questions)) {
+    errors.push('Activity configuration must contain a questions array');
+  } else {
+    if (c.questions.length > 50) {
+      errors.push('Exceeded maximum questions limit (50)');
+    }
+    for (let i = 0; i < c.questions.length; i++) {
+      const q = c.questions[i];
+      if (!q.stem || typeof q.stem !== 'string') {
+        errors.push(`Question ${i + 1} is missing a stem prompt`);
+      }
+      if (!q.correct_answer || typeof q.correct_answer !== 'string') {
+        errors.push(`Question ${i + 1} is missing a valid correct_answer`);
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 // ============================================================================
 // 3. LEARNING ACTIVITIES
 // ============================================================================

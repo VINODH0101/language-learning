@@ -25,6 +25,8 @@ import {
   ContentStatus,
   MistakeStatus,
   ErrorCategory,
+  validateStructuredPayload,
+  validateActivityConfiguration,
 } from '../types/contentCentred';
 import { Language, ExplanationLanguage, CEFRLevel } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -805,11 +807,25 @@ export class ContentCentredService {
       throw new Error('content_item_id is required to create a content version');
     }
 
-    // Check immutability of existing published version
+    // Strict immutability enforcement on published versions (RISK-804)
     if (version.id && localVersionsRegistry.has(version.id)) {
       const existing = localVersionsRegistry.get(version.id)!;
-      if (existing.is_published && !version.is_published) {
-        throw new Error('Published content versions are immutable. Create a new version edition instead.');
+      if (existing.is_published) {
+        if (
+          version.structured_payload !== undefined ||
+          (version.cefr_level !== undefined && version.cefr_level !== existing.cefr_level) ||
+          version.is_published === false
+        ) {
+          throw new Error('Published content versions are immutable. Create a new version edition instead (version_number + 1).');
+        }
+      }
+    }
+
+    // Validate structured payload bounds and schema (Milestone 8.1 / Section 5.4)
+    if (version.structured_payload) {
+      const validation = validateStructuredPayload(version.structured_payload);
+      if (!validation.valid) {
+        throw new Error(`Invalid structured payload: ${validation.errors.join('; ')}`);
       }
     }
 
@@ -897,6 +913,13 @@ export class ContentCentredService {
   public async saveLearningActivity(activity: Partial<LearningActivity>): Promise<LearningActivity> {
     if (!activity.content_version_id) {
       throw new Error('content_version_id is required');
+    }
+
+    if (activity.configuration) {
+      const validation = validateActivityConfiguration(activity.configuration);
+      if (!validation.valid) {
+        throw new Error(`Invalid activity configuration: ${validation.errors.join('; ')}`);
+      }
     }
     const id = activity.id || `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const fullActivity: LearningActivity = {

@@ -59,10 +59,18 @@ def test_migration_015_sql_integrity():
     for table in expected_tables:
         assert f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;" in sql
 
-    # 7. User Isolation Policies
+    # 7. User Isolation Policies with Idempotent DROP POLICY IF EXISTS
     assert "Learner reads own progress" in sql
     assert "User reads own saved words" in sql
     assert "User reads own mistakes" in sql
+    assert 'DROP POLICY IF EXISTS "Public read access on content_sources" ON public.content_sources;' in sql
+    assert 'DROP POLICY IF EXISTS "Learner reads own progress" ON public.learner_content_progress;' in sql
+    assert 'DROP POLICY IF EXISTS "User reads own saved words" ON public.user_saved_words;' in sql
+
+    # 8. Database-Level Content Version Immutability Enforcement
+    assert "prevent_published_version_mutation" in sql
+    assert "trg_prevent_published_version_mutation" in sql
+    assert "Published content versions are immutable" in sql
 
 
 def test_migration_015_rollback_sql_integrity():
@@ -76,3 +84,5 @@ def test_migration_015_rollback_sql_integrity():
     assert "DROP TABLE IF EXISTS public.content_items" in sql
     assert "DROP TABLE IF EXISTS public.user_saved_words" in sql
     assert "DROP TABLE IF EXISTS public.user_mistakes" in sql
+    assert "DROP FUNCTION IF EXISTS public.prevent_published_version_mutation CASCADE;" in sql
+    assert "DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;" in sql

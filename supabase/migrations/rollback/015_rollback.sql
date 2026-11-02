@@ -18,3 +18,7 @@ DROP TABLE IF EXISTS public.learning_activities CASCADE;
 DROP TABLE IF EXISTS public.content_versions CASCADE;
 DROP TABLE IF EXISTS public.content_items CASCADE;
 DROP TABLE IF EXISTS public.content_sources CASCADE;
+
+-- 3. Drop Custom Functions and Triggers
+DROP FUNCTION IF EXISTS public.prevent_published_version_mutation CASCADE;
+DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;

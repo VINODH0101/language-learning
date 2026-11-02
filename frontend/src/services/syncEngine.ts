@@ -152,8 +152,9 @@ class SyncEngine {
         if (item.retry_count > 0) {
           const jitter = Math.floor(Math.random() * 500);
           const backoffMs = Math.min(30000, 1000 * Math.pow(2, item.retry_count) + jitter);
-          const itemAgeMs = Date.now() - new Date(item.created_at).getTime();
-          if (itemAgeMs < backoffMs) {
+          const lastAttempt = item.last_attempted_at ? new Date(item.last_attempted_at).getTime() : new Date(item.created_at).getTime();
+          const elapsedMs = Date.now() - lastAttempt;
+          if (elapsedMs < backoffMs) {
             continue; // Skip until backoff window expires
           }
         }
@@ -377,6 +378,27 @@ class SyncEngine {
           payload.id = prog.id;
         }
 
+        // Monotonic progress merging to prevent out-of-order regressions (RISK-809)
+        const { data: existingProg } = await supabase
+          .from('learner_content_progress')
+          .select('percent_complete, time_spent_seconds, completed_activity_ids, completed_at')
+          .eq('user_id', userId)
+          .eq('content_item_id', prog.content_item_id)
+          .maybeSingle();
+
+        if (existingProg) {
+          payload.percent_complete = Math.max(Number(prog.percent_complete ?? 0), Number(existingProg.percent_complete ?? 0));
+          payload.time_spent_seconds = Math.max(Number(prog.time_spent_seconds ?? 0), Number(existingProg.time_spent_seconds ?? 0));
+          const unionActivities = Array.from(new Set([
+            ...(prog.completed_activity_ids || []),
+            ...(existingProg.completed_activity_ids || [])
+          ]));
+          payload.completed_activity_ids = unionActivities;
+          if (payload.percent_complete === 100) {
+            payload.completed_at = prog.completed_at || existingProg.completed_at || new Date().toISOString();
+          }
+        }
+
         const { error } = await supabase
           .from('learner_content_progress')
           .upsert(payload, { onConflict: 'user_id,content_item_id' });
@@ -413,6 +435,31 @@ class SyncEngine {
         };
         if (w.id && isValidUuid(w.id)) {
           payload.id = w.id;
+        }
+
+        // Guard against out-of-order review snapshots overwriting newer reviews (RISK-809)
+        const { data: existingWord } = await supabase
+          .from('user_saved_words')
+          .select('last_reviewed_at, repetitions, ease_factor, interval_days, next_review, state')
+          .eq('user_id', userId)
+          .eq('target_language', w.target_language)
+          .eq('lemma', w.lemma)
+          .eq('pos', w.pos || 'other')
+          .eq('explanation_language', w.explanation_language)
+          .maybeSingle();
+
+        if (existingWord) {
+          const remoteTime = existingWord.last_reviewed_at ? new Date(existingWord.last_reviewed_at).getTime() : 0;
+          const localTime = w.last_reviewed_at ? new Date(w.last_reviewed_at).getTime() : 0;
+          if (remoteTime > localTime) {
+            // Remote has a newer review. Preserve remote SRS scheduling to prevent regression.
+            payload.repetitions = existingWord.repetitions;
+            payload.ease_factor = existingWord.ease_factor;
+            payload.interval_days = existingWord.interval_days;
+            payload.next_review = existingWord.next_review;
+            payload.last_reviewed_at = existingWord.last_reviewed_at;
+            payload.state = existingWord.state;
+          }
         }
 
         const { error } = await supabase

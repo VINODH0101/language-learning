@@ -6,6 +6,9 @@ import {
   getLearnerProgressLocal,
   getUserMistakesLocal,
   getPendingSyncActions,
+  getDeadLetterSyncActions,
+  enqueueSyncAction,
+  markSyncActionFailed,
 } from '../services/localDb';
 import { syncEngine } from '../services/syncEngine';
 
@@ -128,5 +131,62 @@ describe('Lexilume Persistence & Synchronization (Milestone 7.8)', () => {
 
     expect(notifiedState).not.toBeNull();
     unsub();
+  });
+
+  it('5. Flawed backoff fixed: failure tracks last_attempted_at and transitions to dead_letter at max retries (RISK-803)', async () => {
+    const userId = 'usr_deadletter_test';
+    const actionId = await enqueueSyncAction('SYNC_TEST_ACTION', { foo: 'bar' }, userId);
+
+    // Initial state: pending, retry_count: 0
+    let pending = await getPendingSyncActions(userId);
+    let item = pending.find(p => p.id === actionId);
+    expect(item).toBeDefined();
+    expect(item?.retry_count).toBe(0);
+    expect(item?.status).toBe('pending');
+
+    // Simulate 4 successive failures
+    for (let i = 1; i <= 4; i++) {
+      await markSyncActionFailed(actionId, `Simulated network drop #${i}`);
+      pending = await getPendingSyncActions(userId);
+      item = pending.find(p => p.id === actionId);
+      expect(item).toBeDefined();
+      expect(item?.retry_count).toBe(i);
+      expect(item?.status).toBe('failed');
+      expect(item?.last_attempted_at).toBeDefined();
+    }
+
+    // 5th failure: must transition to 'dead_letter'
+    await markSyncActionFailed(actionId, 'Simulated terminal network drop #5');
+
+    // Item must NO LONGER be returned in pending sync queue
+    pending = await getPendingSyncActions(userId);
+    item = pending.find(p => p.id === actionId);
+    expect(item).toBeUndefined();
+
+    // Item must be retained in dead letter repository for inspection and recovery
+    const deadLetters = await getDeadLetterSyncActions(userId);
+    const deadItem = deadLetters.find(d => d.id === actionId);
+    expect(deadItem).toBeDefined();
+    expect(deadItem?.status).toBe('dead_letter');
+    expect(deadItem?.retry_count).toBe(5);
+    expect(deadItem?.error_message).toContain('#5');
+  });
+
+  it('6. Backoff calculation uses last_attempted_at instead of created_at (RISK-803)', async () => {
+    const userId = 'usr_backoff_timing_test';
+    const actionId = await enqueueSyncAction('SYNC_TIMING_ACTION', { val: 1 }, userId);
+
+    // Fail the action once
+    await markSyncActionFailed(actionId, 'First transient network error');
+
+    const pending = await getPendingSyncActions(userId);
+    const item = pending.find(p => p.id === actionId);
+    expect(item).toBeDefined();
+    expect(item?.retry_count).toBe(1);
+    expect(item?.last_attempted_at).toBeDefined();
+
+    // Verify last_attempted_at is a recent ISO timestamp
+    const diffMs = Math.abs(Date.now() - new Date(item!.last_attempted_at!).getTime());
+    expect(diffMs).toBeLessThan(5000);
   });
 });

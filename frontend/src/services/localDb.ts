@@ -35,9 +35,10 @@ export interface SyncQueueRecord {
   user_id?: string;
   action: string;
   payload: unknown;
-  status: 'pending' | 'failed';
+  status: 'pending' | 'failed' | 'dead_letter';
   retry_count: number;
   error_message?: string;
+  last_attempted_at?: string;
   created_at: string;
 }
 
@@ -582,6 +583,21 @@ export async function getPendingSyncActions(userId?: string): Promise<SyncQueueR
   }
 }
 
+export async function getDeadLetterSyncActions(userId?: string): Promise<SyncQueueRecord[]> {
+  if (!isIndexedDBAvailable()) {
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'dead_letter');
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId) : list;
+  }
+  try {
+    const all = await localDb.syncQueue.toArray();
+    const dead = all.filter(r => r.status === 'dead_letter');
+    return userId ? dead.filter(r => !r.user_id || r.user_id === userId) : dead;
+  } catch (err) {
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'dead_letter');
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId) : list;
+  }
+}
+
 export async function removeSyncAction(id: string): Promise<void> {
   memoryFallback.syncQueue.delete(id);
 
@@ -597,8 +613,9 @@ export async function removeSyncAction(id: string): Promise<void> {
 export async function markSyncActionFailed(id: string, errorMessage?: string): Promise<void> {
   const inMem = memoryFallback.syncQueue.get(id);
   if (inMem) {
-    inMem.status = 'failed';
+    inMem.last_attempted_at = new Date().toISOString();
     inMem.retry_count = (inMem.retry_count || 0) + 1;
+    inMem.status = inMem.retry_count >= 5 ? 'dead_letter' : 'failed';
     if (errorMessage) {
       inMem.error_message = errorMessage;
     }
@@ -608,8 +625,9 @@ export async function markSyncActionFailed(id: string, errorMessage?: string): P
     try {
       const item = await localDb.syncQueue.get(id);
       if (item) {
-        item.status = 'failed';
+        item.last_attempted_at = new Date().toISOString();
         item.retry_count = (item.retry_count || 0) + 1;
+        item.status = item.retry_count >= 5 ? 'dead_letter' : 'failed';
         if (errorMessage) {
           item.error_message = errorMessage;
         }

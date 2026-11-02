@@ -1,6 +1,8 @@
 # Lexilume — Target Product Architecture: Content-Centred English Learning
 
-> **Mission:** Transform Lexilume from an isolated course-generator into a unified, content-centred English-learning platform where authentic real-world content powers reading, listening, speaking, writing, vocabulary acquisition, grammar explanation, and contextual comprehension.
+> **Mission:** Transform Lexilume from an isolated course-generator into a unified, content-centred English-learning platform where authentic real-world content powers reading, listening, speaking, writing, vocabulary acquisition, grammar explanation, and contextual comprehension.  
+> **Master Target Architecture Specification:** See [TARGET_ARCHITECTURE.md](file:///docs/architecture/TARGET_ARCHITECTURE.md) for the definitive Phase 4 architectural blueprint.  
+> **Target Diagrams Reference:** See [TARGET_ARCHITECTURE_DIAGRAMS.md](file:///docs/architecture/TARGET_ARCHITECTURE_DIAGRAMS.md) for the 12 target Mermaid diagrams.
 
 ---
 

@@ -12,6 +12,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { AppRoute, APP_ROUTES } from './routes';
 
 const VALID_ROUTES = new Set<AppRoute>([
+  'learn',
+  'words',
+  'mistakes',
   'dashboard',
   'vocabulary',
   'explore',

@@ -16,6 +16,8 @@ import {
   X,
   ChevronDown,
   BookMarked,
+  Bookmark,
+  AlertTriangle,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/i18nContext';
 import { authService, AuthState } from '../../services/auth';
@@ -26,6 +28,9 @@ import { SyncStatusBadge } from './SyncStatusBadge';
 import { BRANDING } from '../../config/branding';
 
 export type NavTab =
+  | 'learn'
+  | 'words'
+  | 'mistakes'
   | 'dashboard'
   | 'explore'
   | 'vocabulary'
@@ -246,6 +251,44 @@ export const Navigation: React.FC<NavigationProps> = ({
               >
                 <LayoutDashboard className="w-4 h-4 text-indigo-400" />
                 <span>{t('nav_home')}</span>
+              </button>
+
+              {/* Core Content-Centred Destinations (Phase 7) */}
+              <button
+                onClick={() => handleSelectNavTab('learn')}
+                aria-label="Content Library"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
+                  activeTab === 'learn'
+                    ? 'bg-slate-800 text-indigo-300 shadow-sm border border-slate-700/80 font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-emerald-400" />
+                <span>Texts</span>
+              </button>
+
+              <button
+                onClick={() => handleSelectNavTab('words')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
+                  activeTab === 'words'
+                    ? 'bg-slate-800 text-indigo-300 shadow-sm border border-slate-700/80 font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <Bookmark className="w-4 h-4 text-amber-400" />
+                <span>My Words</span>
+              </button>
+
+              <button
+                onClick={() => handleSelectNavTab('mistakes')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
+                  activeTab === 'mistakes'
+                    ? 'bg-slate-800 text-indigo-300 shadow-sm border border-slate-700/80 font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <AlertTriangle className="w-4 h-4 text-rose-400" />
+                <span>My Mistakes</span>
               </button>
 
               {/* 2. Learn Dropdown (PT, ES, EN, Vocab, Dictionary) */}
@@ -616,6 +659,58 @@ export const Navigation: React.FC<NavigationProps> = ({
                   {t('settings:interface_lang_label', 'Idioma da Interface')}
                 </div>
                 <InterfaceLanguageSelector className="w-full" />
+              </div>
+
+              {/* Subsection 0: Content-Centred Learning (Phase 7) */}
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
+                  Content-Centred Learning
+                </span>
+                <button
+                  onClick={() => handleSelectNavTab('learn')}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                    activeTab === 'learn' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <BookOpen className="w-4 h-4 text-emerald-400" />
+                    <div className="text-left">
+                      <div className="text-slate-100 font-semibold">Learn</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Authentic texts & reading practice</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded font-bold border bg-slate-800 text-slate-300 border-slate-700">
+                    CORE
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleSelectNavTab('words')}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                    activeTab === 'words' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Bookmark className="w-4 h-4 text-amber-400" />
+                    <div className="text-left">
+                      <div className="text-slate-100 font-semibold">My Words</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Personal vocabulary & SM-2 review</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleSelectNavTab('mistakes')}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                    activeTab === 'mistakes' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-400" />
+                    <div className="text-left">
+                      <div className="text-slate-100 font-semibold">My Mistakes</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Notebook for error remediation</div>
+                    </div>
+                  </div>
+                </button>
               </div>
 
               {/* Subsection 1: Trilhas de Idiomas */}

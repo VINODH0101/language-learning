@@ -7,6 +7,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { PortuguesePage } from './pages/PortuguesePage';
 import { SpanishPage } from './pages/SpanishPage';
 import { EnglishPage } from './pages/EnglishPage';
+import { LearnPage } from './pages/LearnPage';
+import { MyWordsPage } from './pages/MyWordsPage';
+import { MyMistakesPage } from './pages/MyMistakesPage';
 import { TranslatePage } from './pages/TranslatePage';
 import { PracticePage } from './pages/PracticePage';
 import { ProgressPage } from './pages/ProgressPage';
@@ -73,6 +76,9 @@ export const AppContent: React.FC = () => {
       onSelectTab={handleSelectTab}
       streakDays={streakDays}
     >
+      {currentRoute === 'learn' && <LearnPage />}
+      {currentRoute === 'words' && <MyWordsPage />}
+      {currentRoute === 'mistakes' && <MyMistakesPage />}
       {currentRoute === 'dashboard' && <DashboardPage onNavigateTab={handleSelectTab} />}
       {currentRoute === 'vocabulary' && <VocabularyPage />}
       {currentRoute === 'explore' && <CultureExplorePage />}

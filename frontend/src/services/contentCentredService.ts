@@ -27,7 +27,7 @@ import {
   ErrorCategory,
 } from '../types/contentCentred';
 import { Language, ExplanationLanguage, CEFRLevel } from '../types';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 import {
   localDb,
   cacheContentItemLocal,
@@ -40,8 +40,10 @@ import {
   getUserSavedWordsLocal,
   saveUserMistakeLocal,
   getUserMistakesLocal,
+  getUserMistakeByIdLocal,
 } from './localDb';
 import { SRSService } from './srs';
+import { syncEngine } from './syncEngine';
 
 // ============================================================================
 // SEED AUTHENTIC LEARNING CONTENT
@@ -636,7 +638,7 @@ export class ContentCentredService {
     let items: ContentItem[] = [];
 
     // 1. Attempt query from Supabase if online
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         let query = supabase.from('content_items').select('*');
         if (filters?.status) {
@@ -687,7 +689,7 @@ export class ContentCentredService {
     if (local && local.version) return local;
 
     // Check Supabase
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase.from('content_items').select('*').eq('id', id).maybeSingle();
         if (!error && data) {
@@ -714,7 +716,7 @@ export class ContentCentredService {
       return localVersionsRegistry.get(versionId)!;
     }
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase.from('content_versions').select('*').eq('id', versionId).maybeSingle();
         if (!error && data) {
@@ -735,7 +737,7 @@ export class ContentCentredService {
       return localActivitiesRegistry.get(versionId)!;
     }
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
           .from('learning_activities')
@@ -787,7 +789,7 @@ export class ContentCentredService {
     localItemsRegistry.set(fullItem.id, fullItem);
     await cacheContentItemLocal(fullItem);
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('content_items').upsert(fullItem, { onConflict: 'id' });
       } catch (e) {
@@ -846,7 +848,7 @@ export class ContentCentredService {
       cacheContentItemLocal(parent);
     }
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('content_versions').upsert(fullVersion, { onConflict: 'id' });
       } catch (e) {
@@ -874,7 +876,7 @@ export class ContentCentredService {
       await cacheContentItemLocal(item);
     }
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('content_versions').update({
           is_published: true,
@@ -917,7 +919,7 @@ export class ContentCentredService {
     }
     localActivitiesRegistry.set(fullActivity.content_version_id, existing);
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('learning_activities').upsert(fullActivity, { onConflict: 'id' });
       } catch (e) {
@@ -936,7 +938,7 @@ export class ContentCentredService {
     const local = await getLearnerProgressLocal(userId, contentItemId);
     if (local) return local;
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
           .from('learner_content_progress')
@@ -961,7 +963,7 @@ export class ContentCentredService {
     const local = await getAllLearnerProgressLocal(userId);
     if (local.length > 0) return local;
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
           .from('learner_content_progress')
@@ -1007,8 +1009,9 @@ export class ContentCentredService {
     };
 
     await saveLearnerProgressLocal(fullRecord);
+    syncEngine.queueAction('SYNC_LEARNER_PROGRESS', fullRecord, progress.user_id);
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('learner_content_progress').upsert(fullRecord, { onConflict: 'user_id,content_item_id' });
       } catch (e) {
@@ -1027,7 +1030,7 @@ export class ContentCentredService {
     const localWords = await getUserSavedWordsLocal(userId, targetLanguage);
     if (localWords.length > 0) return localWords;
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         let q = supabase.from('user_saved_words').select('*').eq('user_id', userId);
         if (targetLanguage) q = q.eq('target_language', targetLanguage);
@@ -1096,8 +1099,9 @@ export class ContentCentredService {
     };
 
     await saveUserWordLocal(fullWord);
+    syncEngine.queueAction('SYNC_USER_SAVED_WORD', fullWord, word.user_id);
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('user_saved_words').upsert(fullWord, {
           onConflict: 'user_id,target_language,lemma,pos,explanation_language',
@@ -1126,6 +1130,7 @@ export class ContentCentredService {
       last_reviewed_at: word.last_reviewed_at || null,
       next_review_date: word.next_review,
       mastery_status: word.state as any,
+      history: [],
     };
 
     const nextState = SRSService.calculateNextState(srsState as any, rating);
@@ -1140,8 +1145,19 @@ export class ContentCentredService {
     word.updated_at = new Date().toISOString();
 
     await saveUserWordLocal(word);
+    syncEngine.queueAction('SYNC_USER_SAVED_WORD', word, userId);
+    syncEngine.queueAction('SYNC_WORD_REVIEW_EVENT', {
+      user_id: userId,
+      saved_word_id: word.id,
+      rating,
+      previous_interval_days: srsState.interval_days,
+      new_interval_days: nextState.interval_days,
+      previous_ease_factor: srsState.ease_factor,
+      new_ease_factor: nextState.ease_factor,
+      reviewed_at: new Date().toISOString(),
+    }, userId);
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('user_saved_words').update({
           ease_factor: word.ease_factor,
@@ -1188,7 +1204,7 @@ export class ContentCentredService {
 
     if (filtered.length > 0) return filtered;
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         let q = supabase.from('user_mistakes').select('*').eq('user_id', userId);
         if (status) q = q.eq('status', status);
@@ -1246,8 +1262,9 @@ export class ContentCentredService {
     };
 
     await saveUserMistakeLocal(fullMistake);
+    syncEngine.queueAction('SYNC_USER_MISTAKE', fullMistake, mistake.user_id);
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('user_mistakes').upsert(fullMistake, { onConflict: 'id' });
       } catch (e) {
@@ -1260,8 +1277,7 @@ export class ContentCentredService {
 
   public async resolveUserMistake(mistakeId: string, status: MistakeStatus = 'mastered'): Promise<UserMistake> {
     const local = await getUserMistakesLocal('guest'); // Query all or by ID
-    // Find by ID across all local mistakes
-    let mistake = (await localDb.userMistakes.get(mistakeId)) || null;
+    const mistake = await getUserMistakeByIdLocal(mistakeId);
     if (!mistake) {
       throw new Error(`Mistake ${mistakeId} not found`);
     }
@@ -1271,8 +1287,9 @@ export class ContentCentredService {
     mistake.updated_at = new Date().toISOString();
 
     await saveUserMistakeLocal(mistake);
+    syncEngine.queueAction('SYNC_USER_MISTAKE', mistake, mistake.user_id);
 
-    if (supabase) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('user_mistakes').update({
           status: mistake.status,

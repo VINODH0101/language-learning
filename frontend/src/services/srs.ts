@@ -77,7 +77,7 @@ export class SRSService {
       ease_factor: newEf,
     };
 
-    const newHistory = [...current.history];
+    const newHistory = [...(current.history || [])];
     if (
       isSameDay &&
       newHistory.length > 0 &&

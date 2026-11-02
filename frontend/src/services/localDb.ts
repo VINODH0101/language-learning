@@ -656,6 +656,91 @@ export async function migrateGuestVocabulary(userId: string): Promise<number> {
   return count;
 }
 
+
+export async function migrateGuestContentData(userId: string): Promise<{
+  progressMigrated: number;
+  wordsMigrated: number;
+  mistakesMigrated: number;
+}> {
+  let progressMigrated = 0;
+  let wordsMigrated = 0;
+  let mistakesMigrated = 0;
+
+  // 1. In-memory fallback migration
+  for (const [id, rec] of memoryFallback.learnerContentProgress.entries()) {
+    if (!rec.user_id || rec.user_id === 'guest' || rec.user_id === 'guest_user') {
+      rec.user_id = userId;
+      memoryFallback.learnerContentProgress.set(id, rec);
+      progressMigrated++;
+    }
+  }
+
+  for (const [id, word] of memoryFallback.userSavedWords.entries()) {
+    if (!word.user_id || word.user_id === 'guest' || word.user_id === 'guest_user') {
+      word.user_id = userId;
+      memoryFallback.userSavedWords.set(id, word);
+      wordsMigrated++;
+    }
+  }
+
+  for (const [id, m] of memoryFallback.userMistakes.entries()) {
+    if (!m.user_id || m.user_id === 'guest' || m.user_id === 'guest_user') {
+      m.user_id = userId;
+      memoryFallback.userMistakes.set(id, m);
+      mistakesMigrated++;
+    }
+  }
+
+  // 2. Dexie IndexedDB migration
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.transaction('rw', [localDb.learnerContentProgress, localDb.userSavedWords, localDb.userMistakes, localDb.syncQueue], async () => {
+        // Progress
+        const guestProgress = await localDb.learnerContentProgress
+          .filter(p => !p.user_id || p.user_id === 'guest' || p.user_id === 'guest_user')
+          .toArray();
+        for (const p of guestProgress) {
+          p.user_id = userId;
+          await localDb.learnerContentProgress.put(p);
+        }
+        progressMigrated = Math.max(progressMigrated, guestProgress.length);
+
+        // Saved Words
+        const guestWords = await localDb.userSavedWords
+          .filter(w => !w.user_id || w.user_id === 'guest' || w.user_id === 'guest_user')
+          .toArray();
+        for (const w of guestWords) {
+          w.user_id = userId;
+          await localDb.userSavedWords.put(w);
+        }
+        wordsMigrated = Math.max(wordsMigrated, guestWords.length);
+
+        // Mistakes
+        const guestMistakes = await localDb.userMistakes
+          .filter(m => !m.user_id || m.user_id === 'guest' || m.user_id === 'guest_user')
+          .toArray();
+        for (const m of guestMistakes) {
+          m.user_id = userId;
+          await localDb.userMistakes.put(m);
+        }
+        mistakesMigrated = Math.max(mistakesMigrated, guestMistakes.length);
+
+        // Reassign pending guest sync actions
+        const guestSyncActions = await localDb.syncQueue
+          .filter(a => !a.user_id || a.user_id === 'guest' || a.user_id === 'guest_user')
+          .toArray();
+        for (const a of guestSyncActions) {
+          a.user_id = userId;
+          await localDb.syncQueue.put(a);
+        }
+      });
+    } catch (err) {
+      console.warn('[localDb] Error migrating guest content data in IndexedDB:', err);
+    }
+  }
+
+  return { progressMigrated, wordsMigrated, mistakesMigrated };
+}
 // ============================================================================
 // 7. STORAGE QUOTA, PURGE & EXPORT
 // ============================================================================
@@ -1040,6 +1125,20 @@ export async function getUserMistakesLocal(userId: string): Promise<UserMistake[
     return Array.from(memoryFallback.userMistakes.values()).filter(m => m.user_id === userId);
   }
 }
+
+export async function getUserMistakeByIdLocal(id: string): Promise<UserMistake | null> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.userMistakes.get(id) || null;
+  }
+  try {
+    const item = await localDb.userMistakes.get(id);
+    return item || memoryFallback.userMistakes.get(id) || null;
+  } catch (err) {
+    console.warn('Error fetching user mistake by id from localDb', err);
+    return memoryFallback.userMistakes.get(id) || null;
+  }
+}
+
 
 export async function saveProcessingJobLocal(job: ContentProcessingJob): Promise<void> {
   memoryFallback.contentProcessingJobs.set(job.id, job);

@@ -355,6 +355,132 @@ class SyncEngine {
         return !error;
       }
 
+      // --- Content-Centred Platform Synchronization (Phase 7 / Milestone 7.8) ---
+      if (item.action === 'SYNC_LEARNER_PROGRESS') {
+        const prog = item.payload as any;
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          content_item_id: prog.content_item_id,
+          content_version_id: prog.content_version_id,
+          status: prog.status || 'in_progress',
+          percent_complete: prog.percent_complete ?? 0,
+          completed_activity_ids: prog.completed_activity_ids || [],
+          time_spent_seconds: prog.time_spent_seconds ?? 0,
+          comprehension_score: prog.comprehension_score ?? null,
+          client_mutation_id: prog.client_mutation_id || item.id,
+          first_opened_at: prog.first_opened_at || new Date().toISOString(),
+          last_studied_at: prog.last_studied_at || new Date().toISOString(),
+          completed_at: prog.completed_at || null,
+          updated_at: new Date().toISOString(),
+        };
+        if (prog.id && isValidUuid(prog.id)) {
+          payload.id = prog.id;
+        }
+
+        const { error } = await supabase
+          .from('learner_content_progress')
+          .upsert(payload, { onConflict: 'user_id,content_item_id' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_USER_SAVED_WORD') {
+        const w = item.payload as any;
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          target_language: w.target_language,
+          explanation_language: w.explanation_language,
+          term: w.term,
+          lemma: w.lemma,
+          pos: w.pos || 'other',
+          cefr_level: w.cefr_level || null,
+          definition: w.definition,
+          context_sentence: w.context_sentence || null,
+          context_translation: w.context_translation || null,
+          source_content_id: isValidUuid(w.source_content_id) ? w.source_content_id : null,
+          source_version_id: isValidUuid(w.source_version_id) ? w.source_version_id : null,
+          audio_url: w.audio_url || null,
+          ipa: w.ipa || null,
+          client_mutation_id: w.client_mutation_id || item.id,
+          ease_factor: w.ease_factor ?? 2.5,
+          interval_days: w.interval_days ?? 0,
+          repetitions: w.repetitions ?? 0,
+          lapses: w.lapses ?? 0,
+          last_reviewed_at: w.last_reviewed_at || null,
+          next_review: w.next_review || new Date().toISOString().split('T')[0],
+          state: w.state || 'learning',
+          updated_at: new Date().toISOString(),
+        };
+        if (w.id && isValidUuid(w.id)) {
+          payload.id = w.id;
+        }
+
+        const { error } = await supabase
+          .from('user_saved_words')
+          .upsert(payload, { onConflict: 'user_id,target_language,lemma,pos,explanation_language' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_USER_MISTAKE') {
+        const m = item.payload as any;
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          content_item_id: isValidUuid(m.content_item_id) ? m.content_item_id : null,
+          content_version_id: isValidUuid(m.content_version_id) ? m.content_version_id : null,
+          activity_id: isValidUuid(m.activity_id) ? m.activity_id : null,
+          activity_type: m.activity_type || 'reading_comprehension',
+          error_category: m.error_category || 'general',
+          stimulus: m.stimulus,
+          user_response: m.user_response,
+          correct_response: m.correct_response,
+          pedagogical_explanation: m.pedagogical_explanation,
+          status: m.status || 'unresolved',
+          occurrences_count: m.occurrences_count ?? 1,
+          client_mutation_id: m.client_mutation_id || item.id,
+          first_occurred_at: m.first_occurred_at || new Date().toISOString(),
+          last_occurred_at: m.last_occurred_at || new Date().toISOString(),
+          resolved_at: m.resolved_at || null,
+          updated_at: new Date().toISOString(),
+        };
+        if (m.id && isValidUuid(m.id)) {
+          payload.id = m.id;
+        }
+
+        const { error } = await supabase
+          .from('user_mistakes')
+          .upsert(payload, { onConflict: 'id' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_WORD_REVIEW_EVENT') {
+        const ev = item.payload as any;
+        if (!isValidUuid(ev.saved_word_id)) {
+          return true;
+        }
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          saved_word_id: ev.saved_word_id,
+          rating: ev.rating,
+          previous_interval_days: ev.previous_interval_days ?? 0,
+          new_interval_days: ev.new_interval_days ?? 1,
+          previous_ease_factor: ev.previous_ease_factor ?? 2.5,
+          new_ease_factor: ev.new_ease_factor ?? 2.5,
+          client_mutation_id: ev.client_mutation_id || item.id,
+          reviewed_at: ev.reviewed_at || new Date().toISOString(),
+        };
+        if (ev.id && isValidUuid(ev.id)) {
+          payload.id = ev.id;
+        }
+
+        const { error } = await supabase
+          .from('user_word_review_events')
+          .insert(payload);
+
+        return !error;
+      }
+
       // Unknown action: acknowledge and clear to avoid blocking queue
       return true;
     } catch (err) {

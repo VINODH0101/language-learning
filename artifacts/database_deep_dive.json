@@ -1,0 +1,2414 @@
+{
+  "migrations": [
+    "001_initial_schema.sql",
+    "002_rls_policies.sql",
+    "003_email_and_retention.sql",
+    "004_minimal_wikipedia_assignments.sql",
+    "005_language_directions_and_saved_translations.sql",
+    "006_auth_roles_audit_and_onboarding.sql",
+    "007_multiple_courses_and_progress_isolation.sql",
+    "008_cultural_bookmarks_and_sync.sql",
+    "009_schema_reconciliation_and_sync.sql",
+    "010_database_persistence_and_sync_repair.sql",
+    "011_daily_lessons_reconciliation.sql",
+    "012_daily_content_studio.sql",
+    "013_progress_and_activity_tracking.sql",
+    "014_admin_operations_and_audit.sql"
+  ],
+  "tables": {
+    "licenses_and_sources": {
+      "name": "licenses_and_sources",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "source_name",
+          "type": "VARCHAR(120)",
+          "raw": "source_name VARCHAR(120) NOT NULL"
+        },
+        {
+          "name": "source_url",
+          "type": "TEXT",
+          "raw": "source_url TEXT NOT NULL"
+        },
+        {
+          "name": "license_type",
+          "type": "VARCHAR(64)",
+          "raw": "license_type VARCHAR(64) NOT NULL"
+        },
+        {
+          "name": "attribution_text",
+          "type": "TEXT",
+          "raw": "attribution_text TEXT NOT NULL"
+        },
+        {
+          "name": "terms_url",
+          "type": "TEXT",
+          "raw": "terms_url TEXT"
+        },
+        {
+          "name": "imported_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "imported_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "user_profiles": {
+      "name": "user_profiles",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "auth_user_id",
+          "type": "UUID",
+          "raw": "auth_user_id UUID UNIQUE"
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)",
+          "raw": "email VARCHAR(255) NOT NULL UNIQUE"
+        },
+        {
+          "name": "full_name",
+          "type": "VARCHAR(100)",
+          "raw": "full_name VARCHAR(100) NOT NULL"
+        },
+        {
+          "name": "timezone",
+          "type": "VARCHAR(64)",
+          "raw": "timezone VARCHAR(64) NOT NULL DEFAULT 'UTC'"
+        },
+        {
+          "name": "preferred_delivery_hour_utc",
+          "type": "SMALLINT",
+          "raw": "preferred_delivery_hour_utc SMALLINT NOT NULL DEFAULT 4"
+        },
+        {
+          "name": "study_mode",
+          "type": "VARCHAR(20)",
+          "raw": "study_mode VARCHAR(20) NOT NULL DEFAULT 'full'"
+        },
+        {
+          "name": "diagnostic_completed",
+          "type": "BOOLEAN",
+          "raw": "diagnostic_completed BOOLEAN NOT NULL DEFAULT FALSE"
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "raw": "is_active BOOLEAN NOT NULL DEFAULT TRUE"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "native_language",
+          "type": "VARCHAR(10)",
+          "raw": "native_language VARCHAR(10) DEFAULT 'pt',\n    ADD COLUMN IF NOT EXISTS primary_target_language VARCHAR(10) DEFAULT 'es',\n    ADD COLUMN IF NOT EXISTS account_status VARCHAR(20) DEFAULT 'active',\n    ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP (added in 005_language_directions_and_saved_translations.sql)"
+        },
+        {
+          "name": "interface_language",
+          "type": "VARCHAR(10)",
+          "raw": "interface_language VARCHAR(10) NOT NULL DEFAULT 'en',\n    ADD COLUMN IF NOT EXISTS explanation_language VARCHAR(10) NOT NULL DEFAULT 'en',\n    ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,\n    ADD COLUMN IF NOT EXISTS daily_goal_minutes SMALLINT NOT NULL DEFAULT 10,\n    ADD COLUMN IF NOT EXISTS theme VARCHAR(20) NOT NULL DEFAULT 'dark',\n    ADD COLUMN IF NOT EXISTS email_daily_lesson_opt_in BOOLEAN NOT NULL DEFAULT FALSE (added in 006_auth_roles_audit_and_onboarding.sql)"
+        }
+      ]
+    },
+    "language_tracks": {
+      "name": "language_tracks",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "language_code",
+          "type": "VARCHAR(10)",
+          "raw": "language_code VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "regional_variety",
+          "type": "VARCHAR(20)",
+          "raw": "regional_variety VARCHAR(20) NOT NULL"
+        },
+        {
+          "name": "current_cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "current_cefr_level VARCHAR(5) NOT NULL DEFAULT 'A1'"
+        },
+        {
+          "name": "target_cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "target_cefr_level VARCHAR(5) NOT NULL DEFAULT 'C1'"
+        },
+        {
+          "name": "current_curriculum_node_id",
+          "type": "UUID",
+          "raw": "current_curriculum_node_id UUID"
+        },
+        {
+          "name": "streak_days",
+          "type": "INTEGER",
+          "raw": "streak_days INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "total_lessons_completed",
+          "type": "INTEGER",
+          "raw": "total_lessons_completed INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "curriculum_nodes": {
+      "name": "curriculum_nodes",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "language_code",
+          "type": "VARCHAR(10)",
+          "raw": "language_code VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL"
+        },
+        {
+          "name": "sequence_order",
+          "type": "INTEGER",
+          "raw": "sequence_order INTEGER NOT NULL"
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(200)",
+          "raw": "title VARCHAR(200) NOT NULL"
+        },
+        {
+          "name": "slug",
+          "type": "VARCHAR(200)",
+          "raw": "slug VARCHAR(200) NOT NULL"
+        },
+        {
+          "name": "skill_category",
+          "type": "VARCHAR(50)",
+          "raw": "skill_category VARCHAR(50) NOT NULL"
+        },
+        {
+          "name": "can_do_statement",
+          "type": "TEXT",
+          "raw": "can_do_statement TEXT NOT NULL"
+        },
+        {
+          "name": "regional_relevance",
+          "type": "VARCHAR(20)",
+          "raw": "regional_relevance VARCHAR(20) DEFAULT 'all'"
+        },
+        {
+          "name": "prerequisite_node_id",
+          "type": "UUID",
+          "raw": "prerequisite_node_id UUID REFERENCES public.curriculum_nodes(id)"
+        },
+        {
+          "name": "is_consolidation_review",
+          "type": "BOOLEAN",
+          "raw": "is_consolidation_review BOOLEAN NOT NULL DEFAULT FALSE"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "vocabulary_items": {
+      "name": "vocabulary_items",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "language_code",
+          "type": "VARCHAR(10)",
+          "raw": "language_code VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "lemma",
+          "type": "VARCHAR(120)",
+          "raw": "lemma VARCHAR(120) NOT NULL"
+        },
+        {
+          "name": "part_of_speech",
+          "type": "VARCHAR(30)",
+          "raw": "part_of_speech VARCHAR(30) NOT NULL"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL"
+        },
+        {
+          "name": "definition_en",
+          "type": "TEXT",
+          "raw": "definition_en TEXT NOT NULL"
+        },
+        {
+          "name": "definition_target",
+          "type": "TEXT",
+          "raw": "definition_target TEXT NOT NULL"
+        },
+        {
+          "name": "phonetic_ipa",
+          "type": "VARCHAR(120)",
+          "raw": "phonetic_ipa VARCHAR(120)"
+        },
+        {
+          "name": "regional_tags",
+          "type": "TEXT",
+          "raw": "regional_tags TEXT[] DEFAULT ARRAY['all']::TEXT[]"
+        },
+        {
+          "name": "example_sentence_target",
+          "type": "TEXT",
+          "raw": "example_sentence_target TEXT NOT NULL"
+        },
+        {
+          "name": "example_sentence_en",
+          "type": "TEXT",
+          "raw": "example_sentence_en TEXT NOT NULL"
+        },
+        {
+          "name": "audio_url",
+          "type": "TEXT",
+          "raw": "audio_url TEXT"
+        },
+        {
+          "name": "curriculum_node_id",
+          "type": "UUID",
+          "raw": "curriculum_node_id UUID REFERENCES public.curriculum_nodes(id)"
+        },
+        {
+          "name": "license_id",
+          "type": "UUID",
+          "raw": "license_id UUID NOT NULL REFERENCES public.licenses_and_sources(id)"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "grammar_rules": {
+      "name": "grammar_rules",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "language_code",
+          "type": "VARCHAR(10)",
+          "raw": "language_code VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "rule_code",
+          "type": "VARCHAR(60)",
+          "raw": "rule_code VARCHAR(60) NOT NULL UNIQUE"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL"
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(200)",
+          "raw": "title VARCHAR(200) NOT NULL"
+        },
+        {
+          "name": "category",
+          "type": "VARCHAR(60)",
+          "raw": "category VARCHAR(60) NOT NULL"
+        },
+        {
+          "name": "explanation_markdown",
+          "type": "TEXT",
+          "raw": "explanation_markdown TEXT NOT NULL"
+        },
+        {
+          "name": "structural_formula",
+          "type": "TEXT",
+          "raw": "structural_formula TEXT NOT NULL"
+        },
+        {
+          "name": "examples",
+          "type": "JSONB",
+          "raw": "examples JSONB NOT NULL"
+        },
+        {
+          "name": "common_errors",
+          "type": "JSONB",
+          "raw": "common_errors JSONB NOT NULL"
+        },
+        {
+          "name": "regional_notes",
+          "type": "JSONB",
+          "raw": "regional_notes JSONB"
+        },
+        {
+          "name": "license_id",
+          "type": "UUID",
+          "raw": "license_id UUID NOT NULL REFERENCES public.licenses_and_sources(id)"
+        },
+        {
+          "name": "curriculum_node_id",
+          "type": "UUID",
+          "raw": "curriculum_node_id UUID REFERENCES public.curriculum_nodes(id)"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "exercise_templates": {
+      "name": "exercise_templates",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "curriculum_node_id",
+          "type": "UUID",
+          "raw": "curriculum_node_id UUID NOT NULL REFERENCES public.curriculum_nodes(id)"
+        },
+        {
+          "name": "language_code",
+          "type": "VARCHAR(10)",
+          "raw": "language_code VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "exercise_type",
+          "type": "VARCHAR(40)",
+          "raw": "exercise_type VARCHAR(40) NOT NULL"
+        },
+        {
+          "name": "prompt_text",
+          "type": "TEXT",
+          "raw": "prompt_text TEXT NOT NULL"
+        },
+        {
+          "name": "context_passage",
+          "type": "TEXT",
+          "raw": "context_passage TEXT"
+        },
+        {
+          "name": "target_slot_index",
+          "type": "INTEGER",
+          "raw": "target_slot_index INTEGER"
+        },
+        {
+          "name": "acceptable_solutions",
+          "type": "TEXT",
+          "raw": "acceptable_solutions TEXT[] NOT NULL"
+        },
+        {
+          "name": "distractors",
+          "type": "JSONB",
+          "raw": "distractors JSONB"
+        },
+        {
+          "name": "explanation",
+          "type": "TEXT",
+          "raw": "explanation TEXT NOT NULL"
+        },
+        {
+          "name": "difficulty",
+          "type": "SMALLINT",
+          "raw": "difficulty SMALLINT NOT NULL DEFAULT 3"
+        },
+        {
+          "name": "license_id",
+          "type": "UUID",
+          "raw": "license_id UUID NOT NULL REFERENCES public.licenses_and_sources(id)"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "curated_materials": {
+      "name": "curated_materials",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "curriculum_node_id",
+          "type": "UUID",
+          "raw": "curriculum_node_id UUID REFERENCES public.curriculum_nodes(id)"
+        },
+        {
+          "name": "language_code",
+          "type": "VARCHAR(10)",
+          "raw": "language_code VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "material_type",
+          "type": "VARCHAR(40)",
+          "raw": "material_type VARCHAR(40) NOT NULL"
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(200)",
+          "raw": "title VARCHAR(200) NOT NULL"
+        },
+        {
+          "name": "content_target",
+          "type": "TEXT",
+          "raw": "content_target TEXT NOT NULL"
+        },
+        {
+          "name": "content_en",
+          "type": "TEXT",
+          "raw": "content_en TEXT"
+        },
+        {
+          "name": "vocabulary_glossary",
+          "type": "JSONB",
+          "raw": "vocabulary_glossary JSONB"
+        },
+        {
+          "name": "comprehension_questions",
+          "type": "JSONB",
+          "raw": "comprehension_questions JSONB NOT NULL"
+        },
+        {
+          "name": "speaking_prompt",
+          "type": "TEXT",
+          "raw": "speaking_prompt TEXT"
+        },
+        {
+          "name": "writing_prompt",
+          "type": "TEXT",
+          "raw": "writing_prompt TEXT"
+        },
+        {
+          "name": "audio_url",
+          "type": "TEXT",
+          "raw": "audio_url TEXT"
+        },
+        {
+          "name": "license_id",
+          "type": "UUID",
+          "raw": "license_id UUID NOT NULL REFERENCES public.licenses_and_sources(id)"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "daily_lessons": {
+      "name": "daily_lessons",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "language_track_id",
+          "type": "UUID",
+          "raw": "language_track_id UUID NOT NULL REFERENCES public.language_tracks(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "lesson_date",
+          "type": "DATE",
+          "raw": "lesson_date DATE NOT NULL"
+        },
+        {
+          "name": "curriculum_node_id",
+          "type": "UUID",
+          "raw": "curriculum_node_id UUID NOT NULL REFERENCES public.curriculum_nodes(id)"
+        },
+        {
+          "name": "study_mode",
+          "type": "VARCHAR(20)",
+          "raw": "study_mode VARCHAR(20) NOT NULL DEFAULT 'full'"
+        },
+        {
+          "name": "estimated_minutes",
+          "type": "SMALLINT",
+          "raw": "estimated_minutes SMALLINT NOT NULL DEFAULT 50"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(30)",
+          "raw": "status VARCHAR(30) NOT NULL DEFAULT 'generated'"
+        },
+        {
+          "name": "content_payload",
+          "type": "JSONB",
+          "raw": "content_payload JSONB NOT NULL"
+        },
+        {
+          "name": "completed_sections",
+          "type": "TEXT",
+          "raw": "completed_sections TEXT[] DEFAULT ARRAY[]::TEXT[]"
+        },
+        {
+          "name": "is_review_day",
+          "type": "BOOLEAN",
+          "raw": "is_review_day BOOLEAN NOT NULL DEFAULT FALSE"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "completed_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "completed_at TIMESTAMPTZ"
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(10)",
+          "raw": "language VARCHAR(10) DEFAULT 'pt',\n    ADD COLUMN IF NOT EXISTS cefr_level VARCHAR(5) DEFAULT 'C1',\n    ADD COLUMN IF NOT EXISTS content_fingerprint VARCHAR(64),\n    ADD COLUMN IF NOT EXISTS payload JSONB (added in 011_daily_lessons_reconciliation.sql)"
+        }
+      ]
+    },
+    "lesson_exercises": {
+      "name": "lesson_exercises",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "lesson_id",
+          "type": "UUID",
+          "raw": "lesson_id UUID NOT NULL REFERENCES public.daily_lessons(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "exercise_template_id",
+          "type": "UUID",
+          "raw": "exercise_template_id UUID NOT NULL REFERENCES public.exercise_templates(id)"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "submitted_answer",
+          "type": "TEXT",
+          "raw": "submitted_answer TEXT"
+        },
+        {
+          "name": "is_correct",
+          "type": "BOOLEAN",
+          "raw": "is_correct BOOLEAN"
+        },
+        {
+          "name": "attempt_count",
+          "type": "INTEGER",
+          "raw": "attempt_count INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "feedback_notes",
+          "type": "TEXT",
+          "raw": "feedback_notes TEXT"
+        },
+        {
+          "name": "completed_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "completed_at TIMESTAMPTZ"
+        }
+      ]
+    },
+    "user_vocabulary_history": {
+      "name": "user_vocabulary_history",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "vocabulary_item_id",
+          "type": "UUID",
+          "raw": "vocabulary_item_id UUID NOT NULL REFERENCES public.vocabulary_items(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "repetition_count",
+          "type": "INTEGER",
+          "raw": "repetition_count INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "ease_factor",
+          "type": "NUMERIC(4, 2)",
+          "raw": "ease_factor NUMERIC(4, 2) NOT NULL DEFAULT 2.50"
+        },
+        {
+          "name": "interval_days",
+          "type": "INTEGER",
+          "raw": "interval_days INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "next_review_date",
+          "type": "DATE",
+          "raw": "next_review_date DATE NOT NULL DEFAULT CURRENT_DATE"
+        },
+        {
+          "name": "last_reviewed_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "last_reviewed_at TIMESTAMPTZ"
+        },
+        {
+          "name": "lapse_count",
+          "type": "INTEGER",
+          "raw": "lapse_count INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "history",
+          "type": "JSONB",
+          "raw": "history JSONB DEFAULT '[]'::JSONB"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "email_deliveries": {
+      "name": "email_deliveries",
+      "createdIn": "001_initial_schema.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "idempotency_key",
+          "type": "VARCHAR(120)",
+          "raw": "idempotency_key VARCHAR(120) NOT NULL UNIQUE"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "delivery_date",
+          "type": "DATE",
+          "raw": "delivery_date DATE NOT NULL"
+        },
+        {
+          "name": "provider",
+          "type": "VARCHAR(40)",
+          "raw": "provider VARCHAR(40) NOT NULL DEFAULT 'resend'"
+        },
+        {
+          "name": "provider_message_id",
+          "type": "VARCHAR(150)",
+          "raw": "provider_message_id VARCHAR(150)"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(30)",
+          "raw": "status VARCHAR(30) NOT NULL DEFAULT 'pending'"
+        },
+        {
+          "name": "attempt_count",
+          "type": "INTEGER",
+          "raw": "attempt_count INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "last_error",
+          "type": "TEXT",
+          "raw": "last_error TEXT"
+        },
+        {
+          "name": "sent_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "sent_at TIMESTAMPTZ"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "delivery_purpose",
+          "type": "VARCHAR(50)",
+          "raw": "delivery_purpose VARCHAR(50) NOT NULL DEFAULT 'daily_digest',\n    ADD COLUMN IF NOT EXISTS recipient_email VARCHAR(255),\n    ADD COLUMN IF NOT EXISTS subject VARCHAR(255) (added in 009_schema_reconciliation_and_sync.sql)"
+        }
+      ]
+    },
+    "retention_cleanup_logs": {
+      "name": "retention_cleanup_logs",
+      "createdIn": "003_email_and_retention.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "executed_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+        },
+        {
+          "name": "is_dry_run",
+          "type": "BOOLEAN",
+          "raw": "is_dry_run BOOLEAN NOT NULL DEFAULT FALSE"
+        },
+        {
+          "name": "pruned_lessons_count",
+          "type": "INT",
+          "raw": "pruned_lessons_count INT NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "pruned_attempts_count",
+          "type": "INT",
+          "raw": "pruned_attempts_count INT NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "preserved_users_count",
+          "type": "INT",
+          "raw": "preserved_users_count INT NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "preserved_tracks_count",
+          "type": "INT",
+          "raw": "preserved_tracks_count INT NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "preserved_srs_count",
+          "type": "INT",
+          "raw": "preserved_srs_count INT NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "log_summary",
+          "type": "TEXT",
+          "raw": "log_summary TEXT NOT NULL"
+        }
+      ]
+    },
+    "lesson_assignments": {
+      "name": "lesson_assignments",
+      "createdIn": "004_minimal_wikipedia_assignments.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(10)",
+          "raw": "language VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "assignment_date",
+          "type": "DATE",
+          "raw": "assignment_date DATE NOT NULL"
+        },
+        {
+          "name": "article_id",
+          "type": "VARCHAR(50)",
+          "raw": "article_id VARCHAR(50) NOT NULL"
+        },
+        {
+          "name": "article_title",
+          "type": "VARCHAR(255)",
+          "raw": "article_title VARCHAR(255) NOT NULL"
+        },
+        {
+          "name": "article_url",
+          "type": "TEXT",
+          "raw": "article_url TEXT NOT NULL"
+        },
+        {
+          "name": "revision_id",
+          "type": "VARCHAR(50)",
+          "raw": "revision_id VARCHAR(50)"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL DEFAULT 'B2'"
+        },
+        {
+          "name": "topic_category",
+          "type": "VARCHAR(50)",
+          "raw": "topic_category VARCHAR(50) NOT NULL DEFAULT 'General'"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(30)",
+          "raw": "status VARCHAR(30) NOT NULL DEFAULT 'assigned'"
+        },
+        {
+          "name": "completed_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "completed_at TIMESTAMPTZ"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "saved_translations": {
+      "name": "saved_translations",
+      "createdIn": "005_language_directions_and_saved_translations.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "source_text",
+          "type": "VARCHAR(1000)",
+          "raw": "source_text VARCHAR(1000) NOT NULL"
+        },
+        {
+          "name": "translated_text",
+          "type": "VARCHAR(1000)",
+          "raw": "translated_text VARCHAR(1000) NOT NULL"
+        },
+        {
+          "name": "source_lang",
+          "type": "VARCHAR(10)",
+          "raw": "source_lang VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "target_lang",
+          "type": "VARCHAR(10)",
+          "raw": "target_lang VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "provider_used",
+          "type": "VARCHAR(40)",
+          "raw": "provider_used VARCHAR(40) NOT NULL DEFAULT 'dictionary'"
+        },
+        {
+          "name": "is_verified",
+          "type": "BOOLEAN",
+          "raw": "is_verified BOOLEAN NOT NULL DEFAULT TRUE"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "user_roles": {
+      "name": "user_roles",
+      "createdIn": "006_auth_roles_audit_and_onboarding.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "role",
+          "type": "VARCHAR(20)",
+          "raw": "role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin'))"
+        },
+        {
+          "name": "assigned_by",
+          "type": "UUID",
+          "raw": "assigned_by UUID REFERENCES auth.users(id)"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "admin_audit_logs": {
+      "name": "admin_audit_logs",
+      "createdIn": "006_auth_roles_audit_and_onboarding.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "admin_id",
+          "type": "UUID",
+          "raw": "admin_id UUID NOT NULL REFERENCES auth.users(id)"
+        },
+        {
+          "name": "action",
+          "type": "VARCHAR(80)",
+          "raw": "action VARCHAR(80) NOT NULL"
+        },
+        {
+          "name": "target_user_id",
+          "type": "UUID",
+          "raw": "target_user_id UUID"
+        },
+        {
+          "name": "details",
+          "type": "JSONB",
+          "raw": "details JSONB NOT NULL DEFAULT '{}'::jsonb"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "user_courses": {
+      "name": "user_courses",
+      "createdIn": "007_multiple_courses_and_progress_isolation.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "target_language",
+          "type": "VARCHAR(10)",
+          "raw": "target_language VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "regional_variant",
+          "type": "VARCHAR(20)",
+          "raw": "regional_variant VARCHAR(20) NOT NULL"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL DEFAULT 'B1'"
+        },
+        {
+          "name": "explanation_language",
+          "type": "VARCHAR(10)",
+          "raw": "explanation_language VARCHAR(10) NOT NULL DEFAULT 'en'"
+        },
+        {
+          "name": "daily_goal_minutes",
+          "type": "SMALLINT",
+          "raw": "daily_goal_minutes SMALLINT NOT NULL DEFAULT 10"
+        },
+        {
+          "name": "streak_days",
+          "type": "INTEGER",
+          "raw": "streak_days INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "total_lessons_completed",
+          "type": "INTEGER",
+          "raw": "total_lessons_completed INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "completed_curriculum_node_ids",
+          "type": "TEXT",
+          "raw": "completed_curriculum_node_ids TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]"
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "raw": "is_active BOOLEAN NOT NULL DEFAULT TRUE"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "cultural_bookmarks": {
+      "name": "cultural_bookmarks",
+      "createdIn": "008_cultural_bookmarks_and_sync.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "article_id",
+          "type": "VARCHAR(100)",
+          "raw": "article_id VARCHAR(100) NOT NULL"
+        },
+        {
+          "name": "article_title",
+          "type": "VARCHAR(255)",
+          "raw": "article_title VARCHAR(255) NOT NULL"
+        },
+        {
+          "name": "content_language",
+          "type": "VARCHAR(10)",
+          "raw": "content_language VARCHAR(10) NOT NULL CHECK (content_language IN ('pt', 'es', 'en'))"
+        },
+        {
+          "name": "origin_country",
+          "type": "VARCHAR(100)",
+          "raw": "origin_country VARCHAR(100) NOT NULL"
+        },
+        {
+          "name": "topic",
+          "type": "VARCHAR(50)",
+          "raw": "topic VARCHAR(50) NOT NULL"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(10)",
+          "raw": "cefr_level VARCHAR(10) NOT NULL CHECK (cefr_level IN ('A1', 'A2', 'B1', 'B2', 'C1'))"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "user_learning_tracks": {
+      "name": "user_learning_tracks",
+      "createdIn": "009_schema_reconciliation_and_sync.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL"
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(10)",
+          "raw": "language VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "regional_variety",
+          "type": "VARCHAR(20)",
+          "raw": "regional_variety VARCHAR(20) NOT NULL DEFAULT 'all'"
+        },
+        {
+          "name": "current_cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "current_cefr_level VARCHAR(5) NOT NULL DEFAULT 'A1'"
+        },
+        {
+          "name": "target_cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "target_cefr_level VARCHAR(5) NOT NULL DEFAULT 'C1'"
+        },
+        {
+          "name": "current_curriculum_node_id",
+          "type": "VARCHAR(100)",
+          "raw": "current_curriculum_node_id VARCHAR(100)"
+        },
+        {
+          "name": "streak_days",
+          "type": "INTEGER",
+          "raw": "streak_days INTEGER NOT NULL DEFAULT 1"
+        },
+        {
+          "name": "total_lessons_completed",
+          "type": "INTEGER",
+          "raw": "total_lessons_completed INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "completed_curriculum_node_ids",
+          "type": "TEXT",
+          "raw": "completed_curriculum_node_ids TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]"
+        },
+        {
+          "name": "presented_vocabulary_ids",
+          "type": "TEXT",
+          "raw": "presented_vocabulary_ids TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]"
+        },
+        {
+          "name": "mastered_vocabulary_ids",
+          "type": "TEXT",
+          "raw": "mastered_vocabulary_ids TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]"
+        },
+        {
+          "name": "recent_node_history",
+          "type": "TEXT",
+          "raw": "recent_node_history TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]"
+        },
+        {
+          "name": "recent_exercise_history",
+          "type": "JSONB",
+          "raw": "recent_exercise_history JSONB NOT NULL DEFAULT '[]'::JSONB"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "srs_items": {
+      "name": "srs_items",
+      "createdIn": "009_schema_reconciliation_and_sync.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "raw": "id UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL"
+        },
+        {
+          "name": "vocabulary_item_id",
+          "type": "VARCHAR(120)",
+          "raw": "vocabulary_item_id VARCHAR(120) NOT NULL"
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(10)",
+          "raw": "language VARCHAR(10) NOT NULL"
+        },
+        {
+          "name": "repetition_count",
+          "type": "INTEGER",
+          "raw": "repetition_count INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "ease_factor",
+          "type": "NUMERIC(4, 2)",
+          "raw": "ease_factor NUMERIC(4, 2) NOT NULL DEFAULT 2.50"
+        },
+        {
+          "name": "interval_days",
+          "type": "INTEGER",
+          "raw": "interval_days INTEGER NOT NULL DEFAULT 1"
+        },
+        {
+          "name": "next_review_date",
+          "type": "DATE",
+          "raw": "next_review_date DATE NOT NULL DEFAULT CURRENT_DATE"
+        },
+        {
+          "name": "last_reviewed_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "last_reviewed_at TIMESTAMPTZ"
+        },
+        {
+          "name": "lapse_count",
+          "type": "INTEGER",
+          "raw": "lapse_count INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "mastery_status",
+          "type": "VARCHAR(20)",
+          "raw": "mastery_status VARCHAR(20) NOT NULL DEFAULT 'presented'"
+        },
+        {
+          "name": "history",
+          "type": "JSONB",
+          "raw": "history JSONB NOT NULL DEFAULT '[]'::JSONB"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "exercise_attempts": {
+      "name": "exercise_attempts",
+      "createdIn": "009_schema_reconciliation_and_sync.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "VARCHAR(120)",
+          "raw": "id VARCHAR(120) PRIMARY KEY"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL"
+        },
+        {
+          "name": "exercise_id",
+          "type": "VARCHAR(120)",
+          "raw": "exercise_id VARCHAR(120) NOT NULL"
+        },
+        {
+          "name": "submitted_answer",
+          "type": "TEXT",
+          "raw": "submitted_answer TEXT"
+        },
+        {
+          "name": "is_correct",
+          "type": "BOOLEAN",
+          "raw": "is_correct BOOLEAN NOT NULL DEFAULT FALSE"
+        },
+        {
+          "name": "feedback",
+          "type": "TEXT",
+          "raw": "feedback TEXT"
+        },
+        {
+          "name": "attempt_count",
+          "type": "INTEGER",
+          "raw": "attempt_count INTEGER NOT NULL DEFAULT 1"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(10),\n",
+          "raw": "language VARCHAR(10),\n    ADD COLUMN IF NOT EXISTS exercise_type VARCHAR(50) (added in 013_progress_and_activity_tracking.sql)"
+        }
+      ]
+    },
+    "daily_published_content": {
+      "name": "daily_published_content",
+      "createdIn": "012_daily_content_studio.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "VARCHAR(64)",
+          "raw": "id VARCHAR(64) PRIMARY KEY"
+        },
+        {
+          "name": "content_type",
+          "type": "VARCHAR(20)",
+          "raw": "content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('poetry', 'conversation'))"
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(255)",
+          "raw": "title VARCHAR(255) NOT NULL"
+        },
+        {
+          "name": "author_or_speaker",
+          "type": "VARCHAR(255)",
+          "raw": "author_or_speaker VARCHAR(255)"
+        },
+        {
+          "name": "scenario",
+          "type": "TEXT",
+          "raw": "scenario TEXT"
+        },
+        {
+          "name": "learning_language",
+          "type": "VARCHAR(10)",
+          "raw": "learning_language VARCHAR(10) NOT NULL CHECK (learning_language <> 'hi')"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL CHECK (cefr_level IN ('A1', 'A2', 'B1', 'B2', 'C1'))"
+        },
+        {
+          "name": "excerpt",
+          "type": "TEXT",
+          "raw": "excerpt TEXT"
+        },
+        {
+          "name": "full_content",
+          "type": "TEXT",
+          "raw": "full_content TEXT"
+        },
+        {
+          "name": "dialogue",
+          "type": "JSONB",
+          "raw": "dialogue JSONB"
+        },
+        {
+          "name": "cultural_context",
+          "type": "TEXT",
+          "raw": "cultural_context TEXT"
+        },
+        {
+          "name": "country_name",
+          "type": "VARCHAR(100)",
+          "raw": "country_name VARCHAR(100)"
+        },
+        {
+          "name": "country_code",
+          "type": "VARCHAR(10)",
+          "raw": "country_code VARCHAR(10)"
+        },
+        {
+          "name": "translation",
+          "type": "TEXT",
+          "raw": "translation TEXT"
+        },
+        {
+          "name": "published_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "published_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())"
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "raw": "is_active BOOLEAN NOT NULL DEFAULT TRUE"
+        },
+        {
+          "name": "archived_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "archived_at TIMESTAMPTZ"
+        },
+        {
+          "name": "created_by",
+          "type": "UUID",
+          "raw": "created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())"
+        }
+      ]
+    },
+    "learning_activity_events": {
+      "name": "learning_activity_events",
+      "createdIn": "013_progress_and_activity_tracking.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "VARCHAR(120)",
+          "raw": "id VARCHAR(120) PRIMARY KEY"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "raw": "user_id UUID NOT NULL"
+        },
+        {
+          "name": "learning_language",
+          "type": "VARCHAR(10)",
+          "raw": "learning_language VARCHAR(10) NOT NULL CHECK (learning_language <> 'hi')"
+        },
+        {
+          "name": "activity_type",
+          "type": "VARCHAR(50)",
+          "raw": "activity_type VARCHAR(50) NOT NULL"
+        },
+        {
+          "name": "content_id",
+          "type": "VARCHAR(120)",
+          "raw": "content_id VARCHAR(120)"
+        },
+        {
+          "name": "content_version",
+          "type": "VARCHAR(50)",
+          "raw": "content_version VARCHAR(50)"
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(255)",
+          "raw": "title VARCHAR(255)"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) CHECK (cefr_level IN ('A1', 'A2', 'B1', 'B2', 'C1'))"
+        },
+        {
+          "name": "completion_status",
+          "type": "VARCHAR(20)",
+          "raw": "completion_status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (completion_status IN ('started', 'in_progress', 'completed', 'abandoned'))"
+        },
+        {
+          "name": "score",
+          "type": "NUMERIC(5, 2)",
+          "raw": "score NUMERIC(5, 2)"
+        },
+        {
+          "name": "max_score",
+          "type": "NUMERIC(5, 2)",
+          "raw": "max_score NUMERIC(5, 2)"
+        },
+        {
+          "name": "duration_minutes",
+          "type": "NUMERIC(5, 2)",
+          "raw": "duration_minutes NUMERIC(5, 2)"
+        },
+        {
+          "name": "metadata",
+          "type": "JSONB",
+          "raw": "metadata JSONB NOT NULL DEFAULT '{}'::JSONB"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    "content_review_items": {
+      "name": "content_review_items",
+      "createdIn": "014_admin_operations_and_audit.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "VARCHAR(64)",
+          "raw": "id VARCHAR(64) PRIMARY KEY"
+        },
+        {
+          "name": "content_type",
+          "type": "VARCHAR(30)",
+          "raw": "content_type VARCHAR(30) NOT NULL CHECK (content_type IN ('vocabulary', 'reading', 'exercise', 'dialogue'))"
+        },
+        {
+          "name": "title_or_term",
+          "type": "VARCHAR(255)",
+          "raw": "title_or_term VARCHAR(255) NOT NULL"
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(10)",
+          "raw": "language VARCHAR(10) NOT NULL CHECK (language <> 'hi')"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL CHECK (cefr_level IN ('A1', 'A2', 'B1', 'B2', 'C1'))"
+        },
+        {
+          "name": "source",
+          "type": "VARCHAR(100)",
+          "raw": "source VARCHAR(100) NOT NULL"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(20)",
+          "raw": "status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected'))"
+        },
+        {
+          "name": "reason_flagged",
+          "type": "TEXT",
+          "raw": "reason_flagged TEXT"
+        },
+        {
+          "name": "reviewed_by",
+          "type": "UUID",
+          "raw": "reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "reviewed_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "reviewed_at TIMESTAMPTZ"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())"
+        }
+      ]
+    },
+    "admin_background_jobs": {
+      "name": "admin_background_jobs",
+      "createdIn": "014_admin_operations_and_audit.sql",
+      "columns": [
+        {
+          "name": "id",
+          "type": "VARCHAR(64)",
+          "raw": "id VARCHAR(64) PRIMARY KEY"
+        },
+        {
+          "name": "job_type",
+          "type": "VARCHAR(100)",
+          "raw": "job_type VARCHAR(100) NOT NULL"
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(10)",
+          "raw": "language VARCHAR(10) NOT NULL CHECK (language <> 'hi')"
+        },
+        {
+          "name": "cefr_level",
+          "type": "VARCHAR(5)",
+          "raw": "cefr_level VARCHAR(5) NOT NULL CHECK (cefr_level IN ('A1', 'A2', 'B1', 'B2', 'C1'))"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(20)",
+          "raw": "status VARCHAR(20) NOT NULL DEFAULT 'failed' CHECK (status IN ('pending', 'processing', 'completed', 'failed'))"
+        },
+        {
+          "name": "error_reason",
+          "type": "TEXT",
+          "raw": "error_reason TEXT"
+        },
+        {
+          "name": "retry_count",
+          "type": "INT",
+          "raw": "retry_count INT NOT NULL DEFAULT 0"
+        },
+        {
+          "name": "max_retries",
+          "type": "INT",
+          "raw": "max_retries INT NOT NULL DEFAULT 3"
+        },
+        {
+          "name": "payload",
+          "type": "JSONB",
+          "raw": "payload JSONB NOT NULL DEFAULT '{}'::jsonb"
+        },
+        {
+          "name": "last_run_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "last_run_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "raw": "created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())"
+        }
+      ]
+    }
+  },
+  "functions": [
+    {
+      "function": "check_saved_translation_quota",
+      "args": "",
+      "returns": "TRIGGER",
+      "migration": "005_language_directions_and_saved_translations.sql"
+    },
+    {
+      "function": "is_admin",
+      "args": "",
+      "returns": "BOOLEAN",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "function": "set_active_course",
+      "args": "p_course_id UUID",
+      "returns": "VOID",
+      "migration": "007_multiple_courses_and_progress_isolation.sql"
+    },
+    {
+      "function": "check_cultural_bookmark_quota",
+      "args": "",
+      "returns": "TRIGGER",
+      "migration": "008_cultural_bookmarks_and_sync.sql"
+    },
+    {
+      "function": "handle_new_user",
+      "args": "",
+      "returns": "TRIGGER",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "function": "sync_user_course_to_learning_track",
+      "args": "",
+      "returns": "TRIGGER",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "function": "sync_daily_lessons_payload",
+      "args": "",
+      "returns": "TRIGGER",
+      "migration": "011_daily_lessons_reconciliation.sql"
+    }
+  ],
+  "triggers": [],
+  "indexes": [
+    {
+      "index": "idx_licenses_source_name",
+      "table": "licenses_and_sources",
+      "columns": "source_name",
+      "migration": "001_initial_schema.sql"
+    },
+    {
+      "index": "idx_curriculum_lookup",
+      "table": "curriculum_nodes",
+      "columns": "language_code, cefr_level, sequence_order",
+      "migration": "001_initial_schema.sql"
+    },
+    {
+      "index": "idx_vocab_lookup",
+      "table": "vocabulary_items",
+      "columns": "language_code, cefr_level, lemma",
+      "migration": "001_initial_schema.sql"
+    },
+    {
+      "index": "idx_grammar_lookup",
+      "table": "grammar_rules",
+      "columns": "language_code, cefr_level",
+      "migration": "001_initial_schema.sql"
+    },
+    {
+      "index": "idx_exercise_node",
+      "table": "exercise_templates",
+      "columns": "curriculum_node_id, exercise_type",
+      "migration": "001_initial_schema.sql"
+    },
+    {
+      "index": "idx_lessons_user_date",
+      "table": "daily_lessons",
+      "columns": "user_id, lesson_date DESC",
+      "migration": "001_initial_schema.sql"
+    },
+    {
+      "index": "idx_srs_due_review",
+      "table": "user_vocabulary_history",
+      "columns": "user_id, next_review_date",
+      "migration": "001_initial_schema.sql"
+    },
+    {
+      "index": "idx_email_deliveries_user_date",
+      "table": "email_deliveries",
+      "columns": "user_id, delivery_date",
+      "migration": "003_email_and_retention.sql"
+    },
+    {
+      "index": "idx_email_deliveries_status",
+      "table": "email_deliveries",
+      "columns": "status",
+      "migration": "003_email_and_retention.sql"
+    },
+    {
+      "index": "idx_assignments_user_date",
+      "table": "lesson_assignments",
+      "columns": "user_id, assignment_date DESC",
+      "migration": "004_minimal_wikipedia_assignments.sql"
+    },
+    {
+      "index": "idx_assignments_article",
+      "table": "lesson_assignments",
+      "columns": "article_id",
+      "migration": "004_minimal_wikipedia_assignments.sql"
+    },
+    {
+      "index": "idx_assignments_status",
+      "table": "lesson_assignments",
+      "columns": "user_id, status",
+      "migration": "004_minimal_wikipedia_assignments.sql"
+    },
+    {
+      "index": "idx_saved_trans_user",
+      "table": "saved_translations",
+      "columns": "user_id, created_at DESC",
+      "migration": "005_language_directions_and_saved_translations.sql"
+    },
+    {
+      "index": "idx_user_roles_user_id",
+      "table": "user_roles",
+      "columns": "user_id",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "index": "idx_user_roles_role",
+      "table": "user_roles",
+      "columns": "role",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "index": "idx_admin_audit_logs_admin",
+      "table": "admin_audit_logs",
+      "columns": "admin_id",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "index": "idx_admin_audit_logs_created_at",
+      "table": "admin_audit_logs",
+      "columns": "created_at DESC",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "index": "idx_admin_audit_logs_action",
+      "table": "admin_audit_logs",
+      "columns": "action",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "index": "idx_user_courses_user_id",
+      "table": "user_courses",
+      "columns": "user_id",
+      "migration": "007_multiple_courses_and_progress_isolation.sql"
+    },
+    {
+      "index": "idx_user_courses_active",
+      "table": "user_courses",
+      "columns": "user_id, is_active",
+      "migration": "007_multiple_courses_and_progress_isolation.sql"
+    },
+    {
+      "index": "idx_cultural_bookmarks_user",
+      "table": "cultural_bookmarks",
+      "columns": "user_id, created_at DESC",
+      "migration": "008_cultural_bookmarks_and_sync.sql"
+    },
+    {
+      "index": "idx_user_learning_tracks_user_lang",
+      "table": "user_learning_tracks",
+      "columns": "user_id, language",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "index": "idx_srs_items_user_due",
+      "table": "srs_items",
+      "columns": "user_id, next_review_date",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "index": "idx_srs_items_user_lang",
+      "table": "srs_items",
+      "columns": "user_id, language",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "index": "idx_exercise_attempts_user_id",
+      "table": "exercise_attempts",
+      "columns": "user_id, created_at DESC",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "index": "idx_email_deliveries_purpose",
+      "table": "email_deliveries",
+      "columns": "delivery_purpose",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "index": "idx_daily_lessons_lang_date",
+      "table": "daily_lessons",
+      "columns": "user_id, language, lesson_date DESC",
+      "migration": "011_daily_lessons_reconciliation.sql"
+    },
+    {
+      "index": "idx_daily_lessons_fingerprint",
+      "table": "daily_lessons",
+      "columns": "content_fingerprint",
+      "migration": "011_daily_lessons_reconciliation.sql"
+    },
+    {
+      "index": "idx_daily_content_active",
+      "table": "daily_published_content",
+      "columns": "content_type, learning_language, is_active",
+      "migration": "012_daily_content_studio.sql"
+    },
+    {
+      "index": "idx_daily_content_published",
+      "table": "daily_published_content",
+      "columns": "published_at DESC",
+      "migration": "012_daily_content_studio.sql"
+    },
+    {
+      "index": "idx_exercise_attempts_user_lang",
+      "table": "exercise_attempts",
+      "columns": "user_id, language",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "index": "idx_exercise_attempts_type",
+      "table": "exercise_attempts",
+      "columns": "exercise_type",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "index": "idx_activity_events_user_lang_created",
+      "table": "learning_activity_events",
+      "columns": "user_id, learning_language, created_at DESC",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "index": "idx_activity_events_type",
+      "table": "learning_activity_events",
+      "columns": "activity_type",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "index": "idx_content_review_status_lang",
+      "table": "content_review_items",
+      "columns": "status, language",
+      "migration": "014_admin_operations_and_audit.sql"
+    },
+    {
+      "index": "idx_content_review_created",
+      "table": "content_review_items",
+      "columns": "created_at DESC",
+      "migration": "014_admin_operations_and_audit.sql"
+    },
+    {
+      "index": "idx_admin_jobs_status_created",
+      "table": "admin_background_jobs",
+      "columns": "status, created_at DESC",
+      "migration": "014_admin_operations_and_audit.sql"
+    }
+  ],
+  "policies": [
+    {
+      "policy": "Public read access for licenses",
+      "table": "licenses_and_sources",
+      "details": "FOR SELECT TO anon, authenticated USING (true)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Public read access for curriculum nodes",
+      "table": "curriculum_nodes",
+      "details": "FOR SELECT TO anon, authenticated USING (true)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Public read access for vocabulary",
+      "table": "vocabulary_items",
+      "details": "FOR SELECT TO anon, authenticated USING (true)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Public read access for grammar rules",
+      "table": "grammar_rules",
+      "details": "FOR SELECT TO anon, authenticated USING (true)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Public read access for exercise templates",
+      "table": "exercise_templates",
+      "details": "FOR SELECT TO anon, authenticated USING (true)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Public read access for curated materials",
+      "table": "curated_materials",
+      "details": "FOR SELECT TO anon, authenticated USING (true)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can read own profile",
+      "table": "user_profiles",
+      "details": "FOR SELECT TO authenticated USING (auth.uid() = auth_user_id)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can update own profile",
+      "table": "user_profiles",
+      "details": "FOR UPDATE TO authenticated USING (auth.uid() = auth_user_id) WITH CHECK (auth.uid() = auth_user_id)",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can read own language tracks",
+      "table": "language_tracks",
+      "details": "FOR SELECT TO authenticated USING (user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid()))",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can read own daily lessons",
+      "table": "daily_lessons",
+      "details": "FOR SELECT TO authenticated USING (user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid()))",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can update own daily lessons progress",
+      "table": "daily_lessons",
+      "details": "FOR UPDATE TO authenticated USING (user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid())) WITH CHECK (user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid()))",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can record exercise attempts",
+      "table": "lesson_exercises",
+      "details": "FOR ALL TO authenticated USING (user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid()))",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can view and update own SRS vocabulary",
+      "table": "user_vocabulary_history",
+      "details": "FOR ALL TO authenticated USING (user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid()))",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Users can read own email delivery status",
+      "table": "email_deliveries",
+      "details": "FOR SELECT TO authenticated USING (user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid()))",
+      "migration": "002_rls_policies.sql"
+    },
+    {
+      "policy": "Learners can view own email deliveries",
+      "table": "email_deliveries",
+      "details": "FOR SELECT USING (auth.uid() = user_id)",
+      "migration": "003_email_and_retention.sql"
+    },
+    {
+      "policy": "Service role full access to email deliveries",
+      "table": "email_deliveries",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "003_email_and_retention.sql"
+    },
+    {
+      "policy": "Service role full access to retention logs",
+      "table": "retention_cleanup_logs",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "003_email_and_retention.sql"
+    },
+    {
+      "policy": "Users can view own assignments",
+      "table": "lesson_assignments",
+      "details": "FOR SELECT USING (auth.uid() = user_id)",
+      "migration": "004_minimal_wikipedia_assignments.sql"
+    },
+    {
+      "policy": "Users can insert own assignments",
+      "table": "lesson_assignments",
+      "details": "FOR INSERT WITH CHECK (auth.uid() = user_id)",
+      "migration": "004_minimal_wikipedia_assignments.sql"
+    },
+    {
+      "policy": "Users can update own assignments",
+      "table": "lesson_assignments",
+      "details": "FOR UPDATE USING (auth.uid() = user_id)",
+      "migration": "004_minimal_wikipedia_assignments.sql"
+    },
+    {
+      "policy": "Service role has full access to assignments",
+      "table": "lesson_assignments",
+      "details": "FOR ALL USING (auth.jwt() ->> 'role' = 'service_role')",
+      "migration": "004_minimal_wikipedia_assignments.sql"
+    },
+    {
+      "policy": "Users can view own saved translations",
+      "table": "saved_translations",
+      "details": "FOR SELECT USING (auth.uid() = user_id)",
+      "migration": "005_language_directions_and_saved_translations.sql"
+    },
+    {
+      "policy": "Users can insert own saved translations",
+      "table": "saved_translations",
+      "details": "FOR INSERT WITH CHECK (auth.uid() = user_id)",
+      "migration": "005_language_directions_and_saved_translations.sql"
+    },
+    {
+      "policy": "Users can delete own saved translations",
+      "table": "saved_translations",
+      "details": "FOR DELETE USING (auth.uid() = user_id)",
+      "migration": "005_language_directions_and_saved_translations.sql"
+    },
+    {
+      "policy": "Service role has full access to saved translations",
+      "table": "saved_translations",
+      "details": "FOR ALL USING (auth.jwt() ->> 'role' = 'service_role')",
+      "migration": "005_language_directions_and_saved_translations.sql"
+    },
+    {
+      "policy": "Users can view own role, admins view all",
+      "table": "user_roles",
+      "details": "FOR SELECT USING ( auth.uid() = user_id OR public.is_admin() )",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Admins can manage user roles",
+      "table": "user_roles",
+      "details": "FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin())",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Admins can view audit logs",
+      "table": "admin_audit_logs",
+      "details": "FOR SELECT USING (public.is_admin())",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Admins can insert audit entries",
+      "table": "admin_audit_logs",
+      "details": "FOR INSERT WITH CHECK ( public.is_admin() AND auth.uid() = admin_id )",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Admins can view all user profiles",
+      "table": "user_profiles",
+      "details": "FOR SELECT USING (public.is_admin())",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Admins can update user status",
+      "table": "user_profiles",
+      "details": "FOR UPDATE USING (public.is_admin()) WITH CHECK (public.is_admin())",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Admins can view all language tracks",
+      "table": "language_tracks",
+      "details": "FOR SELECT USING (public.is_admin())",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Admins can view all daily lessons",
+      "table": "daily_lessons",
+      "details": "FOR SELECT USING (public.is_admin())",
+      "migration": "006_auth_roles_audit_and_onboarding.sql"
+    },
+    {
+      "policy": "Users can view own courses",
+      "table": "user_courses",
+      "details": "FOR SELECT USING ( auth.uid() = user_id OR public.is_admin() )",
+      "migration": "007_multiple_courses_and_progress_isolation.sql"
+    },
+    {
+      "policy": "Users can insert own courses",
+      "table": "user_courses",
+      "details": "FOR INSERT WITH CHECK (auth.uid() = user_id)",
+      "migration": "007_multiple_courses_and_progress_isolation.sql"
+    },
+    {
+      "policy": "Users can update own courses",
+      "table": "user_courses",
+      "details": "FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "007_multiple_courses_and_progress_isolation.sql"
+    },
+    {
+      "policy": "Users can delete own courses",
+      "table": "user_courses",
+      "details": "FOR DELETE USING (auth.uid() = user_id)",
+      "migration": "007_multiple_courses_and_progress_isolation.sql"
+    },
+    {
+      "policy": "Users can view own cultural bookmarks",
+      "table": "cultural_bookmarks",
+      "details": "FOR SELECT TO authenticated USING (auth.uid() = user_id)",
+      "migration": "008_cultural_bookmarks_and_sync.sql"
+    },
+    {
+      "policy": "Users can insert own cultural bookmarks",
+      "table": "cultural_bookmarks",
+      "details": "FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)",
+      "migration": "008_cultural_bookmarks_and_sync.sql"
+    },
+    {
+      "policy": "Users can delete own cultural bookmarks",
+      "table": "cultural_bookmarks",
+      "details": "FOR DELETE TO authenticated USING (auth.uid() = user_id)",
+      "migration": "008_cultural_bookmarks_and_sync.sql"
+    },
+    {
+      "policy": "Service role full access on user_learning_tracks",
+      "table": "user_learning_tracks",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "policy": "Users can manage own learning tracks",
+      "table": "user_learning_tracks",
+      "details": "FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "policy": "Service role full access on srs_items",
+      "table": "srs_items",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "policy": "Users can manage own srs items",
+      "table": "srs_items",
+      "details": "FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "policy": "Service role full access on exercise_attempts",
+      "table": "exercise_attempts",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "policy": "Users can manage own exercise attempts",
+      "table": "exercise_attempts",
+      "details": "FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "policy": "Users can assign default role on registration",
+      "table": "user_roles",
+      "details": "FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id AND role = 'user')",
+      "migration": "009_schema_reconciliation_and_sync.sql"
+    },
+    {
+      "policy": "Users can insert own profile",
+      "table": "user_profiles",
+      "details": "FOR INSERT TO authenticated WITH CHECK (auth.uid() = auth_user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can read own profile",
+      "table": "user_profiles",
+      "details": "FOR SELECT TO authenticated USING (auth.uid() = auth_user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can update own profile",
+      "table": "user_profiles",
+      "details": "FOR UPDATE TO authenticated USING (auth.uid() = auth_user_id) WITH CHECK (auth.uid() = auth_user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can view own cultural bookmarks",
+      "table": "cultural_bookmarks",
+      "details": "FOR SELECT TO authenticated USING (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can insert own cultural bookmarks",
+      "table": "cultural_bookmarks",
+      "details": "FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can update own cultural bookmarks",
+      "table": "cultural_bookmarks",
+      "details": "FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can delete own cultural bookmarks",
+      "table": "cultural_bookmarks",
+      "details": "FOR DELETE TO authenticated USING (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can view own saved translations",
+      "table": "saved_translations",
+      "details": "FOR SELECT TO authenticated USING (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can insert own saved translations",
+      "table": "saved_translations",
+      "details": "FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can update own saved translations",
+      "table": "saved_translations",
+      "details": "FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can delete own saved translations",
+      "table": "saved_translations",
+      "details": "FOR DELETE TO authenticated USING (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Users can manage own srs items",
+      "table": "srs_items",
+      "details": "FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "010_database_persistence_and_sync_repair.sql"
+    },
+    {
+      "policy": "Service role full access on daily_lessons",
+      "table": "daily_lessons",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "011_daily_lessons_reconciliation.sql"
+    },
+    {
+      "policy": "Users can manage own daily lessons",
+      "table": "daily_lessons",
+      "details": "FOR ALL TO authenticated USING (auth.uid() = user_id OR user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid())) WITH CHECK (auth.uid() = user_id OR user_id IN (SELECT id FROM public.user_profiles WHERE auth_user_id = auth.uid()))",
+      "migration": "011_daily_lessons_reconciliation.sql"
+    },
+    {
+      "policy": "Anyone can view active daily content",
+      "table": "daily_published_content",
+      "details": "FOR SELECT USING (is_active = TRUE OR auth.role() = 'service_role')",
+      "migration": "012_daily_content_studio.sql"
+    },
+    {
+      "policy": "Service role full access on daily_published_content",
+      "table": "daily_published_content",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "012_daily_content_studio.sql"
+    },
+    {
+      "policy": "Admins can manage daily published content",
+      "table": "daily_published_content",
+      "details": "FOR ALL TO authenticated USING ( (auth.jwt() ->> 'role') = 'admin' OR EXISTS ( SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin' ) ) WITH CHECK ( (auth.jwt() ->> 'role') = 'admin' OR EXISTS ( SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin' ) )",
+      "migration": "012_daily_content_studio.sql"
+    },
+    {
+      "policy": "Service role full access on learning_activity_events",
+      "table": "learning_activity_events",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "policy": "Users can read own activity events",
+      "table": "learning_activity_events",
+      "details": "FOR SELECT TO authenticated USING (auth.uid() = user_id)",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "policy": "Users can insert own activity events",
+      "table": "learning_activity_events",
+      "details": "FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "policy": "Users can update own activity events",
+      "table": "learning_activity_events",
+      "details": "FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)",
+      "migration": "013_progress_and_activity_tracking.sql"
+    },
+    {
+      "policy": "Service role full access on content_review_items",
+      "table": "content_review_items",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "014_admin_operations_and_audit.sql"
+    },
+    {
+      "policy": "Admins can manage content review items",
+      "table": "content_review_items",
+      "details": "FOR ALL TO authenticated USING ( (auth.jwt() ->> 'role') = 'admin' OR EXISTS ( SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin' ) ) WITH CHECK ( (auth.jwt() ->> 'role') = 'admin' OR EXISTS ( SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin' ) )",
+      "migration": "014_admin_operations_and_audit.sql"
+    },
+    {
+      "policy": "Service role full access on admin_background_jobs",
+      "table": "admin_background_jobs",
+      "details": "FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE)",
+      "migration": "014_admin_operations_and_audit.sql"
+    },
+    {
+      "policy": "Admins can manage background jobs",
+      "table": "admin_background_jobs",
+      "details": "FOR ALL TO authenticated USING ( (auth.jwt() ->> 'role') = 'admin' OR EXISTS ( SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin' ) ) WITH CHECK ( (auth.jwt() ->> 'role') = 'admin' OR EXISTS ( SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin' ) )",
+      "migration": "014_admin_operations_and_audit.sql"
+    }
+  ]
+}

@@ -71,3 +71,33 @@ def test_pipeline_rejects_under_15_words():
     )
     with pytest.raises(ValueError, match="at least 15 words"):
         pipeline.execute(inp)
+
+
+def test_pipeline_validates_copyright_rights():
+    pipeline = ContentPipeline()
+    sample_text = """
+The barista poured the velvety flat white into a warm ceramic cup with gentle precision.
+Outside, morning rain tapped rhythmic patterns against the tall Victorian window panes.
+Commuters shook their umbrellas near the doorway, greeting the owner with warm familiar smiles.
+"""
+    # Restricted rights without fair use confirmation must raise ValueError
+    inp_restricted = PipelineExecutionInput(
+        title="Restricted Copyright Article",
+        raw_text=sample_text,
+        target_language=Language.ENGLISH,
+        rights_status=RightsStatus.RESTRICTED,
+        educational_fair_use_confirmed=False,
+    )
+    with pytest.raises(ValueError, match="Copyright rights validation failed"):
+        pipeline.execute(inp_restricted)
+
+    # Restricted rights WITH fair use confirmation must succeed
+    inp_confirmed = PipelineExecutionInput(
+        title="Restricted Copyright Article",
+        raw_text=sample_text,
+        target_language=Language.ENGLISH,
+        rights_status=RightsStatus.RESTRICTED,
+        educational_fair_use_confirmed=True,
+    )
+    result = pipeline.execute(inp_confirmed)
+    assert result.item.title == "Restricted Copyright Article"

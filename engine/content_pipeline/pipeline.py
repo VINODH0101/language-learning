@@ -44,6 +44,7 @@ class PipelineExecutionInput:
         source_url: Optional[str] = None,
         rights_status: RightsStatus = RightsStatus.PUBLIC_DOMAIN,
         author: Optional[str] = None,
+        educational_fair_use_confirmed: bool = False,
     ):
         self.title = title
         self.raw_text = raw_text
@@ -55,6 +56,7 @@ class PipelineExecutionInput:
         self.source_url = source_url
         self.rights_status = rights_status
         self.author = author
+        self.educational_fair_use_confirmed = educational_fair_use_confirmed
 
 
 class PipelineResult:
@@ -81,8 +83,18 @@ class ContentPipeline:
         stage_timings: Dict[str, float] = {}
         total_start = time.time()
 
-        # Stage 0: Intake & Sanitation
+        # Stage 0: Intake & Rights Validation
         t0 = time.time()
+        if not inp.title or not inp.title.strip():
+            raise ValueError("Content title cannot be empty")
+
+        rights_val = inp.rights_status.value if hasattr(inp.rights_status, "value") else str(inp.rights_status)
+        if rights_val in ("restricted", "unknown") and not inp.educational_fair_use_confirmed:
+            raise ValueError(
+                f"Copyright rights validation failed: Content with rights status '{rights_val}' "
+                "requires explicit educational fair use confirmation before processing."
+            )
+
         sanitized = re.sub(r"<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>", "", inp.raw_text, flags=re.IGNORECASE).strip()
         words = [w for w in re.split(r"\s+", sanitized) if w]
         if len(words) < 15:

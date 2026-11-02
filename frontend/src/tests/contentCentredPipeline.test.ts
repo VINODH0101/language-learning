@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { contentPipelineService } from '../services/contentPipelineService';
 import { contentCentredService } from '../services/contentCentredService';
 import { authService } from '../services/auth';
+import { saveProcessingJobLocal } from '../services/localDb';
 
 describe('Lexilume Content-Centred Pipeline (Phase 7)', () => {
   beforeEach(async () => {
@@ -77,5 +78,64 @@ The rich aroma of freshly roasted Ethiopian beans filled the room, offering comf
     const retried = await contentPipelineService.retryStage(result.job.id, 'stage_5_extract_lexicon');
     expect(retried.status).toBe('completed');
     expect(retried.retry_count).toBe(1);
+  });
+
+  it('4. Enforces copyright rights validation and fair use declaration (RISK-805)', async () => {
+    // Restricted rights without fair use declaration must be rejected
+    await expect(
+      contentPipelineService.executePipeline({
+        title: 'Restricted Copyright Book Excerpt',
+        rawText: sampleDublinText,
+        targetLanguage: 'en',
+        explanationLanguage: 'pt',
+        genre: 'literature',
+        rightsStatus: 'restricted',
+        educationalFairUseConfirmed: false,
+      })
+    ).rejects.toThrow(/Copyright rights validation failed/i);
+
+    // Restricted rights WITH explicit educational fair use confirmation must succeed
+    const fairUseResult = await contentPipelineService.executePipeline({
+      title: 'Fair Use Pedagogical Excerpt',
+      rawText: sampleDublinText,
+      targetLanguage: 'en',
+      explanationLanguage: 'pt',
+      genre: 'literature',
+      rightsStatus: 'restricted',
+      educationalFairUseConfirmed: true,
+    });
+
+    expect(fairUseResult.item).toBeDefined();
+    expect(fairUseResult.item.title).toBe('Fair Use Pedagogical Excerpt');
+    expect(fairUseResult.job.status).toBe('completed');
+  });
+
+  it('5. Recovers interrupted in-flight jobs stuck in running state (RISK-805)', async () => {
+    const crashedJobId = `job_crashed_${Date.now()}`;
+    await saveProcessingJobLocal({
+      id: crashedJobId,
+      content_item_id: 'ci_mock_crashed',
+      version_number: 1,
+      status: 'running',
+      current_stage: 'stage_3_segment',
+      stages_completed: ['stage_0_intake', 'stage_1_detect_lang', 'stage_2_classify'],
+      stage_outputs: {},
+      stage_timings: {},
+      retry_count: 0,
+      started_at: new Date(Date.now() - 60000).toISOString(),
+      created_at: new Date(Date.now() - 60000).toISOString(),
+      updated_at: new Date(Date.now() - 60000).toISOString(),
+    });
+
+    // Run recovery
+    const recovered = await contentPipelineService.recoverInterruptedJobs();
+    const found = recovered.find(j => j.id === crashedJobId);
+    expect(found).toBeDefined();
+    expect(found?.status).toBe('failed');
+    expect(found?.error_message).toContain('interrupted');
+
+    // And verify it can now be retried from its current stage
+    const retried = await contentPipelineService.retryStage(crashedJobId, 'stage_3_segment');
+    expect(retried.status).toBe('completed');
   });
 });

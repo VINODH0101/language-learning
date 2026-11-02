@@ -1180,3 +1180,15 @@ export async function getProcessingJobLocal(id: string): Promise<ContentProcessi
     return memoryFallback.contentProcessingJobs.get(id) || null;
   }
 }
+
+export async function getAllProcessingJobsLocal(): Promise<ContentProcessingJob[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.contentProcessingJobs.values());
+  }
+  try {
+    const jobs = await localDb.contentProcessingJobs.toArray();
+    return jobs.length > 0 ? jobs : Array.from(memoryFallback.contentProcessingJobs.values());
+  } catch (err) {
+    return Array.from(memoryFallback.contentProcessingJobs.values());
+  }
+}

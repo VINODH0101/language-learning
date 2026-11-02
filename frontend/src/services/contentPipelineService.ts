@@ -34,7 +34,7 @@ import {
 } from '../types/contentCentred';
 import { Language, ExplanationLanguage, CEFRLevel } from '../types';
 import { contentCentredService } from './contentCentredService';
-import { saveProcessingJobLocal, getProcessingJobLocal } from './localDb';
+import { saveProcessingJobLocal, getProcessingJobLocal, getAllProcessingJobsLocal } from './localDb';
 import { supabase } from './supabaseClient';
 import { authService } from './auth';
 
@@ -48,6 +48,7 @@ export interface PipelineExecutionInput {
   sourceAttribution?: string;
   sourceUrl?: string;
   rightsStatus?: any;
+  educationalFairUseConfirmed?: boolean;
   author?: string;
 }
 
@@ -314,6 +315,25 @@ export class ContentPipelineService {
     return job;
   }
 
+  /**
+   * Recovers in-flight jobs that were interrupted (e.g., page refresh or process crash)
+   * while in 'running' status. Marks them as 'failed' with actionable recovery message.
+   */
+  public async recoverInterruptedJobs(): Promise<ContentProcessingJob[]> {
+    const jobs = await getAllProcessingJobsLocal();
+    const interrupted = jobs.filter(j => j.status === 'running');
+    const recovered: ContentProcessingJob[] = [];
+
+    for (const job of interrupted) {
+      job.status = 'failed';
+      job.error_message = `Execution interrupted during ${job.current_stage || 'processing'} (system restart or tab closure). Ready for stage retry.`;
+      job.updated_at = new Date().toISOString();
+      await this.persistJob(job);
+      recovered.push(job);
+    }
+    return recovered;
+  }
+
   private async runStage<T>(
     job: ContentProcessingJob,
     stage: ProcessingStageName,
@@ -374,6 +394,13 @@ export class ContentPipelineService {
   // ==========================================================================
 
   private async stage0Intake(input: PipelineExecutionInput) {
+    if (!input.title || input.title.trim().length === 0) {
+      throw new Error('Content title cannot be empty');
+    }
+    const rights = input.rightsStatus || 'public_domain';
+    if ((rights === 'restricted' || rights === 'unknown') && !input.educationalFairUseConfirmed) {
+      throw new Error(`Copyright rights validation failed: Content with rights status "${rights}" requires explicit educational fair use confirmation before processing.`);
+    }
     if (!input.rawText || input.rawText.trim().length === 0) {
       throw new Error('Content text cannot be empty');
     }
@@ -386,6 +413,8 @@ export class ContentPipelineService {
       sanitized_text: sanitized,
       word_count: words.length,
       character_count: sanitized.length,
+      rights_status: rights,
+      rights_validated: true,
     };
   }
 

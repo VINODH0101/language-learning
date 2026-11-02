@@ -1,6 +1,8 @@
 # Lexilume — Current State Architecture & Operational Flows
 
-> **Target Standard:** Document the real architecture based on actual CLI code execution and verified contracts, not an idealized system.
+> **Target Standard:** Document the real architecture based on actual CLI code execution and verified contracts, not an idealized system.  
+> **Master Specification:** See [CURRENT_STATE_ARCHITECTURE.md](file:///docs/architecture/CURRENT_STATE_ARCHITECTURE.md) for the authoritative Phase 3 architectural analysis.  
+> **Architecture Diagrams:** See [CURRENT_ARCHITECTURE_DIAGRAMS.md](file:///docs/architecture/CURRENT_ARCHITECTURE_DIAGRAMS.md) for all 10 verified Mermaid system diagrams.
 
 ---
 

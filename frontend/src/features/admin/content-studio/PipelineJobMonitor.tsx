@@ -39,21 +39,24 @@ export const PipelineJobMonitor: React.FC<PipelineJobMonitorProps> = ({
   const isFailed = job.status === 'failed';
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+    <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-400" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-xs font-mono font-medium mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-stone-600" />
+            <span>Deterministic Synthesis Engine</span>
+          </div>
+          <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
             Pipeline Processing Telemetry
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Job ID: <span className="font-mono text-slate-300">{job.id}</span>
+          <p className="font-mono text-xs text-stone-500 mt-0.5">
+            Job ID: <span className="text-stone-800 font-semibold">{job.id}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge
             variant={
-              isCompleted ? 'emerald' : isFailed ? 'rose' : 'indigo'
+              isCompleted ? 'emerald' : isFailed ? 'rose' : 'slate'
             }
           >
             {job.status.toUpperCase()}
@@ -72,18 +75,18 @@ export const PipelineJobMonitor: React.FC<PipelineJobMonitorProps> = ({
       </div>
 
       {isFailed && job.error_message && (
-        <div className="p-4 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5" />
           <div className="space-y-1">
             <p className="font-semibold">Pipeline Execution Halted</p>
-            <p className="text-rose-200/90 font-mono text-[11px]">{job.error_message}</p>
+            <p className="font-mono text-[11px] text-rose-900">{job.error_message}</p>
           </div>
         </div>
       )}
 
       {/* Stage Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {STAGES.map((s, idx) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        {STAGES.map((s) => {
           const isDone = job.stages_completed.includes(s.name);
           const isCurrent = job.current_stage === s.name && job.status === 'running';
           const isStageFailed = isFailed && job.current_stage === s.name;
@@ -92,39 +95,39 @@ export const PipelineJobMonitor: React.FC<PipelineJobMonitorProps> = ({
           return (
             <div
               key={s.name}
-              className={`p-3.5 rounded-xl border transition-all ${
+              className={`p-4 rounded-xl border transition-all ${
                 isDone
-                  ? 'bg-emerald-950/20 border-emerald-800/50 text-slate-200'
+                  ? 'bg-stone-50 border-emerald-300 text-stone-900 shadow-xs'
                   : isCurrent
-                  ? 'bg-indigo-950/30 border-indigo-700/70 text-indigo-200 animate-pulse'
+                  ? 'bg-amber-50/70 border-amber-300 text-amber-950 animate-pulse'
                   : isStageFailed
-                  ? 'bg-rose-950/30 border-rose-800/80 text-rose-200'
-                  : 'bg-slate-950/50 border-slate-800/60 text-slate-400'
+                  ? 'bg-rose-50 border-rose-300 text-rose-950'
+                  : 'bg-stone-50/40 border-stone-200 text-stone-500'
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold flex items-center gap-1.5">
+                <span className="text-xs font-bold flex items-center gap-1.5">
                   {isDone ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   ) : isStageFailed ? (
-                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                   ) : (
-                    <Clock className="w-4 h-4 text-slate-500 shrink-0" />
+                    <Clock className="w-4 h-4 text-stone-400 shrink-0" />
                   )}
                   {s.label}
                 </span>
                 {timingMs !== undefined && (
-                  <span className="text-[10px] font-mono text-slate-400">
+                  <span className="font-mono text-[10px] text-stone-500">
                     {timingMs}ms
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400 leading-tight">
+              <p className="text-[11px] text-stone-600 leading-normal">
                 {s.desc}
               </p>
 
               {isStageFailed && (
-                <div className="mt-2.5 pt-2 border-t border-rose-900/40 flex justify-end">
+                <div className="mt-2.5 pt-2 border-t border-rose-200 flex justify-end">
                   <Button
                     variant="outline"
                     size="sm"

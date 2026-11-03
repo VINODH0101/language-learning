@@ -51,7 +51,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <AdminWorkbench initialTab="content_studio" onNavigateTab={onNavigateTab} />
+      <AdminWorkbench initialTab="overview" onNavigateTab={onNavigateTab} />
     </div>
   );
 };

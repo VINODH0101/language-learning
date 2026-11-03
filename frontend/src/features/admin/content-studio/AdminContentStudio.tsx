@@ -126,14 +126,17 @@ export const AdminContentStudio: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Sub-Header Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
         <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-indigo-400" />
-            Content Studio & Processing Engine
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-xs font-mono font-medium mb-1">
+            <BookOpen className="w-3.5 h-3.5 text-stone-600" />
+            <span>Content Publishing Studio</span>
+          </div>
+          <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
+            Editorial Pipeline & Catalog
           </h2>
-          <p className="text-xs text-slate-400">
-            Create, process, review, and publish authentic learning content with automated linguistic synthesis.
+          <p className="text-xs text-stone-600 mt-0.5">
+            Ingest authentic materials, review linguistic segmentations, and publish high-quality reading content for learners.
           </p>
         </div>
 
@@ -191,15 +194,15 @@ export const AdminContentStudio: React.FC = () => {
       {activeView === 'list' && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-950/80 border border-slate-800/80 rounded-xl p-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
             <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search content titles..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-stone-50 border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400 focus:bg-white transition-colors"
               />
             </div>
 
@@ -207,7 +210,7 @@ export const AdminContentStudio: React.FC = () => {
               <select
                 value={filterLang}
                 onChange={e => setFilterLang(e.target.value)}
-                className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                className="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:outline-none focus:border-stone-400 focus:bg-white"
               >
                 <option value="all">All Languages</option>
                 <option value="en">English (en)</option>
@@ -218,7 +221,7 @@ export const AdminContentStudio: React.FC = () => {
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value)}
-                className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                className="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:outline-none focus:border-stone-400 focus:bg-white"
               >
                 <option value="all">All Statuses</option>
                 <option value="published">Published</option>
@@ -230,10 +233,10 @@ export const AdminContentStudio: React.FC = () => {
 
           {/* Items Table */}
           {filteredItems.length === 0 ? (
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-12 text-center space-y-3">
-              <FileText className="w-8 h-8 text-slate-500 mx-auto" />
-              <h3 className="text-sm font-semibold text-slate-300">No Content Items Found</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <div className="bg-white border border-stone-200 rounded-2xl p-16 text-center space-y-3 shadow-sm">
+              <FileText className="w-8 h-8 text-stone-400 mx-auto" />
+              <h3 className="font-serif text-lg font-bold text-stone-800">No Content Items Found</h3>
+              <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
                 No articles match your active filter. Click "Import New Content" to analyze and publish your first text.
               </p>
             </div>
@@ -242,11 +245,11 @@ export const AdminContentStudio: React.FC = () => {
               {filteredItems.map(item => (
                 <div
                   key={item.id}
-                  className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between transition-all shadow-md group"
+                  className="bg-white border border-stone-200 hover:border-stone-300 rounded-xl p-5 flex flex-col justify-between transition-all shadow-sm group"
                 >
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <Badge variant={item.status === 'published' ? 'emerald' : 'amber'}>
+                      <Badge variant={item.status === 'published' ? 'emerald' : item.status === 'review_required' ? 'amber' : 'slate'}>
                         {item.status.replace('_', ' ').toUpperCase()}
                       </Badge>
                       <div className="flex items-center gap-1.5">
@@ -256,17 +259,17 @@ export const AdminContentStudio: React.FC = () => {
                     </div>
 
                     <div>
-                      <h3 className="text-sm font-bold text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-1">
+                      <h3 className="font-serif text-base font-bold text-stone-900 group-hover:text-stone-700 transition-colors line-clamp-1">
                         {item.title}
                       </h3>
-                      <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-stone-600 mt-1.5 line-clamp-2 leading-relaxed">
                         {item.summary || 'Authentic educational narrative.'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-800/80 mt-4 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
+                  <div className="pt-4 border-t border-stone-100 mt-4 flex items-center justify-between">
+                    <span className="font-mono text-[11px] text-stone-500">
                       ~{item.estimated_read_minutes} min read
                     </span>
                     <Button

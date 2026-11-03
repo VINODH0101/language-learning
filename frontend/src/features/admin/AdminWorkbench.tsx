@@ -39,6 +39,7 @@ import {
   Sparkles,
   FileText,
   Lock,
+  BookOpen,
 } from 'lucide-react';
 import { PendingContentItem, FailedJobItem } from '../../types';
 import {
@@ -77,7 +78,7 @@ interface AdminWorkbenchProps {
 }
 
 export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
-  initialTab = 'review',
+  initialTab = 'overview',
 }) => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<AdminWorkbenchTab>(initialTab);
@@ -118,34 +119,40 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
       const providers = adminService.getProviderHealthStatuses();
       setHealthRecords(providers);
     } catch (err) {
-      console.error('Failed to load AdminWorkbench state', err);
+      console.warn('Could not load dynamic admin data, using initial seed states:', err);
     }
   };
 
   useEffect(() => {
     loadData();
-    const unsub = adminService.subscribe(loadData);
-    return unsub;
   }, []);
 
-  // Handlers for Content Review
-  const handleApproveContent = (id: string) => {
-    setReviewItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, status: 'approved' } : item))
-    );
-    adminService.approveContentItem(id).catch(console.error);
-    toast.success(t('admin:toast_content_approved', 'Conteúdo pedagógico aprovado com sucesso!'));
+  // Handlers for Content Review Actions
+  const handleApproveContent = async (id: string) => {
+    try {
+      await adminService.approveContentItem(id);
+      setReviewItems(prev =>
+        prev.map(item => (item.id === id ? { ...item, status: 'approved' } : item))
+      );
+      toast.success(t('admin:toast_content_approved', 'Conteúdo aprovado e disponibilizado para estudo.'));
+    } catch {
+      toast.error(t('admin:toast_action_failed', 'Erro ao aprovar conteúdo.'));
+    }
   };
 
-  const handleRejectContent = (id: string) => {
-    setReviewItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item))
-    );
-    adminService.rejectContentItem(id, 'Inconformidade pedagógica').catch(console.error);
-    toast.error(t('admin:toast_content_rejected', 'Item reprovado e removido do catálogo de distribuição.'));
+  const handleRejectContent = async (id: string) => {
+    try {
+      await adminService.rejectContentItem(id, 'Rejeitado por moderação editorial');
+      setReviewItems(prev =>
+        prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item))
+      );
+      toast.info(t('admin:toast_content_rejected', 'Conteúdo marcado como rejeitado.'));
+    } catch {
+      toast.error(t('admin:toast_action_failed', 'Erro ao rejeitar conteúdo.'));
+    }
   };
 
-  // Handlers for Language Matrix
+  // Handler for Toggling Language
   const handleToggleLanguage = (lang: string) => {
     if (lang === 'hi') {
       toast.error(t('admin:hindi_forbidden_message', 'Invariante do Sistema: O idioma Hindi (hi) está expressamente excluído da plataforma.'));
@@ -168,31 +175,31 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
   return (
     <div className="space-y-6">
       {/* Workbench Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-stone-200 pb-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400">
-              <Shield className="w-6 h-6" />
+            <div className="p-2.5 bg-stone-100 border border-stone-200 rounded-xl text-stone-700">
+              <Shield className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-100">
-                  {t('admin:workbench_title', 'Painel de Administração e Qualidade')}
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
+                  {t('admin:workbench_title', 'Editorial Desk & Publishing Workspace')}
                 </h2>
-                <Badge variant="rose" size="sm">{t('admin:workbench_badge', 'Admin Workbench')}</Badge>
+                <Badge variant="slate" size="sm">{t('admin:workbench_badge', 'Admin Desk')}</Badge>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {t('admin:workbench_subtitle', 'Revisão de conteúdo, matriz de 13 idiomas, auditoria CEFR, integridade de provedores e telemetria.')}
+              <p className="text-xs text-stone-600 mt-1">
+                {t('admin:workbench_subtitle', 'Editorial content ingestion, deterministic pipeline validation, CEFR alignment, and publishing governance.')}
               </p>
             </div>
           </div>
         </div>
 
         {/* Workbench Tab Navigation */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar border-b border-slate-800">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar border-b border-stone-200">
           {[
-            { id: 'overview', label: t('admin:tab_overview', 'Visão Geral') },
             { id: 'content_studio', label: 'Content Studio (Phase 7)' },
+            { id: 'overview', label: t('admin:tab_overview', 'Visão Geral') },
             { id: 'users', label: t('admin:tab_users', 'Gestão de Usuários') },
             { id: 'review', label: t('admin:tab_review', 'Fila de Moderação'), count: reviewItems.filter(i => i.status === 'pending').length },
             { id: 'languages', label: t('admin:tab_languages', 'Matriz de Idiomas (13)'), count: 13 },
@@ -209,13 +216,13 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
               onClick={() => setActiveTab(tab.id as AdminWorkbenchTab)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition ${
                 activeTab === tab.id
-                  ? 'bg-rose-600 text-white shadow-sm'
-                  : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-stone-900 text-white shadow-xs'
+                  : 'bg-stone-50 text-stone-600 hover:text-stone-900 border border-stone-200 hover:bg-stone-100'
               }`}
             >
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`ml-2 px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                <span className={`ml-2 px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'}`}>
                   {tab.count}
                 </span>
               )}
@@ -224,27 +231,27 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
         </div>
       </div>
 
+      {/* 0.0 Content Studio Tab (Phase 7) */}
+      {activeTab === 'content_studio' && <AdminContentStudio />}
+
       {/* 0. Overview Tab */}
       {activeTab === 'overview' && (
         <AdminOverview onNavigateTab={tab => setActiveTab(tab as AdminWorkbenchTab)} />
       )}
-
-      {/* 0.0 Content Studio Tab (Phase 7) */}
-      {activeTab === 'content_studio' && <AdminContentStudio />}
 
       {/* 0.1 Users Tab */}
       {activeTab === 'users' && <AdminUserManagement />}
 
       {/* 1. Content Review Tab */}
       {activeTab === 'review' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4 text-rose-400" />
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-stone-600" />
                 Fila de Moderação e Validação de Conteúdo
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Avalie materiais sintéticos e de corpora abertos antes de liberá-los para os alunos.
               </p>
             </div>
@@ -255,26 +262,26 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             {reviewItems.map(item => (
               <div
                 key={item.id}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-slate-200 text-sm">{item.titleOrTerm}</span>
+                    <span className="font-serif font-bold text-stone-900 text-sm">{item.titleOrTerm}</span>
                     <Badge variant="indigo" size="sm">{item.type.toUpperCase()}</Badge>
                     <Badge variant="emerald" size="sm">{item.cefrLevel}</Badge>
                     <Badge variant="slate" size="sm">{item.language.toUpperCase()}</Badge>
                     {item.status === 'approved' && (
-                      <span className="text-xs font-bold text-emerald-400">✓ Aprovado</span>
+                      <span className="text-xs font-bold text-emerald-600">✓ Aprovado</span>
                     )}
                     {item.status === 'rejected' && (
-                      <span className="text-xs font-bold text-rose-400">✗ Rejeitado</span>
+                      <span className="text-xs font-bold text-rose-600">✗ Rejeitado</span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400">
-                    <span className="text-slate-500">Fonte:</span> {item.source}
+                  <div className="text-xs text-stone-500">
+                    <span className="text-stone-700 font-semibold">Fonte:</span> {item.source}
                   </div>
                   {item.reasonFlagged && (
-                    <div className="text-[11px] text-amber-400/90 font-mono">
+                    <div className="text-[11px] text-amber-800 font-mono">
                       Motivo: {item.reasonFlagged}
                     </div>
                   )}
@@ -286,7 +293,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
                       onClick={() => handleApproveContent(item.id)}
                       variant="primary"
                       size="sm"
-                      className="gap-1 cursor-pointer bg-emerald-600 hover:bg-emerald-500"
+                      className="gap-1 cursor-pointer bg-emerald-700 hover:bg-emerald-800"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Aprovar</span>
@@ -295,7 +302,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
                       onClick={() => handleRejectContent(item.id)}
                       variant="outline"
                       size="sm"
-                      className="gap-1 cursor-pointer text-rose-400 border-rose-800/60 hover:bg-rose-950/40"
+                      className="gap-1 cursor-pointer text-rose-700 border-rose-300 hover:bg-rose-50"
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>Rejeitar</span>
@@ -310,18 +317,18 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 2. Language Enablement Matrix */}
       {activeTab === 'languages' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Globe2 className="w-4 h-4 text-indigo-400" />
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Globe2 className="w-4 h-4 text-stone-600" />
                 Matriz de Idiomas Suportados (13 Idiomas Oficiais)
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Ativação e desativação de idiomas no currículo. O Hindi (HI) é estritamente proibido nesta plataforma.
               </p>
             </div>
-            <Badge variant="indigo">13 Ativos</Badge>
+            <Badge variant="emerald">13 Ativos</Badge>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -342,18 +349,18 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             ].map(lang => (
               <div
                 key={lang.code}
-                className="p-3.5 bg-slate-950/40 rounded-xl border border-slate-800 flex items-center justify-between"
+                className="p-3.5 bg-stone-50/70 rounded-xl border border-stone-200 flex items-center justify-between"
               >
                 <div>
-                  <div className="text-xs font-bold text-slate-100">{lang.name}</div>
-                  <div className="text-[10px] text-slate-500 font-mono">Código: {lang.code.toUpperCase()}</div>
+                  <div className="text-xs font-bold text-stone-900">{lang.name}</div>
+                  <div className="text-[10px] text-stone-500 font-mono">Código: {lang.code.toUpperCase()}</div>
                 </div>
                 <button
                   onClick={() => handleToggleLanguage(lang.code)}
                   className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${
                     enabledLanguages[lang.code] !== false
-                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800'
-                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                      : 'bg-stone-100 text-stone-500 border border-stone-300'
                   }`}
                 >
                   {enabledLanguages[lang.code] !== false ? 'Ativo' : 'Inativo'}
@@ -362,14 +369,14 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             ))}
 
             {/* Invariant Excluded Language: Hindi */}
-            <div className="p-3.5 bg-rose-950/20 rounded-xl border border-rose-900/60 flex items-center justify-between">
+            <div className="p-3.5 bg-rose-50/70 rounded-xl border border-rose-200 flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold text-rose-300">HI (Hindi)</div>
-                <div className="text-[10px] text-rose-400 font-mono">Excluído pelo Escopo do Sistema</div>
+                <div className="text-xs font-bold text-rose-900">HI (Hindi)</div>
+                <div className="text-[10px] text-rose-700 font-mono">Excluído pelo Escopo do Sistema</div>
               </div>
               <button
                 onClick={() => handleToggleLanguage('hi')}
-                className="px-3 py-1 rounded-lg text-xs font-bold bg-rose-950 text-rose-400 border border-rose-800 cursor-not-allowed opacity-80"
+                className="px-3 py-1 rounded-lg text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 cursor-not-allowed opacity-80"
               >
                 Bloqueado
               </button>
@@ -380,13 +387,13 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 3. CEFR Content Validation Audit */}
       {activeTab === 'cefr_audit' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3">
+            <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-emerald-600" />
               Auditoria de Conteúdo Pedagógico CEFR (A1–C1)
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-stone-500 mt-0.5">
               Verificação dos patamares mínimos de itens lexicais, leituras graduadas e exercícios por nível.
             </p>
           </div>
@@ -401,24 +408,24 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             ].map(lvl => (
               <div
                 key={lvl.level}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2"
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <Badge variant="emerald">{lvl.level}</Badge>
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase">{lvl.status}</span>
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase">{lvl.status}</span>
                 </div>
-                <div className="space-y-1 text-xs text-slate-300">
+                <div className="space-y-1 text-xs text-stone-700">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Vocabulário:</span>
-                    <span className="font-mono">{lvl.vocab}</span>
+                    <span className="text-stone-500">Vocabulário:</span>
+                    <span className="font-mono font-medium">{lvl.vocab}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Textos:</span>
-                    <span className="font-mono">{lvl.passages}</span>
+                    <span className="text-stone-500">Textos:</span>
+                    <span className="font-mono font-medium">{lvl.passages}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Exercícios:</span>
-                    <span className="font-mono">{lvl.exercises}</span>
+                    <span className="text-stone-500">Exercícios:</span>
+                    <span className="font-mono font-medium">{lvl.exercises}</span>
                   </div>
                 </div>
               </div>
@@ -429,14 +436,14 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 4. Provider Health & Telemetry */}
       {activeTab === 'providers' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-400" />
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-amber-600" />
                 Telemetria e Saúde dos Provedores Abertos
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Monitoramento scrubbed de latência média, taxa de sucesso e disponibilidade operacional.
               </p>
             </div>
@@ -447,27 +454,27 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             {healthRecords.map(rec => (
               <div
                 key={rec.providerId}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2"
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-slate-100">{rec.name}</div>
+                  <div className="text-xs font-bold text-stone-900">{rec.name}</div>
                   <Badge variant={rec.status === 'healthy' ? 'emerald' : 'amber'} size="sm">
                     {rec.status.toUpperCase()}
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center text-xs pt-2 border-t border-slate-800/80">
-                  <div className="p-2 bg-slate-900/60 rounded-lg">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Latência</div>
-                    <div className="text-slate-200 font-mono font-bold mt-0.5">{rec.averageLatencyMs} ms</div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs pt-2 border-t border-stone-200">
+                  <div className="p-2 bg-white rounded-lg border border-stone-200">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold">Latência</div>
+                    <div className="text-stone-900 font-mono font-bold mt-0.5">{rec.averageLatencyMs} ms</div>
                   </div>
-                  <div className="p-2 bg-slate-900/60 rounded-lg">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Requisições</div>
-                    <div className="text-slate-200 font-mono font-bold mt-0.5">{rec.totalRequests}</div>
+                  <div className="p-2 bg-white rounded-lg border border-stone-200">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold">Requisições</div>
+                    <div className="text-stone-900 font-mono font-bold mt-0.5">{rec.totalRequests}</div>
                   </div>
-                  <div className="p-2 bg-slate-900/60 rounded-lg">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Falhas</div>
-                    <div className="text-slate-200 font-mono font-bold mt-0.5">{rec.failedRequests}</div>
+                  <div className="p-2 bg-white rounded-lg border border-stone-200">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold">Falhas</div>
+                    <div className="text-stone-900 font-mono font-bold mt-0.5">{rec.failedRequests}</div>
                   </div>
                 </div>
               </div>
@@ -478,14 +485,14 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 5. Failed Generation Jobs Queue */}
       {activeTab === 'jobs' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-rose-400" />
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-rose-600" />
                 Fila de Falhas & Retentativas
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Recuperação resiliente de tarefas em lote interrompidas por timeout de rede ou limites de taxa.
               </p>
             </div>
@@ -493,7 +500,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
           </div>
 
           {failedJobs.length === 0 ? (
-            <div className="text-center py-8 text-xs text-slate-500">
+            <div className="text-center py-8 text-xs text-stone-500">
               Nenhuma tarefa com falha no momento. A esteira de geração opera de forma estável.
             </div>
           ) : (
@@ -501,16 +508,16 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
               {failedJobs.map(job => (
                 <div
                   key={job.id}
-                  className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                  className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 flex flex-col md:flex-row md:items-center justify-between gap-3"
                 >
                   <div className="space-y-1 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-200">{job.jobType}</span>
+                      <span className="font-serif font-bold text-stone-900">{job.jobType}</span>
                       <Badge variant="indigo" size="sm">{job.language.toUpperCase()}</Badge>
                       <Badge variant="emerald" size="sm">{job.cefrLevel}</Badge>
                     </div>
-                    <div className="text-rose-400 font-mono">{job.errorReason}</div>
-                    <div className="text-slate-500 text-[10px]">
+                    <div className="text-rose-700 font-mono text-[11px]">{job.errorReason}</div>
+                    <div className="text-stone-500 text-[10px]">
                       Ocorrido em: {new Date(job.lastRunAt || job.createdAt).toLocaleTimeString()} • Tentativas: {job.retryCount}
                     </div>
                   </div>
@@ -519,7 +526,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
                     onClick={() => handleRetryJob(job.id)}
                     variant="primary"
                     size="sm"
-                    className="gap-1.5 cursor-pointer bg-rose-600 hover:bg-rose-500"
+                    className="gap-1.5 cursor-pointer bg-rose-700 hover:bg-rose-800"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Tentar Novamente</span>
@@ -533,14 +540,14 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 6. Duplicate Content Scanner */}
       {activeTab === 'duplicates' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Search className="w-4 h-4 text-sky-400" />
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Search className="w-4 h-4 text-stone-600" />
                 Varredor de Conteúdo Duplicado
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Detecção de termos léxicos e sentenças redundantes nas matrizes de estudo.
               </p>
             </div>
@@ -555,12 +562,12 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             </Button>
           </div>
 
-          <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-center space-y-2">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <div className="text-sm font-bold text-slate-200">
+          <div className="p-8 bg-stone-50/70 rounded-xl border border-stone-200 text-center space-y-2">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+            <div className="font-serif text-base font-bold text-stone-900">
               Banco de Dados Íntegro
             </div>
-            <div className="text-xs text-slate-400 max-w-md mx-auto">
+            <div className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
               Todas as 13 linguagens utilizam hashing determinístico para garantir que nenhuma sentença ou cartão de repetição espaçada seja duplicado no armazenamento Dexie ou Supabase.
             </div>
           </div>
@@ -569,13 +576,13 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 7. Dataset Version Registry */}
       {activeTab === 'datasets' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Database className="w-4 h-4 text-indigo-400" />
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3">
+            <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+              <Database className="w-4 h-4 text-stone-600" />
               Rastreamento de Versões dos Datasets Abertos
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-stone-500 mt-0.5">
               Auditoria de proveniência e integridade das fontes educacionais livres.
             </p>
           </div>
@@ -591,11 +598,11 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             ].map(ds => (
               <div
                 key={ds.name}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 flex items-center justify-between gap-3"
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 flex items-center justify-between gap-3"
               >
                 <div>
-                  <div className="text-xs font-bold text-slate-100">{ds.name}</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                  <div className="text-xs font-bold text-stone-900">{ds.name}</div>
+                  <div className="text-[11px] text-stone-500 mt-0.5 font-mono">
                     Versão: {ds.version} • {ds.count}
                   </div>
                 </div>

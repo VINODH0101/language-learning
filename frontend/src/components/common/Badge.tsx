@@ -9,26 +9,26 @@ interface BadgeProps {
 
 export const Badge: React.FC<BadgeProps> = ({
   children,
-  variant = 'indigo',
+  variant = 'slate',
   size = 'md',
   className = '',
 }) => {
   const variantMap = {
-    emerald: 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60',
-    indigo: 'bg-indigo-950/80 text-indigo-300 border-indigo-800/60',
-    amber: 'bg-amber-950/80 text-amber-300 border-amber-800/60',
-    rose: 'bg-rose-950/80 text-rose-300 border-rose-800/60',
-    slate: 'bg-slate-800 text-slate-300 border-slate-700',
-    sky: 'bg-sky-950/80 text-sky-300 border-sky-800/60',
+    emerald: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
+    indigo: 'bg-stone-100 text-stone-800 border-stone-200',
+    amber: 'bg-amber-50 text-amber-800 border-amber-200/80',
+    rose: 'bg-rose-50 text-rose-800 border-rose-200/80',
+    slate: 'bg-stone-100 text-stone-700 border-stone-200',
+    sky: 'bg-sky-50 text-sky-800 border-sky-200/80',
   }[variant];
 
   const sizeMap = {
-    sm: 'px-2 py-0.5 text-xs',
-    md: 'px-2.5 py-1 text-xs font-semibold',
+    sm: 'px-2 py-0.5 text-[11px] leading-tight',
+    md: 'px-2.5 py-0.5 text-xs font-medium',
   }[size];
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border ${variantMap} ${sizeMap} ${className}`}>
+    <span className={`inline-flex items-center gap-1 rounded-md border tracking-wide ${variantMap} ${sizeMap} ${className}`}>
       {children}
     </span>
   );

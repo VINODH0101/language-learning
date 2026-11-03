@@ -2,23 +2,18 @@ import React, { useState, useEffect } from 'react';
 import {
   BookOpen,
   Search,
-  Filter,
-  Sparkles,
   Clock,
-  Layers,
-  CheckCircle2,
   ChevronRight,
-  TrendingUp,
+  Sparkles,
+  ArrowRight,
+  Compass,
 } from 'lucide-react';
 import {
   ContentItem,
   ContentVersion,
   LearningActivity,
-  ContentGenre,
   LearnerContentProgress,
 } from '../../types/contentCentred';
-import { Language, CEFRLevel } from '../../types';
-import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { contentCentredService } from '../../services/contentCentredService';
 import { authService } from '../../services/auth';
@@ -82,35 +77,36 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
     return true;
   });
 
+  const featuredItem = filteredItems.length > 0 ? filteredItems[0] : null;
+  const remainingItems = filteredItems.slice(1);
+
   return (
-    <div className="space-y-8">
-      {/* Hero Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xl">
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Content-Centred Learning</span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-100 tracking-tight">
-            Learn from Authentic Content
-          </h1>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            Acquire vocabulary, idioms, and natural grammar directly through authentic texts, stories, dialogues, and cultural narratives. Select any story below to begin reading.
-          </p>
+    <div className="space-y-12 max-w-6xl mx-auto">
+      {/* Editorial Masthead Header */}
+      <header className="border-b border-stone-200 pb-8 space-y-3">
+        <div className="flex items-center justify-between text-xs text-stone-500 uppercase tracking-widest font-medium">
+          <span>Lexilume Gazette & Library</span>
+          <span>Authentic Language Acquisition</span>
         </div>
-      </div>
+        <h1 className="text-3xl sm:text-5xl font-serif font-bold text-stone-900 tracking-tight leading-tight">
+          The Reading Room
+        </h1>
+        <p className="text-sm sm:text-base text-stone-600 max-w-2xl leading-relaxed">
+          Acquire vocabulary, idioms, and natural grammar directly through authentic texts, stories, dialogues, and cultural narratives. Select any story below to begin reading.
+        </p>
+      </header>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2 border-b border-stone-200">
         {/* Search */}
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search stories & articles..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+            placeholder="Search stories, essays & dialogues..."
+            className="w-full bg-white border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-500 transition-colors"
           />
         </div>
 
@@ -120,7 +116,7 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
           <select
             value={selectedLanguage}
             onChange={e => setSelectedLanguage(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-stone-500 cursor-pointer"
           >
             <option value="all">All Languages</option>
             <option value="en">English</option>
@@ -132,7 +128,7 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
           <select
             value={selectedGenre}
             onChange={e => setSelectedGenre(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-stone-500 cursor-pointer"
           >
             <option value="all">All Genres</option>
             <option value="culture_and_travel">Culture & Travel</option>
@@ -147,7 +143,7 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
           <select
             value={selectedCefr}
             onChange={e => setSelectedCefr(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-stone-500 cursor-pointer"
           >
             <option value="all">All CEFR Levels</option>
             <option value="A1">A1 Beginner</option>
@@ -159,80 +155,127 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
         </div>
       </div>
 
-      {/* Content Grid */}
       {filteredItems.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-16 text-center space-y-3">
-          <BookOpen className="w-10 h-10 text-slate-500 mx-auto" />
-          <h3 className="text-base font-bold text-slate-200">No Content Matches Filters</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+        <div className="py-20 text-center space-y-3 bg-white border border-stone-200/80 rounded-xl">
+          <BookOpen className="w-9 h-9 text-stone-400 mx-auto" />
+          <h3 className="text-base font-serif font-bold text-stone-800">No Content Matches Filters</h3>
+          <p className="text-xs text-stone-500 max-w-sm mx-auto">
             Try adjusting your search keywords or language filters to discover authentic learning texts.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map(item => {
-            const progress = progressMap[item.id];
-            const isStarted = progress && progress.status !== 'not_started';
-            const isDone = progress?.status === 'completed';
-
-            return (
-              <div
-                key={item.id}
-                onClick={() => handleCardClick(item)}
-                className="group bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 rounded-3xl p-6 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-lg hover:shadow-indigo-500/10"
-              >
-                <div className="space-y-3.5">
-                  {/* Badges */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="indigo">{item.target_language.toUpperCase()}</Badge>
-                      <Badge variant="slate">{item.primary_cefr}</Badge>
-                    </div>
-
-                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-slate-500" />
-                      ~{item.estimated_read_minutes} min
-                    </span>
-                  </div>
-
-                  {/* Title & Summary */}
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-2 line-clamp-3 leading-relaxed">
-                      {item.summary || 'Authentic educational narrative crafted for reading practice.'}
-                    </p>
-                  </div>
+        <div className="space-y-12">
+          {/* Featured Lead Editorial Item */}
+          {featuredItem && !searchQuery && (
+            <article
+              onClick={() => handleCardClick(featuredItem)}
+              className="group p-6 sm:p-8 bg-white border border-stone-200 rounded-2xl shadow-xs hover:border-stone-400 transition-all duration-200 cursor-pointer relative"
+            >
+              <div className="max-w-3xl space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] uppercase tracking-wider font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                    Featured Reading
+                  </span>
+                  <Badge variant="indigo">{featuredItem.target_language.toUpperCase()}</Badge>
+                  <Badge variant="slate">{featuredItem.primary_cefr}</Badge>
+                  <span className="text-xs text-stone-500 flex items-center gap-1 ml-auto">
+                    <Clock className="w-3.5 h-3.5 text-stone-400" />
+                    ~{featuredItem.estimated_read_minutes} min read
+                  </span>
                 </div>
 
-                {/* Card Footer: Progress and CTA */}
-                <div className="pt-5 border-t border-slate-800/80 mt-5">
-                  {isStarted && (
-                    <div className="mb-3 space-y-1">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400">Progress</span>
-                        <span className="font-semibold text-indigo-400">
-                          {progress.percent_complete}%
-                        </span>
-                      </div>
-                      <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-500 rounded-full"
-                          style={{ width: `${progress.percent_complete}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                <h2 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 group-hover:text-stone-700 transition-colors leading-tight">
+                  {featuredItem.title}
+                </h2>
 
-                  <div className="flex items-center justify-between text-xs font-semibold text-indigo-400 group-hover:text-indigo-300">
-                    <span>{isDone ? 'Review Text' : isStarted ? 'Continue Reading' : 'Start Reading'}</span>
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
+                <p className="text-sm text-stone-600 leading-relaxed line-clamp-3">
+                  {featuredItem.summary || 'Authentic educational narrative crafted for reading practice.'}
+                </p>
+
+                <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-stone-900 group-hover:translate-x-1 transition-transform">
+                  <span>Start Reading Story</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </div>
+            </article>
+          )}
+
+          {/* Editorial Articles Grid */}
+          {(() => {
+            const gridItems = (featuredItem && !searchQuery) ? filteredItems.slice(1) : filteredItems;
+            if (gridItems.length === 0) return null;
+
+            return (
+              <div className="space-y-4">
+                <h3 className="text-xs uppercase tracking-widest font-bold text-stone-500 border-b border-stone-200 pb-2">
+                  Catalog Stories & Articles ({gridItems.length})
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {gridItems.map(item => {
+                    const progress = progressMap[item.id];
+                    const isStarted = progress && progress.status !== 'not_started';
+                    const isDone = progress?.status === 'completed';
+
+                    return (
+                      <article
+                        key={item.id}
+                        onClick={() => handleCardClick(item)}
+                        className="group bg-white border border-stone-200 hover:border-stone-400 rounded-xl p-5 flex flex-col justify-between transition-all duration-150 cursor-pointer shadow-xs"
+                      >
+                        <div className="space-y-3">
+                          {/* Badges & Meta */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="indigo">{item.target_language.toUpperCase()}</Badge>
+                              <Badge variant="slate">{item.primary_cefr}</Badge>
+                            </div>
+                            <span className="text-[11px] text-stone-500 flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-stone-400" />
+                              ~{item.estimated_read_minutes} min
+                            </span>
+                          </div>
+
+                          {/* Title & Summary */}
+                          <div>
+                            <h4 className="text-base font-serif font-bold text-stone-900 group-hover:text-stone-700 transition-colors line-clamp-2 leading-snug">
+                              {item.title}
+                            </h4>
+                            <p className="text-xs text-stone-600 mt-2 line-clamp-3 leading-relaxed">
+                              {item.summary || 'Authentic educational narrative crafted for reading practice.'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Progress & Read Action */}
+                        <div className="pt-4 border-t border-stone-100 mt-4">
+                          {isStarted && (
+                            <div className="mb-2 space-y-1">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-stone-500">Progress</span>
+                                <span className="font-medium text-stone-700">{progress.percent_complete}%</span>
+                              </div>
+                              <div className="w-full h-1 bg-stone-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-stone-800 rounded-full"
+                                  style={{ width: `${progress.percent_complete}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs font-medium text-stone-900 group-hover:text-stone-700">
+                            <span>{isDone ? 'Review Text' : isStarted ? 'Continue Reading' : 'Read Text'}</span>
+                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </div>
             );
-          })}
+          })()}
         </div>
       )}
     </div>

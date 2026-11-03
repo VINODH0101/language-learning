@@ -16,28 +16,28 @@ export const Alert: React.FC<AlertProps> = ({
 }) => {
   const config = {
     info: {
-      border: 'border-sky-800/80',
-      bg: 'bg-sky-950/40',
-      text: 'text-sky-300',
-      icon: <Info className="w-5 h-5 text-sky-400 shrink-0" />,
+      border: 'border-sky-200',
+      bg: 'bg-sky-50',
+      text: 'text-sky-900',
+      icon: <Info className="w-5 h-5 text-sky-700 shrink-0" />,
     },
     warning: {
-      border: 'border-amber-800/80',
-      bg: 'bg-amber-950/40',
-      text: 'text-amber-300',
-      icon: <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />,
+      border: 'border-amber-200',
+      bg: 'bg-amber-50',
+      text: 'text-amber-900',
+      icon: <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />,
     },
     error: {
-      border: 'border-rose-800/80',
-      bg: 'bg-rose-950/40',
-      text: 'text-rose-300',
-      icon: <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />,
+      border: 'border-rose-200',
+      bg: 'bg-rose-50',
+      text: 'text-rose-900',
+      icon: <AlertCircle className="w-5 h-5 text-rose-700 shrink-0" />,
     },
     success: {
-      border: 'border-emerald-800/80',
-      bg: 'bg-emerald-950/40',
-      text: 'text-emerald-300',
-      icon: <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />,
+      border: 'border-emerald-200',
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-900',
+      icon: <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0" />,
     },
   }[type];
 
@@ -46,7 +46,7 @@ export const Alert: React.FC<AlertProps> = ({
       {config.icon}
       <div className="text-sm">
         {title && <h4 className={`font-semibold mb-1 ${config.text}`}>{title}</h4>}
-        <div className="text-slate-300 text-xs leading-relaxed">{children}</div>
+        <div className="text-stone-700 text-xs leading-relaxed">{children}</div>
       </div>
     </div>
   );

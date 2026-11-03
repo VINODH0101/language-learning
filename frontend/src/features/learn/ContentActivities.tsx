@@ -2,12 +2,9 @@ import React, { useState } from 'react';
 import {
   CheckCircle2,
   XCircle,
-  AlertTriangle,
   ArrowRight,
   RotateCcw,
   Sparkles,
-  HelpCircle,
-  BookOpen,
   Award,
 } from 'lucide-react';
 import {
@@ -37,8 +34,10 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
 }) => {
   const allQuestions: Array<{ activityId: string; question: ActivityQuestion }> = [];
   for (const act of activities) {
-    for (const q of act.configuration.questions) {
-      allQuestions.push({ activityId: act.id, question: q });
+    if (act.configuration?.questions) {
+      for (const q of act.configuration.questions) {
+        allQuestions.push({ activityId: act.id, question: q });
+      }
     }
   }
 
@@ -50,10 +49,10 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
 
   if (allQuestions.length === 0) {
     return (
-      <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
-        <Sparkles className="w-8 h-8 text-indigo-400 mx-auto" />
-        <h3 className="text-sm font-semibold text-slate-200">No Interactive Activities Available</h3>
-        <p className="text-xs text-slate-400">This reading text is self-directed reading practice.</p>
+      <div className="p-8 text-center bg-white border border-stone-200 rounded-2xl space-y-2">
+        <Sparkles className="w-8 h-8 text-stone-400 mx-auto" />
+        <h3 className="text-sm font-semibold text-stone-800">No Interactive Activities Available</h3>
+        <p className="text-xs text-stone-500">This reading text is self-directed reading practice.</p>
       </div>
     );
   }
@@ -145,16 +144,16 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
   if (isCompleted) {
     const score = Math.round((correctCount / allQuestions.length) * 100);
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-xl animate-in zoom-in-95">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-lg">
+      <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center space-y-6 shadow-xs animate-in zoom-in-95">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-center mx-auto shadow-xs">
           <Award className="w-8 h-8" />
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-2xl font-bold text-slate-100">Comprehension Completed!</h3>
-          <p className="text-sm text-slate-400 max-w-md mx-auto">
-            You scored <span className="font-bold text-indigo-400">{score}%</span> ({correctCount}/{allQuestions.length} correct).
-            {score < 100 && ' Incorrect answers have been added to your Mistake Notebook for spaced remediation.'}
+          <h3 className="text-2xl font-serif font-bold text-stone-900">Comprehension Completed</h3>
+          <p className="text-sm text-stone-600 max-w-md mx-auto leading-relaxed">
+            You scored <span className="font-bold text-stone-900">{score}%</span> ({correctCount}/{allQuestions.length} correct).
+            {score < 100 && ' Any incorrect answers have been added to your Mistake Notebook for spaced review.'}
           </p>
         </div>
 
@@ -168,21 +167,21 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
   }
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+    <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
       {/* Question Header & Progress Bar */}
-      <div className="space-y-3 border-b border-slate-800 pb-4">
+      <div className="space-y-3 border-b border-stone-200 pb-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            Activity Question {currentIdx + 1} of {allQuestions.length}
+          <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-800" />
+            Reading Exercise {currentIdx + 1} of {allQuestions.length}
           </span>
           <Badge variant="slate">{question.type.replace('_', ' ').toUpperCase()}</Badge>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-indigo-500 transition-all duration-300 rounded-full"
+            className="h-full bg-stone-900 transition-all duration-300 rounded-full"
             style={{ width: `${((currentIdx + 1) / allQuestions.length) * 100}%` }}
           />
         </div>
@@ -190,7 +189,7 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
 
       {/* Stem / Question */}
       <div className="space-y-4">
-        <h3 className="text-base sm:text-lg font-bold text-slate-100 leading-snug">
+        <h3 className="text-base sm:text-lg font-serif font-bold text-stone-900 leading-snug">
           {question.stem}
         </h3>
 
@@ -199,19 +198,19 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
           <div className="space-y-2.5">
             {question.options.map(opt => {
               const isSelected = selectedAnswers[question.id] === opt.text;
-              let btnStyle = 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700';
+              let btnStyle = 'bg-white border-stone-200 text-stone-800 hover:border-stone-400 hover:bg-stone-50/50';
 
               if (isSubmitted) {
                 const isCorrectOption = opt.text.trim().toLowerCase() === question.correct_answer.trim().toLowerCase();
                 if (isCorrectOption) {
-                  btnStyle = 'bg-emerald-950/40 border-emerald-600 text-emerald-200 font-semibold';
+                  btnStyle = 'bg-emerald-50 border-emerald-300 text-emerald-900 font-medium';
                 } else if (isSelected) {
-                  btnStyle = 'bg-rose-950/40 border-rose-600 text-rose-200';
+                  btnStyle = 'bg-rose-50 border-rose-300 text-rose-900';
                 } else {
-                  btnStyle = 'bg-slate-950/30 border-slate-800/40 text-slate-500';
+                  btnStyle = 'bg-stone-50 border-stone-100 text-stone-400';
                 }
               } else if (isSelected) {
-                btnStyle = 'bg-indigo-950/50 border-indigo-500 text-indigo-100 shadow-sm';
+                btnStyle = 'bg-amber-50 border-amber-300 text-stone-900 font-medium ring-1 ring-amber-300';
               }
 
               return (
@@ -219,14 +218,14 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
                   key={opt.id}
                   disabled={isSubmitted}
                   onClick={() => handleSelectOption(opt.text)}
-                  className={`w-full text-left p-4 rounded-2xl border text-sm transition-all flex items-center justify-between gap-3 ${btnStyle}`}
+                  className={`w-full text-left p-3.5 rounded-xl border text-sm transition-all flex items-center justify-between gap-3 cursor-pointer ${btnStyle}`}
                 >
                   <span>{opt.text}</span>
                   {isSubmitted && opt.text.trim().toLowerCase() === question.correct_answer.trim().toLowerCase() && (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   )}
                   {isSubmitted && isSelected && !isCorrect && (
-                    <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
                   )}
                 </button>
               );
@@ -238,32 +237,32 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
       {/* Answer Feedback Panel */}
       {isSubmitted && (
         <div
-          className={`p-4 rounded-2xl border text-xs space-y-2 animate-in fade-in duration-200 ${
+          className={`p-4 rounded-xl border text-xs space-y-1.5 animate-in fade-in duration-150 ${
             isCorrect
-              ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-200'
-              : 'bg-rose-950/30 border-rose-800/60 text-rose-200'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+              : 'bg-rose-50 border-rose-200 text-rose-950'
           }`}
         >
-          <div className="flex items-center gap-1.5 font-bold">
+          <div className="flex items-center gap-1.5 font-bold text-sm">
             {isCorrect ? (
               <>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Correct!</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Correct</span>
               </>
             ) : (
               <>
-                <XCircle className="w-4 h-4 text-rose-400" />
+                <XCircle className="w-4 h-4 text-rose-600" />
                 <span>Incorrect — Saved to your Mistake Notebook</span>
               </>
             )}
           </div>
-          <p className="leading-relaxed text-slate-300">{question.explanation}</p>
+          <p className="leading-relaxed text-stone-700">{question.explanation}</p>
         </div>
       )}
 
       {/* Footer Controls */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-        <span className="text-xs text-slate-500">
+      <div className="flex items-center justify-between pt-2 border-t border-stone-200">
+        <span className="text-xs text-stone-500 font-sans">
           Score: {correctCount}/{currentIdx + (isSubmitted ? 1 : 0)}
         </span>
 

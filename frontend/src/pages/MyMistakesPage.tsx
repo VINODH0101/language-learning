@@ -59,7 +59,7 @@ export const MyMistakesPage: React.FC = () => {
       setRetestingId(null);
       setRetestInput('');
     } else {
-      toast.error('Incorrect response. Review the explanation below.');
+      toast.error('Incorrect response. Review the pedagogical explanation below.');
     }
   };
 
@@ -71,22 +71,22 @@ export const MyMistakesPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
-          <AlertTriangle className="w-3.5 h-3.5" />
+      {/* Editorial Header Banner */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-2">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium tracking-wide">
+          <AlertTriangle className="w-3.5 h-3.5 text-rose-700" />
           <span>Error Diagnostics & Remediation</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
+        <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 tracking-tight">
           My Mistakes Notebook
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-          Every incorrect answer from reading comprehension and activities is preserved here with pedagogical feedback for targeted re-testing and mastery.
+        <p className="text-sm text-stone-600 max-w-xl font-normal leading-relaxed">
+          Uncertain grammar structures and comprehension misses encountered in reading are indexed here with pedagogical feedback for active re-testing.
         </p>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
         <div className="flex items-center gap-2">
           <Badge variant="rose">
             {mistakes.filter(m => m.status === 'unresolved').length} Unresolved
@@ -100,7 +100,7 @@ export const MyMistakesPage: React.FC = () => {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
+            className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-stone-400 focus:bg-white"
           >
             <option value="all">All Statuses</option>
             <option value="unresolved">Unresolved Only</option>
@@ -110,7 +110,7 @@ export const MyMistakesPage: React.FC = () => {
           <select
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
+            className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-stone-400 focus:bg-white"
           >
             <option value="all">All Categories</option>
             <option value="vocabulary_choice">Vocabulary Choice</option>
@@ -124,11 +124,11 @@ export const MyMistakesPage: React.FC = () => {
 
       {/* Mistakes List */}
       {filteredMistakes.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-16 text-center space-y-3">
-          <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-          <h3 className="text-base font-bold text-slate-200">No Unresolved Mistakes!</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            You currently have no recorded errors matching this filter. Keep reading authentic texts and completing comprehension activities to test your understanding.
+        <div className="bg-white border border-stone-200 rounded-2xl p-16 text-center space-y-3 shadow-sm">
+          <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
+          <h3 className="font-serif text-lg font-bold text-stone-800">No Unresolved Mistakes!</h3>
+          <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
+            You currently have no recorded errors matching this filter. Continue reading authentic stories and completing comprehension exercises.
           </p>
         </div>
       ) : (
@@ -139,41 +139,43 @@ export const MyMistakesPage: React.FC = () => {
             return (
               <div
                 key={mistake.id}
-                className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md flex flex-col justify-between"
+                className="bg-white border border-stone-200 rounded-xl p-5 space-y-4 shadow-sm flex flex-col justify-between"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Badge variant={mistake.status === 'mastered' ? 'emerald' : 'rose'}>
                       {mistake.error_category.replace('_', ' ').toUpperCase()}
                     </Badge>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="font-mono text-[11px] text-stone-500">
                       {mistake.occurrences_count} {mistake.occurrences_count === 1 ? 'occurrence' : 'occurrences'}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-bold text-slate-100">{mistake.stimulus}</h3>
+                    <h3 className="font-serif text-base font-bold text-stone-900 leading-snug">
+                      {mistake.stimulus}
+                    </h3>
                   </div>
 
                   {/* Previous submission vs correct answer */}
-                  <div className="p-3 bg-slate-950/70 border border-slate-800/80 rounded-xl space-y-1.5 text-xs">
-                    <div className="flex items-center gap-2 text-rose-300">
-                      <span className="font-semibold text-[10px] uppercase text-rose-400">Your answer:</span>
-                      <span>"{mistake.user_response}"</span>
+                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-lg space-y-2 text-xs">
+                    <div className="flex items-center gap-2 text-rose-800 bg-rose-50/70 p-2 rounded border border-rose-100">
+                      <span className="font-mono font-semibold text-[10px] uppercase text-rose-700">Your answer:</span>
+                      <span className="font-mono font-medium">"{mistake.user_response}"</span>
                     </div>
-                    <div className="flex items-center gap-2 text-emerald-300">
-                      <span className="font-semibold text-[10px] uppercase text-emerald-400">Correct:</span>
-                      <span className="font-semibold">"{mistake.correct_response}"</span>
+                    <div className="flex items-center gap-2 text-emerald-800 bg-emerald-50/70 p-2 rounded border border-emerald-100">
+                      <span className="font-mono font-semibold text-[10px] uppercase text-emerald-700">Correct:</span>
+                      <span className="font-mono font-semibold">"{mistake.correct_response}"</span>
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-300 leading-relaxed italic bg-slate-950/40 p-2.5 rounded-lg border border-slate-800/60">
+                  <p className="font-serif text-xs text-stone-700 leading-relaxed italic bg-amber-50/60 p-3 rounded-lg border-l-2 border-amber-300">
                     "{mistake.pedagogical_explanation}"
                   </p>
                 </div>
 
                 {/* Retest Area or Action */}
-                <div className="pt-3 border-t border-slate-800/80">
+                <div className="pt-3 border-t border-stone-100">
                   {isRetesting ? (
                     <div className="space-y-2">
                       <input
@@ -181,7 +183,7 @@ export const MyMistakesPage: React.FC = () => {
                         value={retestInput}
                         onChange={e => setRetestInput(e.target.value)}
                         placeholder="Type the correct response..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-500 focus:bg-white font-mono"
                       />
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => setRetestingId(null)}>
@@ -210,15 +212,15 @@ export const MyMistakesPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                            icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                             onClick={() => handleResolveMistake(mistake.id)}
                           >
                             Mark Mastered
                           </Button>
                         </>
                       ) : (
-                        <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                          <Award className="w-4 h-4" />
+                        <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                          <Award className="w-4 h-4 text-emerald-600" />
                           Mastered
                         </span>
                       )}

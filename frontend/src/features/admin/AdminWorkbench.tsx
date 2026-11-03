@@ -78,7 +78,7 @@ interface AdminWorkbenchProps {
 }
 
 export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
-  initialTab = 'overview',
+  initialTab = 'review',
 }) => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<AdminWorkbenchTab>(initialTab);
@@ -129,11 +129,11 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
   // Handlers for Content Review Actions
   const handleApproveContent = async (id: string) => {
+    setReviewItems(prev =>
+      prev.map(item => (item.id === id ? { ...item, status: 'approved' } : item))
+    );
     try {
       await adminService.approveContentItem(id);
-      setReviewItems(prev =>
-        prev.map(item => (item.id === id ? { ...item, status: 'approved' } : item))
-      );
       toast.success(t('admin:toast_content_approved', 'Conteúdo aprovado e disponibilizado para estudo.'));
     } catch {
       toast.error(t('admin:toast_action_failed', 'Erro ao aprovar conteúdo.'));
@@ -141,11 +141,11 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
   };
 
   const handleRejectContent = async (id: string) => {
+    setReviewItems(prev =>
+      prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item))
+    );
     try {
       await adminService.rejectContentItem(id, 'Rejeitado por moderação editorial');
-      setReviewItems(prev =>
-        prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item))
-      );
       toast.info(t('admin:toast_content_rejected', 'Conteúdo marcado como rejeitado.'));
     } catch {
       toast.error(t('admin:toast_action_failed', 'Erro ao rejeitar conteúdo.'));
@@ -184,7 +184,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
-                  {t('admin:workbench_title', 'Editorial Desk & Publishing Workspace')}
+                  {t('admin:workbench_title', 'Painel de Administração e Qualidade')}
                 </h2>
                 <Badge variant="slate" size="sm">{t('admin:workbench_badge', 'Admin Desk')}</Badge>
               </div>

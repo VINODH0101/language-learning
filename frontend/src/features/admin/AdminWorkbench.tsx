@@ -61,8 +61,11 @@ import { toast } from 'sonner';
 export type AdminWorkbenchTab =
   | 'overview'
   | 'content_studio'
-  | 'users'
+  | 'content_import'
+  | 'processing_studio'
   | 'review'
+  | 'settings'
+  | 'users'
   | 'languages'
   | 'cefr_audit'
   | 'providers'
@@ -198,10 +201,13 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
         {/* Workbench Tab Navigation */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar border-b border-stone-200">
           {[
-            { id: 'content_studio', label: 'Content Studio (Phase 7)' },
-            { id: 'overview', label: t('admin:tab_overview', 'Visão Geral') },
+            { id: 'overview', label: t('admin:tab_overview', 'Dashboard / Visão Geral') },
+            { id: 'content_studio', label: 'Content Library' },
+            { id: 'content_import', label: 'Import Content' },
+            { id: 'processing_studio', label: 'Processing Studio' },
+            { id: 'review', label: t('admin:tab_review', 'Fila de Moderação / Review & Publish'), count: reviewItems.filter(i => i.status === 'pending').length },
+            { id: 'settings', label: 'Settings' },
             { id: 'users', label: t('admin:tab_users', 'Gestão de Usuários') },
-            { id: 'review', label: t('admin:tab_review', 'Fila de Moderação'), count: reviewItems.filter(i => i.status === 'pending').length },
             { id: 'languages', label: t('admin:tab_languages', 'Matriz de Idiomas (13)'), count: 13 },
             { id: 'cefr_audit', label: t('admin:tab_cefr_audit', 'Auditoria CEFR A1–C1') },
             { id: 'providers', label: t('admin:tab_providers', 'Saúde de Provedores'), count: healthRecords.length },
@@ -231,8 +237,14 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
         </div>
       </div>
 
-      {/* 0.0 Content Studio Tab (Phase 7) */}
-      {activeTab === 'content_studio' && <AdminContentStudio />}
+      {/* Content Library (Phase 7) */}
+      {activeTab === 'content_studio' && <AdminContentStudio initialView="list" />}
+
+      {/* Import Content (Phase 7) */}
+      {activeTab === 'content_import' && <AdminContentStudio initialView="import" />}
+
+      {/* Processing Studio (Phase 7) */}
+      {activeTab === 'processing_studio' && <AdminContentStudio initialView="monitor" />}
 
       {/* 0. Overview Tab */}
       {activeTab === 'overview' && (
@@ -316,7 +328,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
       )}
 
       {/* 2. Language Enablement Matrix */}
-      {activeTab === 'languages' && (
+      {(activeTab === 'languages' || activeTab === 'settings') && (
         <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
           <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>

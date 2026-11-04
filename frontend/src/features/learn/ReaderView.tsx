@@ -49,32 +49,43 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const totalSentences = allSentences.length;
 
   // Active reading-session tracking refs
+  // Invariant: Tracking begins ONLY after the first meaningful learner interaction.
   const unflushedSecondsRef = useRef<number>(0);
   const totalActiveSecondsRef = useRef<number>(0);
-  const lastInteractionTimeRef = useRef<number>(Date.now());
-  const isIdleRef = useRef<boolean>(false);
+  const lastInteractionTimeRef = useRef<number>(0);
+  const hasInteractedRef = useRef<boolean>(false);
+  const isIdleRef = useRef<boolean>(true);
   const isTabVisibleRef = useRef<boolean>(typeof document !== 'undefined' ? document.visibilityState === 'visible' : true);
   const accumulatedStudyMinutesRef = useRef<number>(0);
 
   const INACTIVITY_THRESHOLD_MS = 60_000; // 60 seconds of inactivity pauses tracking
   const FLUSH_INTERVAL_SECONDS = 15; // flush to persistent storage every 15s of active reading
 
-  // Activity detection: resets idle timer on genuine user interaction
+  // Activity detection: activates/resets tracking on genuine user interaction
   const recordUserInteraction = useCallback(() => {
+    hasInteractedRef.current = true;
     lastInteractionTimeRef.current = Date.now();
     isIdleRef.current = false;
   }, []);
 
-  // Flush genuine active reading time to progress and storage
+  // Flush genuine active reading time to persistent storage and progress
   const flushActiveTime = useCallback(async () => {
     const unflushed = unflushedSecondsRef.current;
     if (unflushed <= 0) return;
 
-    // Immediately claim the unflushed seconds to prevent duplicate flushes
+    // Immediately claim the unflushed seconds to prevent concurrent flushes & double-counting
     unflushedSecondsRef.current = 0;
     const auth = authService.getState();
     const userId = auth.user?.id || 'guest_user';
 
+    // 1. Authoritative local persistence first (synchronous & robust across network drops)
+    try {
+      StorageService.addTodayActiveSeconds(unflushed, userId);
+    } catch (localErr) {
+      console.warn('Error saving active seconds locally:', localErr);
+    }
+
+    // 2. Persistent content progress and background remote synchronization
     try {
       await contentCentredService.updateLearnerProgress({
         user_id: userId,
@@ -82,13 +93,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         content_version_id: version.id,
         time_spent_seconds: unflushed,
       });
-
-      // Synchronize genuine cognitive seconds to StorageService across multiple sessions
-      StorageService.addTodayActiveSeconds(unflushed, userId);
-    } catch (err) {
-      // Re-add to unflushed so next flush retries without losing active seconds
-      unflushedSecondsRef.current += unflushed;
-      console.warn('Error flushing active reading time:', err);
+    } catch (remoteErr) {
+      console.warn('Error syncing active reading time remotely:', remoteErr);
+      // Local seconds are already safely preserved in StorageService; syncEngine handles retries.
     }
   }, [item.id, version.id]);
 
@@ -100,10 +107,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       if (!isVisible) {
         // Tab hidden: flush accumulated active seconds immediately and pause
         flushActiveTime();
+        isIdleRef.current = true;
+        hasInteractedRef.current = false;
       } else {
-        // Tab restored: resume active tracking
-        lastInteractionTimeRef.current = Date.now();
-        isIdleRef.current = false;
+        // Invariant: Do not automatically restart tracking solely because tab becomes visible.
+        // Keep tracking paused until the learner performs a meaningful interaction.
+        isIdleRef.current = true;
+        hasInteractedRef.current = false;
       }
     };
 
@@ -123,11 +133,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       // Pause if tab is hidden
       if (!isTabVisibleRef.current) return;
 
+      // Pause if no meaningful interaction occurred since mount or tab return
+      if (!hasInteractedRef.current) return;
+
       // Pause if idle for longer than the inactivity threshold
       if (Date.now() - lastInteractionTimeRef.current > INACTIVITY_THRESHOLD_MS) {
         isIdleRef.current = true;
         return;
       }
+
+      if (isIdleRef.current) return;
 
       // Active second accumulated
       unflushedSecondsRef.current += 1;

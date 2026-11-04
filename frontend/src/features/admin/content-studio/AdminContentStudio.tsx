@@ -32,10 +32,14 @@ import {
 } from '../../../services/contentPipelineService';
 import { toast } from 'sonner';
 
-export const AdminContentStudio: React.FC = () => {
+interface AdminContentStudioProps {
+  initialView?: 'list' | 'import' | 'monitor' | 'review';
+}
+
+export const AdminContentStudio: React.FC<AdminContentStudioProps> = ({ initialView = 'list' }) => {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'list' | 'import' | 'monitor' | 'review'>('list');
+  const [activeView, setActiveView] = useState<'list' | 'import' | 'monitor' | 'review'>(initialView);
 
   // Active working entities
   const [activeJob, setActiveJob] = useState<ContentProcessingJob | null>(null);

@@ -18,6 +18,7 @@ import {
   BookMarked,
   Bookmark,
   AlertTriangle,
+  ArrowLeft,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/i18nContext';
 import { authService, AuthState } from '../../services/auth';
@@ -213,6 +214,84 @@ export const Navigation: React.FC<NavigationProps> = ({
     }
   };
 
+  // Dedicated Admin Navigation Header when viewing AdminDesk
+  if (activeTab === 'admin' && authState.role === 'admin') {
+    return (
+      <header className="bg-[#FDFBF7]/95 border-b border-stone-200 sticky top-0 z-40 backdrop-blur-md w-full shadow-xs">
+        <div className="w-full px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 w-full">
+            {/* Left: Admin Logo & Exit to Learner App */}
+            <div className="flex items-center gap-3">
+              <div
+                role="button"
+                tabIndex={0}
+                className="flex items-center gap-2 cursor-pointer shrink-0 select-none group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
+                onClick={() => handleSelectNavTab('admin')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') handleSelectNavTab('admin');
+                }}
+                aria-label="Lexilume Admin Desk"
+              >
+                <Logo size="md" />
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-800 border border-stone-300 uppercase tracking-wider">
+                  Admin Desk
+                </span>
+              </div>
+
+              <button
+                onClick={() => handleSelectNavTab('dashboard')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 transition cursor-pointer border border-stone-200"
+                aria-label="Return to Learner View"
+                title="Return to Learner View"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Learner App</span>
+              </button>
+            </div>
+
+            {/* Center: Admin Primary Destinations */}
+            <nav className="hidden lg:flex items-center gap-1 mx-auto" aria-label="Admin Destinations">
+              {[
+                { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+                { id: 'content_studio', label: 'Content Library', icon: BookOpen },
+                { id: 'content_import', label: 'Import Content', icon: Sparkles },
+                { id: 'processing_studio', label: 'Processing Studio', icon: TrendingUp },
+                { id: 'review', label: 'Review & Publish', icon: Shield },
+                { id: 'settings', label: 'Settings', icon: Settings },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleSelectNavTab('admin')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-stone-700 hover:text-stone-900 hover:bg-stone-100 transition cursor-pointer"
+                >
+                  <item.icon className="w-3.5 h-3.5 text-stone-500" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </nav>
+
+            {/* Right: Sync Status + Language + Sign Out */}
+            <div className="flex items-center gap-2 shrink-0">
+              <SyncStatusBadge />
+              <InterfaceLanguageSelector />
+              <button
+                onClick={() => {
+                  authService.signOut();
+                  handleSelectNavTab('dashboard');
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 border border-stone-200 hover:border-rose-200 text-xs font-bold text-rose-700 transition cursor-pointer"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t('nav_sign_out')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <>
       {/* Top Header Navbar */}
@@ -238,7 +317,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               )}
             </div>
 
-            {/* CENTER: Desktop Navigation Menu */}
+            {/* CENTER: Desktop Navigation Menu (7 Primary Learner Destinations) */}
             <nav className="hidden lg:flex items-center gap-1 xl:gap-2 mx-auto" aria-label={t('navigation:menu_title', 'Main Navigation')}>
               {/* 1. Home / Dashboard */}
               <button
@@ -249,69 +328,44 @@ export const Navigation: React.FC<NavigationProps> = ({
                     : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
                 }`}
               >
-                <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+                <LayoutDashboard className="w-4 h-4 text-stone-700" />
                 <span>{t('nav_home')}</span>
               </button>
 
-              {/* Core Content-Centred Destinations (Phase 7) */}
-              <button
-                onClick={() => handleSelectNavTab('learn')}
-                aria-label="Content Library"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'learn'
-                    ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
-                }`}
-              >
-                <BookOpen className="w-4 h-4 text-emerald-400" />
-                <span>Texts</span>
-              </button>
-
-              <button
-                onClick={() => handleSelectNavTab('words')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'words'
-                    ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
-                }`}
-              >
-                <Bookmark className="w-4 h-4 text-amber-400" />
-                <span>My Words</span>
-              </button>
-
-              <button
-                onClick={() => handleSelectNavTab('mistakes')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'mistakes'
-                    ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
-                }`}
-              >
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
-                <span>My Mistakes</span>
-              </button>
-
-              {/* 2. Learn Dropdown (PT, ES, EN, Vocab, Dictionary) */}
+              {/* 2. Learn with quick-access track selector */}
               <div className="relative" ref={learnDropdownRef}>
-                <button
-                  onClick={() => setIsLearnDropdownOpen(!isLearnDropdownOpen)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                    isLearnActive
-                      ? 'bg-stone-100 text-emerald-300 shadow-sm border border-stone-200 font-bold'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
-                  }`}
-                  aria-expanded={isLearnDropdownOpen}
-                  aria-haspopup="true"
-                  aria-label={`${t('nav_learn')} menu`}
-                >
-                  <BookOpen className="w-4 h-4 text-emerald-400" />
-                  <span>{t('nav_learn')}</span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                      isLearnDropdownOpen ? 'rotate-180 text-emerald-300' : 'text-stone-500'
+                <div className="flex items-center">
+                  <button
+                    onClick={() => handleSelectNavTab('learn')}
+                    aria-label="Content Library"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-l-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
+                      activeTab === 'learn' || isLearnActive
+                        ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
                     }`}
-                  />
-                </button>
+                  >
+                    <BookOpen className="w-4 h-4 text-emerald-600" />
+                    <span>{t('nav_learn')}</span>
+                  </button>
+                  <button
+                    onClick={() => setIsLearnDropdownOpen(!isLearnDropdownOpen)}
+                    className={`px-1.5 py-2 rounded-r-xl text-sm transition-all duration-150 min-h-[42px] cursor-pointer border-l border-stone-200/60 ${
+                      activeTab === 'learn' || isLearnActive
+                        ? 'bg-stone-100 text-stone-900 border border-stone-200'
+                        : 'text-stone-500 hover:text-stone-900 hover:bg-stone-50'
+                    }`}
+                    aria-expanded={isLearnDropdownOpen}
+                    aria-haspopup="true"
+                    aria-label={`${t('nav_learn')} menu`}
+                    title={`${t('nav_learn')} menu`}
+                  >
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        isLearnDropdownOpen ? 'rotate-180 text-stone-900' : 'text-stone-500'
+                      }`}
+                    />
+                  </button>
+                </div>
 
                 {/* Dropdown Menu Panel */}
                 {isLearnDropdownOpen && (
@@ -410,15 +464,41 @@ export const Navigation: React.FC<NavigationProps> = ({
                 onClick={() => handleSelectNavTab('practice')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
                   activeTab === 'practice'
-                    ? 'bg-stone-100 text-amber-300 shadow-sm border border-stone-200 font-bold'
+                    ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
                     : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Sparkles className="w-4 h-4 text-amber-600" />
                 <span>{t('nav_practice')}</span>
               </button>
 
-              {/* 4. Progress */}
+              {/* 4. My Words */}
+              <button
+                onClick={() => handleSelectNavTab('words')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
+                  activeTab === 'words'
+                    ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+                }`}
+              >
+                <Bookmark className="w-4 h-4 text-amber-600" />
+                <span>My Words</span>
+              </button>
+
+              {/* 5. My Mistakes */}
+              <button
+                onClick={() => handleSelectNavTab('mistakes')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
+                  activeTab === 'mistakes'
+                    ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+                }`}
+              >
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                <span>My Mistakes</span>
+              </button>
+
+              {/* 6. Progress */}
               <button
                 onClick={() => handleSelectNavTab('progress')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
@@ -427,8 +507,21 @@ export const Navigation: React.FC<NavigationProps> = ({
                     : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
                 }`}
               >
-                <TrendingUp className="w-4 h-4 text-indigo-400" />
+                <TrendingUp className="w-4 h-4 text-stone-700" />
                 <span>{t('nav_progress')}</span>
+              </button>
+
+              {/* 7. Settings */}
+              <button
+                onClick={() => handleSelectNavTab('settings')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
+                  activeTab === 'settings'
+                    ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200 font-bold'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+                }`}
+              >
+                <Settings className="w-4 h-4 text-stone-600" />
+                <span>{t('nav_settings')}</span>
               </button>
             </nav>
 
@@ -578,14 +671,14 @@ export const Navigation: React.FC<NavigationProps> = ({
 
       {/* Accessible Mobile Bottom Navigation Dock (< 1024px) */}
       <nav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-xl border-t border-stone-200 flex items-center justify-around py-1.5 px-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-2xl"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-xl border-t border-stone-200 flex items-center justify-around py-1.5 px-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-2xl"
         aria-label={t('navigation:mobile_nav_aria', 'Mobile Navigation')}
       >
         {/* 1. Home */}
         <button
           onClick={() => handleSelectNavTab('dashboard')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            activeTab === 'dashboard' ? 'text-indigo-400 font-bold' : 'text-stone-600 hover:text-stone-900'
+            activeTab === 'dashboard' ? 'text-stone-900 font-bold' : 'text-stone-600 hover:text-stone-900'
           }`}
         >
           <LayoutDashboard className="w-5 h-5 mb-0.5" />
@@ -596,7 +689,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         <button
           onClick={handleMobileLearnClick}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            isLearnActive ? 'text-emerald-400 font-bold' : 'text-stone-600 hover:text-stone-900'
+            isLearnActive || activeTab === 'learn' ? 'text-emerald-700 font-bold' : 'text-stone-600 hover:text-stone-900'
           }`}
           aria-label={t('nav_learn')}
         >
@@ -608,7 +701,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         <button
           onClick={() => handleSelectNavTab('practice')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            activeTab === 'practice' ? 'text-amber-400 font-bold' : 'text-stone-600 hover:text-stone-900'
+            activeTab === 'practice' ? 'text-amber-700 font-bold' : 'text-stone-600 hover:text-stone-900'
           }`}
         >
           <Sparkles className="w-5 h-5 mb-0.5" />
@@ -619,11 +712,25 @@ export const Navigation: React.FC<NavigationProps> = ({
         <button
           onClick={() => handleSelectNavTab('progress')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            activeTab === 'progress' ? 'text-indigo-400 font-bold' : 'text-stone-600 hover:text-stone-900'
+            activeTab === 'progress' ? 'text-stone-900 font-bold' : 'text-stone-600 hover:text-stone-900'
           }`}
         >
           <TrendingUp className="w-5 h-5 mb-0.5" />
           <span className="text-[10px] tracking-tight leading-none">{t('nav_progress')}</span>
+        </button>
+
+        {/* 5. More (opens drawer with My Words, My Mistakes, Settings, Tracks & Tools) */}
+        <button
+          onClick={() => setIsMobileDrawerOpen(true)}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
+            isMobileDrawerOpen || ['words', 'mistakes', 'settings'].includes(activeTab)
+              ? 'text-stone-900 font-bold'
+              : 'text-stone-600 hover:text-stone-900'
+          }`}
+          aria-label={t('navigation:more_menu_aria', 'More menu')}
+        >
+          <Menu className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px] tracking-tight leading-none">{t('navigation:more', 'More')}</span>
         </button>
       </nav>
 
@@ -708,6 +815,20 @@ export const Navigation: React.FC<NavigationProps> = ({
                     <div className="text-left">
                       <div className="text-stone-900 font-semibold">My Mistakes</div>
                       <div className="text-[10px] text-stone-600 font-normal">Notebook for error remediation</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleSelectNavTab('settings')}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                    activeTab === 'settings' ? 'bg-stone-900 text-white shadow-sm' : 'text-stone-800 hover:bg-stone-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Settings className="w-4 h-4 text-stone-600" />
+                    <div className="text-left">
+                      <div className="text-stone-900 font-semibold">{t('nav_settings')}</div>
+                      <div className="text-[10px] text-stone-600 font-normal">Account, goals & preferences</div>
                     </div>
                   </div>
                 </button>

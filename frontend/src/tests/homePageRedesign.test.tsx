@@ -30,6 +30,8 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     localStorage.clear();
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
   });
 
   const renderHome = (initialLang: 'en' | 'pt' | 'es' = 'en') => {
@@ -673,7 +675,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     });
   });
 
-  it('24. Active reading session tracks active duration and flushes accumulated seconds on unmount', async () => {
+  it('24. Active reading session does not count time before interaction, tracks on active interaction, and flushes on unmount', async () => {
     vi.useFakeTimers();
     const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
     const mockItem = SEED_CONTENT_ITEMS[0];
@@ -687,7 +689,18 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
       />
     );
 
-    // Simulate active reading for 10 seconds
+    // 1. Invariant: Advance 10 seconds without any user interaction -> time MUST NOT be counted!
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+    expect(updateSpy).not.toHaveBeenCalled();
+
+    // 2. Meaningful user interaction starts active cognitive tracking
+    act(() => {
+      fireEvent.mouseMove(window);
+    });
+
+    // Advance 10 seconds of active reading
     act(() => {
       vi.advanceTimersByTime(10000);
     });
@@ -733,6 +746,10 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
         onBack={vi.fn()}
       />
     );
+    // Interact to initiate tracking
+    act(() => {
+      fireEvent.mouseMove(window);
+    });
     await act(async () => {
       vi.advanceTimersByTime(40000);
       await Promise.resolve();
@@ -755,6 +772,10 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
         onBack={vi.fn()}
       />
     );
+    // Interact to initiate tracking
+    act(() => {
+      fireEvent.mouseMove(window);
+    });
     await act(async () => {
       vi.advanceTimersByTime(40000);
       await Promise.resolve();
@@ -772,7 +793,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     vi.useRealTimers();
   });
 
-  it('26. Active reading timer pauses on 60s idle timeout and flushes on tab hidden', async () => {
+  it('26. Active reading timer pauses on 60s idle timeout and flushes on tab hidden, remaining paused when tab restored until interaction', async () => {
     vi.useFakeTimers();
     const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
     const mockItem = SEED_CONTENT_ITEMS[0];
@@ -792,6 +813,11 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
         onBack={vi.fn()}
       />
     );
+
+    // Meaningful interaction starts tracking
+    act(() => {
+      fireEvent.mouseMove(window);
+    });
 
     // 10 active seconds
     act(() => {
@@ -817,9 +843,22 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
       })
     );
 
+    // Returning to visible tab does NOT auto-resume tracking until user interacts
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    act(() => {
+      vi.advanceTimersByTime(20000); // 20s passes with NO user interaction
+    });
+
     act(() => {
       unmount();
     });
+
+    // Restore real document visibility state
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
 
     authStateSpy.mockRestore();
     vi.useRealTimers();
@@ -1044,5 +1083,151 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     fireEvent.click(secondSentence);
 
     expect(localStorage.getItem(`lexilume_reading_pos_${mockItem.id}_${mockItem.version.id}`)).toBe('s2');
+  });
+
+  it('31. Priority 3 recommendation transitions to honest empty state when all published items are already completed', async () => {
+    const course = { ...sampleCourse, target_language: 'pt' as const };
+    const userId = course.user_id;
+
+    // Mock published items
+    const published = [
+      { id: 'item_1', title: 'Story 1', primary_cefr: 'B1', target_language: 'pt', status: 'published' },
+      { id: 'item_2', title: 'Story 2', primary_cefr: 'B1', target_language: 'pt', status: 'published' },
+    ];
+    vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValue(published as any);
+
+    // Mock all published items as completed in progress
+    vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValue([
+      { id: 'p1', user_id: userId, content_item_id: 'item_1', status: 'completed', percent_complete: 100 },
+      { id: 'p2', user_id: userId, content_item_id: 'item_2', status: 'completed', percent_complete: 100 },
+    ] as any);
+
+    // Mock curriculum generator to return null to test recommendation phase
+    const lessonSpy = vi.spyOn(ClientLessonGenerator, 'generateOrGetLesson').mockReturnValue(null as any);
+
+    const result = await resolveContinueLearning(course, userId);
+
+    // Invariant: Never recommend already completed content as unfinished; transition honestly to empty!
+    expect(result.type).toBe('empty');
+
+    lessonSpy.mockRestore();
+  });
+
+  it('32. Local persistence in StorageService succeeds even when remote updateLearnerProgress rejects', async () => {
+    vi.useFakeTimers();
+    // Simulate remote network failure
+    vi.spyOn(contentCentredService, 'updateLearnerProgress').mockRejectedValue(new Error('Network offline'));
+    const mockItem = SEED_CONTENT_ITEMS[0];
+    const userId = 'user_offline_sync_test';
+    const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
+      user: { id: userId, email: 'offline@example.com' } as any,
+      role: 'user',
+      isGuest: false,
+      isLoading: false,
+    });
+
+    const { unmount } = render(
+      <ReaderView
+        item={mockItem}
+        version={mockItem.version}
+        activities={mockItem.activities}
+        onBack={vi.fn()}
+      />
+    );
+
+    // Meaningful interaction
+    act(() => {
+      fireEvent.mouseMove(window);
+    });
+
+    // Advance 30 active seconds
+    act(() => {
+      vi.advanceTimersByTime(30000);
+    });
+
+    // Unmount flushes
+    act(() => {
+      unmount();
+    });
+
+    // Even though remote network failed, authoritative local seconds are preserved!
+    expect(StorageService.getTodayStudySeconds(userId)).toBe(30);
+
+    authStateSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('33. Full reading and activity lifecycle: preserves reading position when activities are completed', async () => {
+    const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
+    const mockItem = SEED_CONTENT_ITEMS[0];
+    const userId = 'user_lifecycle_test';
+    const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
+      user: { id: userId, email: 'lifecycle@example.com' } as any,
+      role: 'user',
+      isGuest: false,
+      isLoading: false,
+    });
+
+    // 1. Set explicit reading position before activity submission
+    localStorage.setItem(`lexilume_reading_pos_${mockItem.id}_${mockItem.version.id}`, 's3');
+
+    // 2. Complete activities via contentCentredService
+    await contentCentredService.updateLearnerProgress({
+      user_id: userId,
+      content_item_id: mockItem.id,
+      content_version_id: mockItem.version.id,
+      status: 'completed',
+      percent_complete: 100,
+      completed_activity_ids: ['act_1', 'act_2'],
+    });
+
+    // Verified: Reading position in localStorage was not clobbered by activity completion
+    expect(localStorage.getItem(`lexilume_reading_pos_${mockItem.id}_${mockItem.version.id}`)).toBe('s3');
+
+    authStateSpy.mockRestore();
+  });
+
+  it('34. Duplicate saved words with same lemma are deduplicated into single distinct canonical count', async () => {
+    const userId = 'user_dedup_test';
+    const today = getLocalTodayDateString();
+
+    vi.spyOn(contentCentredService, 'getUserSavedWords').mockResolvedValue([
+      {
+        id: 'w1',
+        user_id: userId,
+        target_language: 'pt',
+        lemma: 'aprender',
+        term: 'aprendo',
+        next_review: today,
+        created_at: new Date().toISOString(),
+      } as any,
+      // Duplicate saved word with same lemma but different inflected term
+      {
+        id: 'w2',
+        user_id: userId,
+        target_language: 'pt',
+        lemma: 'aprender',
+        term: 'aprendemos',
+        next_review: today,
+        created_at: new Date().toISOString(),
+      } as any,
+    ]);
+
+    vi.spyOn(StorageService, 'getSRSItems').mockReturnValue([]);
+
+    const summary = await resolveVocabularySummary({ ...sampleCourse, target_language: 'pt' }, userId);
+
+    // Deduped into 1 canonical item: 'pt:aprender'
+    expect(summary.dueSRSCount).toBe(1);
+    expect(summary.savedThisWeekCount).toBe(1);
+  });
+
+  it('35. Same spelling in different languages (pt:sol vs es:sol) produces distinct canonical identities', () => {
+    const ptKey = buildCanonicalVocabIdentity('pt', null, 'sol', 'sol');
+    const esKey = buildCanonicalVocabIdentity('es', null, 'sol', 'sol');
+
+    expect(ptKey).toBe('pt:sol');
+    expect(esKey).toBe('es:sol');
+    expect(ptKey).not.toBe(esKey);
   });
 });

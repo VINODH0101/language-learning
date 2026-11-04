@@ -493,19 +493,9 @@ export class StorageService {
       }
     } catch {}
 
-    // Calculate actual elapsed minutes from today's recorded exercise attempts using local calendar date
-    const attempts = this.getExerciseAttempts(userId);
-    const todayAttempts = attempts.filter(a => {
-      if (!a.timestamp) return false;
-      const ad = new Date(a.timestamp);
-      if (isNaN(ad.getTime())) return a.timestamp.startsWith(today);
-      const aLocal = `${ad.getFullYear()}-${String(ad.getMonth() + 1).padStart(2, '0')}-${String(ad.getDate()).padStart(2, '0')}`;
-      return aLocal === today;
-    });
-    if (todayAttempts.length === 0) return 0;
-
-    // Genuine calculation: average ~1.5 minutes per attempt actively completed
-    return Math.max(1, Math.round(todayAttempts.length * 1.5));
+    // Derives strictly from genuine tracked active study seconds; never estimates from exercise count or arbitrary durations
+    const seconds = this.getTodayStudySeconds(userId);
+    return Math.floor(seconds / 60);
   }
 
   /**
@@ -545,11 +535,18 @@ export class StorageService {
     const newFullMinutes = Math.floor(totalSeconds / 60);
     const deltaMinutes = newFullMinutes - prevFullMinutes;
 
+    let currentStoredMins = 0;
+    try {
+      const stored = localStorage.getItem(minKey);
+      if (stored !== null) {
+        currentStoredMins = Math.max(0, parseInt(stored, 10) || 0);
+      }
+    } catch {}
+
     try {
       localStorage.setItem(secKey, String(totalSeconds));
       if (deltaMinutes > 0) {
-        const currentMins = this.getTodayStudyMinutes(userId);
-        localStorage.setItem(minKey, String(currentMins + deltaMinutes));
+        localStorage.setItem(minKey, String(currentStoredMins + deltaMinutes));
       }
     } catch (e) {
       console.warn('Error recording active study seconds', e);

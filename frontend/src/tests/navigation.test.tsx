@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { Navigation, NavTab } from '../components/common/Navigation';
 import { I18nProvider } from '../i18n/i18nContext';
 import { courseService } from '../services/courseService';
+import { authService } from '../services/auth';
 import i18n from '../i18n/config';
 
 describe('Navigation Component & UX', () => {
@@ -127,5 +128,94 @@ describe('Navigation Component & UX', () => {
     const signInBtn = screen.getByRole('button', { name: /entrar|sign in/i });
     expect(signInBtn).toBeDefined();
     expect(signInBtn.getAttribute('aria-label') || signInBtn.getAttribute('title')).toMatch(/entrar|sign in/i);
+  });
+
+  it('renders all 7 primary learner destinations on desktop', () => {
+    renderNav('dashboard');
+
+    // Desktop main navigation container
+    const navMenu = screen.getByRole('navigation', { name: 'Navigation Menu' });
+    expect(navMenu).toBeDefined();
+
+    // 1. Home
+    expect(within(navMenu).getByRole('button', { name: /^Home$/i })).toBeDefined();
+    // 2. Learn / Texts
+    expect(within(navMenu).getByRole('button', { name: /Content Library/i })).toBeDefined();
+    // 3. Practice
+    expect(within(navMenu).getByRole('button', { name: /^Practice$/i })).toBeDefined();
+    // 4. My Words
+    expect(within(navMenu).getByRole('button', { name: /^My Words$/i })).toBeDefined();
+    // 5. My Mistakes
+    expect(within(navMenu).getByRole('button', { name: /^My Mistakes$/i })).toBeDefined();
+    // 6. Progress
+    expect(within(navMenu).getByRole('button', { name: /^Progress$/i })).toBeDefined();
+    // 7. Settings
+    expect(within(navMenu).getByRole('button', { name: /^Settings$/i })).toBeDefined();
+  });
+
+  it('renders 5 destinations on mobile bottom dock including More which opens drawer', () => {
+    renderNav('dashboard');
+
+    const mobileDock = screen.getByRole('navigation', { name: 'Mobile Navigation' });
+    expect(mobileDock).toBeDefined();
+
+    // The 5 dock destinations
+    expect(screen.getByRole('button', { name: /More menu|Mais/i })).toBeDefined();
+
+    // Clicking More opens drawer
+    const moreBtn = screen.getByRole('button', { name: /More menu|Mais/i });
+    fireEvent.click(moreBtn);
+
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(screen.getByText(/(Navegação Completa|Full Navigation)/i)).toBeDefined();
+  });
+
+  it('renders dedicated admin navigation header when activeTab is admin and user is authorized admin', async () => {
+    const adminUser = {
+      id: 'admin_1',
+      auth_user_id: 'auth_admin_1',
+      email: 'admin@lexilume.com',
+      full_name: 'Lead Admin',
+      role: 'admin',
+      account_status: 'active',
+      native_language: 'en',
+      primary_target_language: 'pt',
+      interface_language: 'en',
+      explanation_language: 'en',
+      theme: 'light',
+      onboarding_completed: true,
+    };
+    const adminState = {
+      user: adminUser as any,
+      role: 'admin' as const,
+      isGuest: false,
+      isLoading: false,
+    };
+    const authSpy = vi.spyOn(authService, 'getState').mockReturnValue(adminState);
+    const subSpy = vi.spyOn(authService, 'subscribe').mockImplementation((listener) => {
+      listener(adminState);
+      return () => {};
+    });
+
+    renderNav('admin');
+
+    // Admin Desk identity
+    expect(screen.getByText(/Admin Desk/i)).toBeDefined();
+    // Learner App return button
+    expect(screen.getByRole('button', { name: /Return to Learner View/i })).toBeDefined();
+    // Admin primary destinations
+    expect(screen.getByRole('button', { name: /Dashboard/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Content Library/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Import Content/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Processing Studio/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Review & Publish/i })).toBeDefined();
+
+    // Clicking Learner App button returns to dashboard
+    const returnBtn = screen.getByRole('button', { name: /Return to Learner View/i });
+    fireEvent.click(returnBtn);
+    expect(mockOnSelectTab).toHaveBeenCalledWith('dashboard');
+
+    authSpy.mockRestore();
+    subSpy.mockRestore();
   });
 });

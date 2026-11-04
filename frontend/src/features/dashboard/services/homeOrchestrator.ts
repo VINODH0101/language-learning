@@ -260,8 +260,9 @@ export const resolveContinueLearning = async (
   }
 
   // 3. Fallback to suitable published recommendation
-  // - Exclude completed items
-  // - Prefer exact CEFR match, then compatible CEFR match
+  // - Exclude completed items (never recommend completed items as unfinished)
+  // - Prefer exact CEFR match, then compatible CEFR match (|delta| <= 1)
+  // - Never select arbitrary content merely because it is the first catalog item
   // - Deterministic rotation per user/course/date
   // Invariant: Do NOT swallow backend/network errors into fake empty states;
   // let errors propagate so caller presents the error state with a retry action!
@@ -274,27 +275,34 @@ export const resolveContinueLearning = async (
     allProgress.filter(p => p.status === 'completed').map(p => p.content_item_id)
   );
   const uncompleted = published.filter(item => !completedIds.has(item.id));
-  const candidates = uncompleted.length > 0 ? uncompleted : published;
 
-  const exactCefr = candidates.filter(item => item.primary_cefr === course.cefr_level);
-  const compatibleCefr = candidates.filter(item => isCEFRCompatible(item.primary_cefr, course.cefr_level));
-  const eligiblePool = exactCefr.length > 0 ? exactCefr : (compatibleCefr.length > 0 ? compatibleCefr : candidates);
-
-  if (eligiblePool.length > 0) {
-    const sortedPool = [...eligiblePool].sort((a, b) => {
-      const hashA = getDeterministicDateHash(`${today}_${course.id}_${a.id}`);
-      const hashB = getDeterministicDateHash(`${today}_${course.id}_${b.id}`);
-      return hashA - hashB;
-    });
-
-    const selected = sortedPool[0];
-    const full = await contentCentredService.getContentItemById(selected.id);
-    return {
-      type: 'recommended',
-      item: full || selected,
-      version: full?.version,
-    };
+  // If all published items have already been completed, honestly transition to empty state
+  if (uncompleted.length === 0) {
+    return { type: 'empty' };
   }
+
+  const exactCefr = uncompleted.filter(item => item.primary_cefr === course.cefr_level);
+  const compatibleCefr = uncompleted.filter(item => item.primary_cefr && isCEFRCompatible(item.primary_cefr, course.cefr_level));
+  const eligiblePool = exactCefr.length > 0 ? exactCefr : compatibleCefr;
+
+  // If no CEFR-compatible uncompleted items exist, do not recommend distant levels; return empty state
+  if (eligiblePool.length === 0) {
+    return { type: 'empty' };
+  }
+
+  const sortedPool = [...eligiblePool].sort((a, b) => {
+    const hashA = getDeterministicDateHash(`${today}_${course.id}_${a.id}`);
+    const hashB = getDeterministicDateHash(`${today}_${course.id}_${b.id}`);
+    return hashA - hashB;
+  });
+
+  const selected = sortedPool[0];
+  const full = await contentCentredService.getContentItemById(selected.id);
+  return {
+    type: 'recommended',
+    item: full || selected,
+    version: full?.version,
+  };
 
   // 4. Genuine empty state (catalog has zero matching published content)
   return { type: 'empty' };
@@ -404,7 +412,7 @@ export const resolveVocabularySummary = async (
 
     const canonicalKey = buildCanonicalVocabIdentity(
       targetLang,
-      w.lemma || w.term,
+      (w as any).canonical_id,
       w.lemma,
       w.term
     );
@@ -414,6 +422,7 @@ export const resolveVocabularySummary = async (
     if (w.legacy_srs_item_id) {
       const legacyKey = `${targetLang.toLowerCase()}:${normalizeCanonicalVocabKey(w.legacy_srs_item_id)}`;
       legacyIdToCanonicalMap.set(legacyKey, canonicalKey);
+      legacyIdToCanonicalMap.set(w.legacy_srs_item_id, canonicalKey);
     }
 
     const nextDue = w.next_review || (w as any).next_review_date;
@@ -433,9 +442,13 @@ export const resolveVocabularySummary = async (
     if (item.language && item.language !== targetLang) continue;
     if (!item.vocabulary_item_id) continue;
 
-    const itemNormalizedId = `${targetLang.toLowerCase()}:${normalizeCanonicalVocabKey(item.vocabulary_item_id)}`;
-    // Resolve alias if mapped from a UserSavedWord legacy_srs_item_id; otherwise use normalized item ID
-    const canonicalKey = legacyIdToCanonicalMap.get(itemNormalizedId) || itemNormalizedId;
+    const rawItemId = item.vocabulary_item_id;
+    const scopedItemId = `${targetLang.toLowerCase()}:${normalizeCanonicalVocabKey(rawItemId)}`;
+    // Resolve alias if mapped from a UserSavedWord legacy_srs_item_id; otherwise build canonical key
+    const canonicalKey = legacyIdToCanonicalMap.get(scopedItemId) ||
+      legacyIdToCanonicalMap.get(rawItemId) ||
+      buildCanonicalVocabIdentity(targetLang, rawItemId, (item as any).lemma, (item as any).term);
+    if (!canonicalKey) continue;
 
     if (item.next_review_date && item.next_review_date <= today) {
       dueCanonicalKeys.add(canonicalKey);

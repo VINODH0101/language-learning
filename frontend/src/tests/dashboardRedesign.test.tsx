@@ -97,25 +97,7 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.queryByText(/Daily Immersive Dialogue/i)).toBeNull();
   });
 
-  it('6. Supports global country exploration across 250+ countries with genuine coordinates', async () => {
-    renderDashboard('en');
-
-    // Global Discovery header and selector
-    expect(screen.getByText(/Global Discovery/i)).toBeDefined();
-    expect(screen.getByText(/Capital & Region/i)).toBeDefined();
-    expect(screen.getByText(/Population/i)).toBeDefined();
-    expect(screen.getByText(/Local Weather/i)).toBeDefined();
-    expect(screen.getByText(/GPS:/i)).toBeDefined();
-
-    // Switch country dropdown to another sovereign nation
-    const select = screen.getByLabelText(/Select country to explore/i) as HTMLSelectElement;
-    expect(select).toBeDefined();
-
-    fireEvent.change(select, { target: { value: 'BR' } });
-    expect(select.value).toBe('BR');
-  });
-
-  it('7. Enforces replacement semantics in DailyContentService (new activates, old archives)', async () => {
+  it('6. Enforces replacement semantics in DailyContentService (new activates, old archives)', async () => {
     const initial = await dailyContentService.getAllContent();
 
     // Publish new poem
@@ -142,5 +124,36 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     // Previous active poem was safely archived (not deleted)
     const archivedPt = updated.archivedPoetry.filter(p => p.learning_language === 'pt');
     expect(archivedPt.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('7. Displays Section 4 Vocabulary Summary with genuine review schedule and links to My Words', async () => {
+    renderDashboard('en');
+
+    expect(screen.getByText(/Vocabulary Summary/i)).toBeDefined();
+    expect(screen.getByText(/Due for Review Today/i)).toBeDefined();
+    expect(screen.getByText(/Saved in Past 7 Days/i)).toBeDefined();
+
+    const myWordsBtn = screen.getByText(/My Words/i);
+    fireEvent.click(myWordsBtn);
+    expect(mockNavigateTab).toHaveBeenCalledWith('words');
+  });
+
+  it('8. Displays Section 6 Recently Learned and provides link to full progress history', async () => {
+    renderDashboard('en');
+
+    expect(screen.getByText(/Recently Learned/i)).toBeDefined();
+    const historyBtn = screen.getByText(/View Learning History/i);
+    fireEvent.click(historyBtn);
+    expect(mockNavigateTab).toHaveBeenCalledWith('progress');
+  });
+
+  it('9. Enforces Four-Way Linguistic Decoupling in masthead', () => {
+    renderDashboard('en');
+
+    // Should indicate target language and explanation language separately
+    expect(screen.getAllByText(/Learning/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Portuguese/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Explanations in/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/English/i).length).toBeGreaterThan(0);
   });
 });

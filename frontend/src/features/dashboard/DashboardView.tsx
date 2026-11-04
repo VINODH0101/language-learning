@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   DailyLessonPayload,
   UserSettings,
@@ -9,6 +9,7 @@ import {
   DailyPoem,
   DailyConversation,
 } from '../../types';
+import { ContentItem } from '../../types/contentCentred';
 import { ClientLessonGenerator } from '../../services/lessonGenerator';
 import { StorageService } from '../../services/storage';
 import { getActiveProgress } from '../../services/localDb';
@@ -19,21 +20,34 @@ import { toast } from 'sonner';
 
 import {
   WelcomeHeader,
-  DailyLearningGoal,
   ContinueLearningCard,
   DailyContentPreview,
+  VocabularySummary,
+  DailyLearningGoal,
+  RecentLearning,
   DailyPoetryReaderModal,
   DailyConversationModal,
-  GlobalCountryDiscovery,
-  PracticeReminder,
-  RecentActivityCard,
-  CoursesOverviewCard,
   AddCourseModal,
 } from './components';
+
+import {
+  ContinueItemData,
+  RecentLearningActivity,
+  getLocalTodayDateString,
+  resolveContinueLearning,
+  resolveTodaysEdition,
+  resolveVocabularySummary,
+  resolveDailyGoal,
+  resolveRecentActivities,
+} from './services/homeOrchestrator';
 
 interface DashboardPageProps {
   onNavigateTab: (
     tab:
+      | 'learn'
+      | 'words'
+      | 'mistakes'
+      | 'dashboard'
       | 'portuguese'
       | 'spanish'
       | 'english'
@@ -43,28 +57,51 @@ interface DashboardPageProps {
       | 'practice'
       | 'progress'
       | 'settings'
+      | 'admin'
   ) => void;
 }
 
 export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) => {
-  const { t, interfaceLanguage } = useI18n();
-  const [courses, setCourses] = useState<Course[]>(courseService.getCourses());
-  const [activeCourse, setActiveCourse] = useState<Course>(() => {
-    return courseService.getActiveCourse();
-  });
+  const { t } = useI18n();
 
+  // Active courses state
+  const [courses, setCourses] = useState<Course[]>(() => courseService.getCourses());
+  const [activeCourse, setActiveCourse] = useState<Course>(() => courseService.getActiveCourse());
+  const [settings, setSettings] = useState<UserSettings | null>(() => StorageService.getSettings());
+
+  // Section 2: Continue Learning
+  const [continueItem, setContinueItem] = useState<ContinueItemData | null>(null);
   const [activeLesson, setActiveLesson] = useState<DailyLessonPayload | null>(null);
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [dueSRSCount, setDueSRSCount] = useState(0);
   const [activeLessonProgress, setActiveLessonProgress] = useState<ActiveLessonProgress | null>(null);
-  const [isAddCourseModalOpen, setIsAddCourseModalOpen] = useState(false);
+  const [isContinueLoading, setIsContinueLoading] = useState(true);
 
-  // Daily Content (Poetry & Conversation)
-  const [dailyPoem, setDailyPoem] = useState<DailyPoem | null>(null);
-  const [dailyConversation, setDailyConversation] = useState<DailyConversation | null>(null);
+  // Section 3: Today's Edition
+  const [dailyPoem, setDailyPoem] = useState<DailyPoem | null>(() => {
+    return dailyContentService.getDailyPoem(
+      courseService.getActiveCourse().target_language,
+      courseService.getActiveCourse().explanation_language
+    );
+  });
+  const [dailyConversation, setDailyConversation] = useState<DailyConversation | null>(() => {
+    return dailyContentService.getDailyConversation(
+      courseService.getActiveCourse().target_language,
+      courseService.getActiveCourse().explanation_language
+    );
+  });
+  const [todayStories, setTodayStories] = useState<ContentItem[]>([]);
   const [isPoetryModalOpen, setIsPoetryModalOpen] = useState(false);
   const [isConversationModalOpen, setIsConversationModalOpen] = useState(false);
 
+  // Section 4: Vocabulary Summary
+  const [dueSRSCount, setDueSRSCount] = useState<number>(() => {
+    const today = getLocalTodayDateString();
+    const active = courseService.getActiveCourse();
+    const items = StorageService.getSRSItems(active.target_language, courseService.getUserId());
+    return items.filter(s => s.next_review_date <= today).length;
+  });
+  const [savedThisWeekCount, setSavedThisWeekCount] = useState(0);
+
+  // Section 5: Daily Goal & Pace
   const [sessionDuration, setSessionDuration] = useState<SessionDuration>(() => {
     try {
       const saved = localStorage.getItem('polyglot_session_duration');
@@ -72,6 +109,12 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     } catch {}
     return '10';
   });
+
+  // Section 6: Recently Learned
+  const [recentActivities, setRecentActivities] = useState<RecentLearningActivity[]>([]);
+
+  // Modals
+  const [isAddCourseModalOpen, setIsAddCourseModalOpen] = useState(false);
 
   // Subscribe to course updates
   useEffect(() => {
@@ -82,26 +125,26 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     return unsub;
   }, []);
 
-  // Synchronize lesson, SRS, and daily content when active course changes
+  // Orchestrate independent Home sections when activeCourse changes
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const generated = ClientLessonGenerator.generateOrGetLesson(
-      courseService.toCourseConfig(activeCourse),
-      today
-    );
-    setActiveLesson(generated);
+    const userId = courseService.getUserId();
+    const today = getLocalTodayDateString();
+
+    // Ensure settings are synced
     setSettings(StorageService.getSettings());
 
-    const allSRS = StorageService.getSRSItems(activeCourse.target_language);
-    const due = allSRS.filter(s => s.next_review_date <= today);
-    setDueSRSCount(due.length);
+    // Generate fallback curriculum lesson synchronously
+    try {
+      const generated = ClientLessonGenerator.generateOrGetLesson(
+        courseService.toCourseConfig(activeCourse),
+        today
+      );
+      setActiveLesson(generated);
+    } catch (err) {
+      console.warn('Error generating daily lesson fallback:', err);
+    }
 
-    getActiveProgress(activeCourse.target_language).then(p => {
-      if (p && p.lesson_date === today) setActiveLessonProgress(p);
-      else setActiveLessonProgress(null);
-    });
-
-    // Load authentic daily literature and conversation
+    // Load authentic daily literature and conversation immediately
     const poem = dailyContentService.getDailyPoem(
       activeCourse.target_language,
       activeCourse.explanation_language
@@ -112,6 +155,62 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     );
     setDailyPoem(poem);
     setDailyConversation(convo);
+
+    // Initial synchronous SRS count
+    const allSRS = StorageService.getSRSItems(activeCourse.target_language, userId);
+    const due = allSRS.filter(s => s.next_review_date <= today);
+    setDueSRSCount(due.length);
+
+    // Check active lesson progress
+    getActiveProgress(activeCourse.target_language)
+      .then(p => {
+        if (p && p.lesson_date === today) setActiveLessonProgress(p);
+        else setActiveLessonProgress(null);
+      })
+      .catch(() => setActiveLessonProgress(null));
+
+    // Section 2: Resolve Continue Learning Priority
+    setIsContinueLoading(true);
+    resolveContinueLearning(activeCourse, userId)
+      .then(res => {
+        setContinueItem(res);
+      })
+      .catch(err => {
+        console.warn('Error resolving continue learning:', err);
+      })
+      .finally(() => {
+        setIsContinueLoading(false);
+      });
+
+    // Section 3: Resolve Today's Edition (Poem, Dialogue, Stories)
+    resolveTodaysEdition(activeCourse)
+      .then(edition => {
+        setDailyPoem(edition.poem);
+        setDailyConversation(edition.conversation);
+        setTodayStories(edition.stories);
+      })
+      .catch(err => {
+        console.warn('Error resolving today edition:', err);
+      });
+
+    // Section 4: Resolve Vocabulary Summary
+    resolveVocabularySummary(activeCourse, userId)
+      .then(vocab => {
+        setDueSRSCount(vocab.dueSRSCount);
+        setSavedThisWeekCount(vocab.savedThisWeekCount);
+      })
+      .catch(err => {
+        console.warn('Error resolving vocabulary summary:', err);
+      });
+
+    // Section 6: Resolve Recent Learning Activities
+    resolveRecentActivities(activeCourse, userId)
+      .then(acts => {
+        setRecentActivities(acts);
+      })
+      .catch(err => {
+        console.warn('Error resolving recent activities:', err);
+      });
   }, [activeCourse]);
 
   const handleSelectDuration = (d: SessionDuration) => {
@@ -123,16 +222,6 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     } catch {}
   };
 
-  const handleSwitchCourse = (courseId: string) => {
-    try {
-      const switched = courseService.setActiveCourse(courseId);
-      setActiveCourse(switched);
-      toast.success(`${t('dashboard:active_course', 'Active Course')}: ${switched.target_language.toUpperCase()} (${switched.cefr_level})`);
-    } catch {
-      toast.error(t('errors:course_switch_failed', 'Error switching course.'));
-    }
-  };
-
   const handleOpenCourseLesson = (course: Course) => {
     courseService.setActiveCourse(course.id);
     if (course.target_language === 'en') onNavigateTab('english');
@@ -141,20 +230,40 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     else onNavigateTab('portuguese');
   };
 
+  const handleContinue = (item: ContinueItemData) => {
+    if (item.type === 'story' || item.type === 'recommended') {
+      try {
+        sessionStorage.setItem('lexilume_open_content_id', item.item.id);
+      } catch {}
+      onNavigateTab('learn');
+    } else if (item.type === 'curriculum') {
+      handleOpenCourseLesson(activeCourse);
+    } else {
+      onNavigateTab('learn');
+    }
+  };
+
+  const handleOpenStory = (story: ContentItem) => {
+    try {
+      sessionStorage.setItem('lexilume_open_content_id', story.id);
+    } catch {}
+    onNavigateTab('learn');
+  };
+
   if (!activeLesson || !settings) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-slate-400 text-sm">
-        {t('dash_loading')}
+      <div className="flex items-center justify-center min-h-[50vh] text-stone-400 text-sm">
+        {t('dash_loading', 'Loading editorial edition...')}
       </div>
     );
   }
 
-  // Genuine tracked cognitive learning minutes today (Zero fabrication: returns 0 if unstarted)
+  // Genuine tracked cognitive learning minutes today
   const genuineStudyMinutes = StorageService.getTodayStudyMinutes(courseService.getUserId());
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full max-w-full overflow-x-hidden">
-      {/* 1. Welcome & Immersion Header */}
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8 overflow-x-hidden">
+      {/* 1. Personal Welcome Header */}
       <WelcomeHeader
         fullName={settings.full_name}
         streakDays={activeCourse.streak_days}
@@ -162,54 +271,49 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
         activeCourse={activeCourse}
       />
 
-      {/* 2. Daily Learning Goal & Pace Tracker */}
+      {/* 2. Hero Continue Learning Card (Primary Visual Focus) */}
+      <ContinueLearningCard
+        activeCourse={activeCourse}
+        activeLesson={activeLesson}
+        activeLessonProgress={activeLessonProgress}
+        continueItem={continueItem}
+        onContinue={handleContinue}
+        onOpenLesson={handleOpenCourseLesson}
+        onExploreCatalog={() => onNavigateTab('learn')}
+        isLoading={isContinueLoading}
+      />
+
+      {/* 3. Today's Edition: Mixed Content Discovery */}
+      <DailyContentPreview
+        dailyPoem={dailyPoem}
+        dailyConversation={dailyConversation}
+        publishedStories={todayStories}
+        onOpenPoem={() => setIsPoetryModalOpen(true)}
+        onOpenConversation={() => setIsConversationModalOpen(true)}
+        onOpenStory={handleOpenStory}
+        onExploreAll={() => onNavigateTab('learn')}
+      />
+
+      {/* 4. Vocabulary Summary & Spaced Repetition */}
+      <VocabularySummary
+        dueSRSCount={dueSRSCount}
+        savedThisWeekCount={savedThisWeekCount}
+        onReviewDue={() => onNavigateTab('practice')}
+        onOpenVocabulary={() => onNavigateTab('words')}
+      />
+
+      {/* 5. Daily Learning Goal & Pace */}
       <DailyLearningGoal
-        dailyGoalMinutes={activeCourse.daily_goal_minutes}
+        dailyGoalMinutes={activeCourse.daily_goal_minutes || 10}
         elapsedMinutes={genuineStudyMinutes}
         sessionDuration={sessionDuration}
         onSelectDuration={handleSelectDuration}
       />
 
-      {/* 3. Hero Continue Learning Card */}
-      <ContinueLearningCard
-        activeCourse={activeCourse}
-        activeLesson={activeLesson}
-        activeLessonProgress={activeLessonProgress}
-        onOpenLesson={handleOpenCourseLesson}
-      />
-
-      {/* 4. Daily Learning Content (Poetry & Immersive Conversation) */}
-      <DailyContentPreview
-        dailyPoem={dailyPoem}
-        dailyConversation={dailyConversation}
-        onOpenPoem={() => setIsPoetryModalOpen(true)}
-        onOpenConversation={() => setIsConversationModalOpen(true)}
-      />
-
-      {/* 5. Courses Overview & Multi-Track Manager */}
-      <CoursesOverviewCard
-        courses={courses}
-        activeCourse={activeCourse}
-        onSwitchCourse={handleSwitchCourse}
-        onOpenCourseLesson={handleOpenCourseLesson}
-        onOpenAddCourseModal={() => setIsAddCourseModalOpen(true)}
-      />
-
-      {/* 6. Spaced Repetition, Vocabulary & Translation Shortcuts */}
-      <PracticeReminder
-        dueSRSCount={dueSRSCount}
-        onNavigateTab={onNavigateTab}
-      />
-
-      {/* 7. Worldwide Country Explorer & Cultural Discovery */}
-      <GlobalCountryDiscovery
-        targetLanguage={activeCourse.target_language}
-        onExploreAll={() => onNavigateTab('explore')}
-      />
-
-      {/* 8. Recent Activity & Accuracy Statistics */}
-      <RecentActivityCard
-        onNavigateProgress={() => onNavigateTab('progress')}
+      {/* 6. Recently Learned Activities */}
+      <RecentLearning
+        activities={recentActivities}
+        onViewAll={() => onNavigateTab('progress')}
       />
 
       {/* Modals */}

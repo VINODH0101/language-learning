@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, BookOpen, Feather, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowRight, BookOpen, Feather, MessageSquare, CheckCircle2, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
 import { useI18n } from '../../../i18n/i18nContext';
@@ -9,14 +9,46 @@ interface RecentLearningProps {
   activities: RecentLearningActivity[];
   onViewAll: () => void;
   isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
 export const RecentLearning: React.FC<RecentLearningProps> = ({
   activities,
   onViewAll,
   isLoading = false,
+  isError = false,
+  errorMessage,
+  onRetry,
 }) => {
   const { t } = useI18n();
+
+  // Error state
+  if (isError && activities.length === 0) {
+    return (
+      <section aria-label="Recent Learning Activities" className="bg-white border border-amber-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-serif font-bold text-stone-900">
+                {t('dashboard:error_recent_title', 'Unable to load recent activity')}
+              </h3>
+              <p className="text-xs text-stone-600 mt-0.5">
+                {errorMessage || t('dashboard:error_recent_desc', 'Could not retrieve your recent activity log.')}
+              </p>
+            </div>
+          </div>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} icon={<RefreshCw className="w-3.5 h-3.5" />}>
+              {t('common:retry', 'Retry')}
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   const getTypeIcon = (type: RecentLearningActivity['type']) => {
     switch (type) {
@@ -61,7 +93,7 @@ export const RecentLearning: React.FC<RecentLearningProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
         <div>
           <span className="text-xs uppercase tracking-widest text-stone-500 font-semibold block mb-1">
-            {t('dashboard:learning_history_kicker', 'Pedagogical Telemetry')}
+            {t('dashboard:learning_history_kicker', 'Recent Activity')}
           </span>
           <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
             {t('dashboard:recent_learning_title', 'Recently Learned')}
@@ -79,7 +111,13 @@ export const RecentLearning: React.FC<RecentLearningProps> = ({
         </Button>
       </div>
 
-      {activities.length === 0 ? (
+      {isLoading && activities.length === 0 ? (
+        <div className="space-y-3 pt-3 animate-pulse">
+          <div className="h-12 bg-stone-100 rounded-lg" />
+          <div className="h-12 bg-stone-100 rounded-lg" />
+          <div className="h-12 bg-stone-100 rounded-lg" />
+        </div>
+      ) : activities.length === 0 ? (
         <div className="py-8 text-center text-stone-500 text-sm">
           <BookOpen className="w-8 h-8 mx-auto text-stone-300 mb-2" />
           <p className="font-medium text-stone-700">

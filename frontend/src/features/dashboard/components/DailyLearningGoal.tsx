@@ -1,25 +1,73 @@
 import React from 'react';
-import { Target, CheckCircle2 } from 'lucide-react';
+import { Target, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { ProgressBar } from '../../../components/common/ProgressBar';
+import { Button } from '../../../components/common/Button';
 import { useI18n } from '../../../i18n/i18nContext';
-import { SessionDuration } from '../../../types';
 
 interface DailyLearningGoalProps {
   dailyGoalMinutes: number;
   elapsedMinutes: number;
-  sessionDuration?: SessionDuration;
-  onSelectDuration?: (duration: SessionDuration) => void;
   isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
 export const DailyLearningGoal: React.FC<DailyLearningGoalProps> = ({
   dailyGoalMinutes,
   elapsedMinutes,
-  sessionDuration = '10',
-  onSelectDuration,
   isLoading = false,
+  isError = false,
+  errorMessage,
+  onRetry,
 }) => {
   const { t } = useI18n();
+
+  // Skeleton loading state
+  if (isLoading) {
+    return (
+      <section aria-label="Daily Learning Goal" className="bg-white border border-stone-200/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-3.5 animate-pulse">
+        <div className="flex justify-between items-center">
+          <div className="space-y-1.5">
+            <div className="w-20 h-3 bg-stone-100 rounded" />
+            <div className="w-36 h-5 bg-stone-100 rounded" />
+          </div>
+          <div className="w-24 h-4 bg-stone-100 rounded" />
+        </div>
+        <div className="w-full h-2.5 bg-stone-100 rounded-full" />
+        <div className="flex justify-between items-center">
+          <div className="w-28 h-3 bg-stone-100 rounded" />
+          <div className="w-20 h-3 bg-stone-100 rounded" />
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <section aria-label="Daily Learning Goal" className="bg-white border border-amber-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-serif font-bold text-sm text-stone-900">
+                {t('dashboard:error_goal_title', 'Unable to calculate goal progress')}
+              </h3>
+              <p className="text-xs text-stone-600">
+                {errorMessage || t('dashboard:error_goal_desc', 'Study time tracking is temporarily unavailable.')}
+              </p>
+            </div>
+          </div>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} icon={<RefreshCw className="w-3 h-3" />}>
+              {t('common:retry', 'Retry')}
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   const goalProgressPct = Math.min(
     100,

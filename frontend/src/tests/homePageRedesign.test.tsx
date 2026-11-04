@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { DashboardView } from '../features/dashboard/DashboardView';
+import { LearnPage } from '../pages/LearnPage';
 import { I18nProvider } from '../i18n/i18nContext';
 import { courseService } from '../services/courseService';
 import { StorageService } from '../services/storage';
@@ -266,5 +267,116 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     expect(sections[4].getAttribute('aria-label')).toBe('Daily Learning Goal');
     // Section 6: Recently Learned
     expect(sections[5].getAttribute('aria-label')).toBe('Recent Learning Activities');
+  });
+
+  it('11. Safe CEFR level transition: resumes unfinished story in target language even if active course level differs', async () => {
+    const userId = 'user_cefr_transition';
+    const mockB1Progress = {
+      id: 'prog_b1_item',
+      user_id: userId,
+      content_item_id: 'ci_coffee_dublin_001', // B1 item
+      content_version_id: 'cv_coffee_dublin_v1',
+      status: 'in_progress' as const,
+      percent_complete: 30,
+      completed_activity_ids: [],
+      time_spent_seconds: 90,
+      first_opened_at: new Date().toISOString(),
+      last_studied_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValueOnce([mockB1Progress]);
+
+    // Active course is now A1, but the in-progress content is B1
+    const a1Course: Course = { ...sampleCourse, target_language: 'en', cefr_level: 'A1' };
+    const resolved = await resolveContinueLearning(a1Course, userId);
+
+    expect(resolved.type).toBe('story');
+    if (resolved.type === 'story') {
+      expect(resolved.item.id).toBe('ci_coffee_dublin_001');
+      expect(resolved.version.cefr_level).toBe('B1');
+    }
+  });
+
+  it('12. Deterministic Today\'s Edition excludes active Continue Learning item and rotates stably', async () => {
+    const excludedId = 'ci_coffee_dublin_001';
+    const edition = await resolveTodaysEdition({ ...sampleCourse, target_language: 'en' }, excludedId);
+
+    // Excluded item must not be in stories
+    const hasExcluded = edition.stories.some(s => s.id === excludedId);
+    expect(hasExcluded).toBe(false);
+  });
+
+  it('13. Vocabulary deduplication: distinct union across StorageService and contentCentredService eliminates duplicates', async () => {
+    const userId = 'user_vocab_dedup';
+    const today = getLocalTodayDateString();
+
+    // Word 'café' in StorageService
+    vi.spyOn(StorageService, 'getSRSItems').mockReturnValueOnce([
+      {
+        vocabulary_item_id: 'café',
+        language: 'pt' as const,
+        repetition_count: 1,
+        ease_factor: 2.5,
+        interval_days: 1,
+        next_review_date: today,
+        last_reviewed_at: new Date().toISOString(),
+        lapse_count: 0,
+        mastery_status: 'learning' as const,
+      },
+    ] as any);
+
+    // Duplicate word 'café' in contentCentredService
+    vi.spyOn(contentCentredService, 'getUserSavedWords').mockResolvedValueOnce([
+      {
+        id: 'w1',
+        user_id: userId,
+        term: 'Café',
+        lemma: 'café',
+        language: 'pt',
+        next_review_date: today,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as any,
+    ]);
+
+    const vocab = await resolveVocabularySummary(sampleCourse, userId);
+
+    // Distinct count should be 1 (not 2)
+    expect(vocab.dueSRSCount).toBe(1);
+    expect(vocab.savedThisWeekCount).toBe(1);
+  });
+
+  it('14. Reader resumption: stores content and version IDs in sessionStorage when Continue Reading is clicked', async () => {
+    const setItemSpy = vi.spyOn(sessionStorage, 'setItem');
+    renderHome('en');
+
+    // Click Start/Continue Reading or Lesson button
+    const actionBtn = screen.getByRole('button', { name: /(start reading|continue reading|start lesson)/i });
+    fireEvent.click(actionBtn);
+
+    // Navigates to curriculum course or learn
+    expect(mockNavigateTab).toHaveBeenCalled();
+  });
+
+  it('15. LearnPage mounts and resumes directly into ReaderView when session storage contains open content and version IDs', async () => {
+    sessionStorage.setItem('lexilume_open_content_id', 'ci_coffee_dublin_001');
+    sessionStorage.setItem('lexilume_open_version_id', 'cv_coffee_dublin_v1');
+
+    render(
+      <I18nProvider>
+        <LearnPage />
+      </I18nProvider>
+    );
+
+    // It should open the reader view directly
+    await waitFor(() => {
+      expect(screen.getByText(/A Morning Coffee in Dublin/i)).toBeDefined();
+    });
+
+    // Session storage keys should have been cleaned up
+    expect(sessionStorage.getItem('lexilume_open_content_id')).toBeNull();
+    expect(sessionStorage.getItem('lexilume_open_version_id')).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, BookOpen, PlayCircle, Compass } from 'lucide-react';
+import { ArrowRight, BookOpen, PlayCircle, Compass, RefreshCw, AlertCircle } from 'lucide-react';
 import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
 import { ProgressBar } from '../../../components/common/ProgressBar';
@@ -9,7 +9,6 @@ import {
   ActiveLessonProgress,
   Language,
   RegionalVariety,
-  CEFRLevel,
 } from '../../../types';
 import { useI18n } from '../../../i18n/i18nContext';
 import { courseService } from '../../../services/courseService';
@@ -25,6 +24,9 @@ interface ContinueLearningCardProps {
   onContinue?: (item: ContinueItemData) => void;
   onExploreCatalog?: () => void;
   isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
 export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
@@ -36,6 +38,9 @@ export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
   onContinue,
   onExploreCatalog,
   isLoading = false,
+  isError = false,
+  errorMessage,
+  onRetry,
 }) => {
   const { t, interfaceLanguage } = useI18n();
 
@@ -49,6 +54,65 @@ export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
     if (lang === 'es') return variant?.includes('ES') ? '🇪🇸' : '🇲🇽';
     return '🌐';
   };
+
+  // Section Loading Skeleton (only if neither continueItem nor activeLesson is available yet)
+  if (isLoading && !continueItem && !activeLesson) {
+    return (
+      <section
+        aria-label="Continue Learning"
+        className="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-xs space-y-5 animate-pulse"
+      >
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-stone-100" />
+            <div className="space-y-1.5">
+              <div className="w-24 h-3 bg-stone-100 rounded" />
+              <div className="w-36 h-3 bg-stone-100 rounded" />
+            </div>
+          </div>
+          <div className="w-14 h-6 bg-stone-100 rounded-full" />
+        </div>
+        <div className="space-y-2">
+          <div className="w-2/3 h-7 bg-stone-100 rounded" />
+          <div className="w-full h-4 bg-stone-100 rounded" />
+        </div>
+        <div className="w-full h-2 bg-stone-100 rounded" />
+        <div className="w-36 h-10 bg-stone-100 rounded-xl" />
+      </section>
+    );
+  }
+
+  // Section Error State
+  if (isError && !continueItem && !activeLesson) {
+    return (
+      <section
+        aria-label="Continue Learning"
+        className="bg-white border border-amber-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4 text-center sm:text-left sm:flex sm:items-center sm:justify-between"
+      >
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-serif font-bold text-stone-900">
+              {t('dashboard:error_continue_title', 'Unable to load active lesson')}
+            </h3>
+            <p className="text-xs text-stone-600 mt-0.5">
+              {errorMessage || t('dashboard:error_continue_desc', 'A temporary error occurred while retrieving your learning progress.')}
+            </p>
+          </div>
+        </div>
+        {onRetry && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            icon={<RefreshCw className="w-3.5 h-3.5" />}
+          >
+            {t('common:retry', 'Retry')}
+          </Button>
+        )}
+      </section>
+    );
+  }
 
   // Determine effective data: prioritize continueItem if provided, else use activeLesson
   const itemType = continueItem?.type || (activeLesson ? 'curriculum' : 'empty');
@@ -71,6 +135,8 @@ export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
   if (continueItem && continueItem.type === 'story') {
     const { item, version, progress } = continueItem;
     const pct = Math.min(100, Math.max(0, Math.round(progress.percent_complete || 0)));
+    const storyLevel = version.cefr_level || item.primary_cefr;
+    const isLevelMismatched = storyLevel && storyLevel !== activeCourse.cefr_level;
 
     return (
       <section
@@ -94,8 +160,13 @@ export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
 
           <div className="flex items-center gap-2">
             <Badge variant="slate" size="md">
-              {version.cefr_level || item.primary_cefr}
+              {storyLevel}
             </Badge>
+            {isLevelMismatched && (
+              <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
+                {t('dashboard:resumed_level', 'Resumed Level')}
+              </span>
+            )}
             <Badge variant="indigo" size="md">
               {item.genre.replace('_', ' ')}
             </Badge>

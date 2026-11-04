@@ -3,7 +3,6 @@ import {
   DailyLessonPayload,
   UserSettings,
   ActiveLessonProgress,
-  SessionDuration,
   Course,
   Language,
   DailyPoem,
@@ -16,7 +15,6 @@ import { getActiveProgress } from '../../services/localDb';
 import { courseService } from '../../services/courseService';
 import { dailyContentService } from '../../services/dailyContentService';
 import { useI18n } from '../../i18n/i18nContext';
-import { toast } from 'sonner';
 
 import {
   WelcomeHeader,
@@ -71,9 +69,19 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
 
   // Section 2: Continue Learning
   const [continueItem, setContinueItem] = useState<ContinueItemData | null>(null);
-  const [activeLesson, setActiveLesson] = useState<DailyLessonPayload | null>(null);
+  const [activeLesson, setActiveLesson] = useState<DailyLessonPayload | null>(() => {
+    try {
+      return ClientLessonGenerator.generateOrGetLesson(
+        courseService.toCourseConfig(courseService.getActiveCourse()),
+        getLocalTodayDateString()
+      );
+    } catch {
+      return null;
+    }
+  });
   const [activeLessonProgress, setActiveLessonProgress] = useState<ActiveLessonProgress | null>(null);
   const [isContinueLoading, setIsContinueLoading] = useState(true);
+  const [continueError, setContinueError] = useState<string | null>(null);
 
   // Section 3: Today's Edition
   const [dailyPoem, setDailyPoem] = useState<DailyPoem | null>(() => {
@@ -89,6 +97,8 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     );
   });
   const [todayStories, setTodayStories] = useState<ContentItem[]>([]);
+  const [isEditionLoading, setIsEditionLoading] = useState(false);
+  const [editionError, setEditionError] = useState<string | null>(null);
   const [isPoetryModalOpen, setIsPoetryModalOpen] = useState(false);
   const [isConversationModalOpen, setIsConversationModalOpen] = useState(false);
 
@@ -100,18 +110,13 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     return items.filter(s => s.next_review_date <= today).length;
   });
   const [savedThisWeekCount, setSavedThisWeekCount] = useState(0);
-
-  // Section 5: Daily Goal & Pace
-  const [sessionDuration, setSessionDuration] = useState<SessionDuration>(() => {
-    try {
-      const saved = localStorage.getItem('polyglot_session_duration');
-      if (saved === '5' || saved === '10' || saved === '20') return saved;
-    } catch {}
-    return '10';
-  });
+  const [isVocabLoading, setIsVocabLoading] = useState(false);
+  const [vocabError, setVocabError] = useState<string | null>(null);
 
   // Section 6: Recently Learned
   const [recentActivities, setRecentActivities] = useState<RecentLearningActivity[]>([]);
+  const [isRecentLoading, setIsRecentLoading] = useState(false);
+  const [recentError, setRecentError] = useState<string | null>(null);
 
   // Modals
   const [isAddCourseModalOpen, setIsAddCourseModalOpen] = useState(false);
@@ -123,6 +128,69 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
       setActiveCourse(active);
     });
     return unsub;
+  }, []);
+
+  // Section 2 loader (independent)
+  const loadContinue = useCallback(async (course: Course, userId: string) => {
+    setIsContinueLoading(true);
+    setContinueError(null);
+    try {
+      const res = await resolveContinueLearning(course, userId);
+      setContinueItem(res);
+    } catch (err: any) {
+      console.warn('Error resolving continue learning:', err);
+      setContinueError(err?.message || 'Failed to load continue learning progress');
+    } finally {
+      setIsContinueLoading(false);
+    }
+  }, []);
+
+  // Section 3 loader (independent)
+  const loadEdition = useCallback(async (course: Course, excludedId?: string) => {
+    setIsEditionLoading(true);
+    setEditionError(null);
+    try {
+      const edition = await resolveTodaysEdition(course, excludedId);
+      setDailyPoem(edition.poem);
+      setDailyConversation(edition.conversation);
+      setTodayStories(edition.stories);
+    } catch (err: any) {
+      console.warn('Error resolving today edition:', err);
+      setEditionError(err?.message || "Failed to load Today's Edition");
+    } finally {
+      setIsEditionLoading(false);
+    }
+  }, []);
+
+  // Section 4 loader (independent)
+  const loadVocab = useCallback(async (course: Course, userId: string) => {
+    setIsVocabLoading(true);
+    setVocabError(null);
+    try {
+      const vocab = await resolveVocabularySummary(course, userId);
+      setDueSRSCount(vocab.dueSRSCount);
+      setSavedThisWeekCount(vocab.savedThisWeekCount);
+    } catch (err: any) {
+      console.warn('Error resolving vocabulary summary:', err);
+      setVocabError(err?.message || 'Failed to load vocabulary metrics');
+    } finally {
+      setIsVocabLoading(false);
+    }
+  }, []);
+
+  // Section 6 loader (independent)
+  const loadRecent = useCallback(async (course: Course, userId: string) => {
+    setIsRecentLoading(true);
+    setRecentError(null);
+    try {
+      const acts = await resolveRecentActivities(course, userId);
+      setRecentActivities(acts);
+    } catch (err: any) {
+      console.warn('Error resolving recent activities:', err);
+      setRecentError(err?.message || 'Failed to load recent activities');
+    } finally {
+      setIsRecentLoading(false);
+    }
   }, []);
 
   // Orchestrate independent Home sections when activeCourse changes
@@ -144,23 +212,6 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
       console.warn('Error generating daily lesson fallback:', err);
     }
 
-    // Load authentic daily literature and conversation immediately
-    const poem = dailyContentService.getDailyPoem(
-      activeCourse.target_language,
-      activeCourse.explanation_language
-    );
-    const convo = dailyContentService.getDailyConversation(
-      activeCourse.target_language,
-      activeCourse.explanation_language
-    );
-    setDailyPoem(poem);
-    setDailyConversation(convo);
-
-    // Initial synchronous SRS count
-    const allSRS = StorageService.getSRSItems(activeCourse.target_language, userId);
-    const due = allSRS.filter(s => s.next_review_date <= today);
-    setDueSRSCount(due.length);
-
     // Check active lesson progress
     getActiveProgress(activeCourse.target_language)
       .then(p => {
@@ -169,58 +220,18 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
       })
       .catch(() => setActiveLessonProgress(null));
 
-    // Section 2: Resolve Continue Learning Priority
-    setIsContinueLoading(true);
-    resolveContinueLearning(activeCourse, userId)
-      .then(res => {
-        setContinueItem(res);
-      })
-      .catch(err => {
-        console.warn('Error resolving continue learning:', err);
-      })
-      .finally(() => {
-        setIsContinueLoading(false);
-      });
+    // Independent Section 2 loader
+    loadContinue(activeCourse, userId);
 
-    // Section 3: Resolve Today's Edition (Poem, Dialogue, Stories)
-    resolveTodaysEdition(activeCourse)
-      .then(edition => {
-        setDailyPoem(edition.poem);
-        setDailyConversation(edition.conversation);
-        setTodayStories(edition.stories);
-      })
-      .catch(err => {
-        console.warn('Error resolving today edition:', err);
-      });
+    // Independent Section 3 loader
+    loadEdition(activeCourse);
 
-    // Section 4: Resolve Vocabulary Summary
-    resolveVocabularySummary(activeCourse, userId)
-      .then(vocab => {
-        setDueSRSCount(vocab.dueSRSCount);
-        setSavedThisWeekCount(vocab.savedThisWeekCount);
-      })
-      .catch(err => {
-        console.warn('Error resolving vocabulary summary:', err);
-      });
+    // Independent Section 4 loader
+    loadVocab(activeCourse, userId);
 
-    // Section 6: Resolve Recent Learning Activities
-    resolveRecentActivities(activeCourse, userId)
-      .then(acts => {
-        setRecentActivities(acts);
-      })
-      .catch(err => {
-        console.warn('Error resolving recent activities:', err);
-      });
-  }, [activeCourse]);
-
-  const handleSelectDuration = (d: SessionDuration) => {
-    setSessionDuration(d);
-    try {
-      localStorage.setItem('polyglot_session_duration', d);
-      courseService.updateCourse(activeCourse.id, { daily_goal_minutes: parseInt(d, 10) });
-      toast.success(`${t('dashboard:goal_title', 'Daily Learning Goal')}: ${d} ${t('common:minutes', 'min')}`);
-    } catch {}
-  };
+    // Independent Section 6 loader
+    loadRecent(activeCourse, userId);
+  }, [activeCourse, loadContinue, loadEdition, loadVocab, loadRecent]);
 
   const handleOpenCourseLesson = (course: Course) => {
     courseService.setActiveCourse(course.id);
@@ -234,6 +245,9 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     if (item.type === 'story' || item.type === 'recommended') {
       try {
         sessionStorage.setItem('lexilume_open_content_id', item.item.id);
+        if ('version' in item && item.version?.id) {
+          sessionStorage.setItem('lexilume_open_version_id', item.version.id);
+        }
       } catch {}
       onNavigateTab('learn');
     } else if (item.type === 'curriculum') {
@@ -246,98 +260,108 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
   const handleOpenStory = (story: ContentItem) => {
     try {
       sessionStorage.setItem('lexilume_open_content_id', story.id);
+      if (story.current_version_id) {
+        sessionStorage.setItem('lexilume_open_version_id', story.current_version_id);
+      }
     } catch {}
     onNavigateTab('learn');
   };
-
-  if (!activeLesson || !settings) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh] text-stone-400 text-sm">
-        {t('dash_loading', 'Loading editorial edition...')}
-      </div>
-    );
-  }
 
   // Genuine tracked cognitive learning minutes today
   const genuineStudyMinutes = StorageService.getTodayStudyMinutes(courseService.getUserId());
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8 overflow-x-hidden">
-      {/* 1. Personal Welcome Header */}
-      <WelcomeHeader
-        fullName={settings.full_name}
-        streakDays={activeCourse.streak_days}
-        dueSRSCount={dueSRSCount}
-        activeCourse={activeCourse}
-      />
-
-      {/* 2. Hero Continue Learning Card (Primary Visual Focus) */}
-      <ContinueLearningCard
-        activeCourse={activeCourse}
-        activeLesson={activeLesson}
-        activeLessonProgress={activeLessonProgress}
-        continueItem={continueItem}
-        onContinue={handleContinue}
-        onOpenLesson={handleOpenCourseLesson}
-        onExploreCatalog={() => onNavigateTab('learn')}
-        isLoading={isContinueLoading}
-      />
-
-      {/* 3. Today's Edition: Mixed Content Discovery */}
-      <DailyContentPreview
-        dailyPoem={dailyPoem}
-        dailyConversation={dailyConversation}
-        publishedStories={todayStories}
-        onOpenPoem={() => setIsPoetryModalOpen(true)}
-        onOpenConversation={() => setIsConversationModalOpen(true)}
-        onOpenStory={handleOpenStory}
-        onExploreAll={() => onNavigateTab('learn')}
-      />
-
-      {/* 4. Vocabulary Summary & Spaced Repetition */}
-      <VocabularySummary
-        dueSRSCount={dueSRSCount}
-        savedThisWeekCount={savedThisWeekCount}
-        onReviewDue={() => onNavigateTab('practice')}
-        onOpenVocabulary={() => onNavigateTab('words')}
-      />
-
-      {/* 5. Daily Learning Goal & Pace */}
-      <DailyLearningGoal
-        dailyGoalMinutes={activeCourse.daily_goal_minutes || 10}
-        elapsedMinutes={genuineStudyMinutes}
-        sessionDuration={sessionDuration}
-        onSelectDuration={handleSelectDuration}
-      />
-
-      {/* 6. Recently Learned Activities */}
-      <RecentLearning
-        activities={recentActivities}
-        onViewAll={() => onNavigateTab('progress')}
-      />
-
-      {/* Modals */}
-      {dailyPoem && (
-        <DailyPoetryReaderModal
-          poem={dailyPoem}
-          isOpen={isPoetryModalOpen}
-          onClose={() => setIsPoetryModalOpen(false)}
+    <div className="min-h-screen bg-[#F7F5F0] text-[#292923]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8 overflow-x-hidden">
+        {/* 1. Personal Welcome Header */}
+        <WelcomeHeader
+          fullName={settings?.full_name}
+          streakDays={activeCourse.streak_days}
+          dueSRSCount={dueSRSCount}
+          activeCourse={activeCourse}
         />
-      )}
 
-      {dailyConversation && (
-        <DailyConversationModal
-          conversation={dailyConversation}
-          isOpen={isConversationModalOpen}
-          onClose={() => setIsConversationModalOpen(false)}
+        {/* 2. Hero Continue Learning Card (Primary Visual Focus) */}
+        <ContinueLearningCard
+          activeCourse={activeCourse}
+          activeLesson={activeLesson}
+          activeLessonProgress={activeLessonProgress}
+          continueItem={continueItem}
+          onContinue={handleContinue}
+          onOpenLesson={handleOpenCourseLesson}
+          onExploreCatalog={() => onNavigateTab('learn')}
+          isLoading={isContinueLoading}
+          isError={Boolean(continueError)}
+          errorMessage={continueError || undefined}
+          onRetry={() => loadContinue(activeCourse, courseService.getUserId())}
         />
-      )}
 
-      <AddCourseModal
-        isOpen={isAddCourseModalOpen}
-        onClose={() => setIsAddCourseModalOpen(false)}
-        onCourseCreated={course => setActiveCourse(course)}
-      />
+        {/* 3. Today's Edition: Mixed Content Discovery */}
+        <DailyContentPreview
+          dailyPoem={dailyPoem}
+          dailyConversation={dailyConversation}
+          publishedStories={todayStories}
+          onOpenPoem={() => setIsPoetryModalOpen(true)}
+          onOpenConversation={() => setIsConversationModalOpen(true)}
+          onOpenStory={handleOpenStory}
+          onExploreAll={() => onNavigateTab('learn')}
+          isLoading={isEditionLoading}
+          isError={Boolean(editionError)}
+          errorMessage={editionError || undefined}
+          onRetry={() => loadEdition(activeCourse)}
+        />
+
+        {/* 4. Vocabulary Summary & Spaced Repetition */}
+        <VocabularySummary
+          dueSRSCount={dueSRSCount}
+          savedThisWeekCount={savedThisWeekCount}
+          onReviewDue={() => onNavigateTab('practice')}
+          onOpenVocabulary={() => onNavigateTab('words')}
+          isLoading={isVocabLoading}
+          isError={Boolean(vocabError)}
+          errorMessage={vocabError || undefined}
+          onRetry={() => loadVocab(activeCourse, courseService.getUserId())}
+        />
+
+        {/* 5. Daily Learning Goal & Pace */}
+        <DailyLearningGoal
+          dailyGoalMinutes={activeCourse.daily_goal_minutes || 10}
+          elapsedMinutes={genuineStudyMinutes}
+        />
+
+        {/* 6. Recently Learned Activities */}
+        <RecentLearning
+          activities={recentActivities}
+          onViewAll={() => onNavigateTab('progress')}
+          isLoading={isRecentLoading}
+          isError={Boolean(recentError)}
+          errorMessage={recentError || undefined}
+          onRetry={() => loadRecent(activeCourse, courseService.getUserId())}
+        />
+
+        {/* Modals */}
+        {dailyPoem && (
+          <DailyPoetryReaderModal
+            poem={dailyPoem}
+            isOpen={isPoetryModalOpen}
+            onClose={() => setIsPoetryModalOpen(false)}
+          />
+        )}
+
+        {dailyConversation && (
+          <DailyConversationModal
+            conversation={dailyConversation}
+            isOpen={isConversationModalOpen}
+            onClose={() => setIsConversationModalOpen(false)}
+          />
+        )}
+
+        <AddCourseModal
+          isOpen={isAddCourseModalOpen}
+          onClose={() => setIsAddCourseModalOpen(false)}
+          onCourseCreated={course => setActiveCourse(course)}
+        />
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Feather, MessageSquare, ArrowRight, Sparkles, BookOpen } from 'lucide-react';
+import { Feather, MessageSquare, ArrowRight, BookOpen, AlertCircle, RefreshCw } from 'lucide-react';
 import { DailyPoem, DailyConversation } from '../../../types';
 import { ContentItem } from '../../../types/contentCentred';
 import { Badge } from '../../../components/common/Badge';
@@ -15,6 +15,9 @@ interface DailyContentPreviewProps {
   onOpenStory?: (story: ContentItem) => void;
   onExploreAll?: () => void;
   isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
 export const DailyContentPreview: React.FC<DailyContentPreviewProps> = ({
@@ -26,8 +29,69 @@ export const DailyContentPreview: React.FC<DailyContentPreviewProps> = ({
   onOpenStory,
   onExploreAll,
   isLoading = false,
+  isError = false,
+  errorMessage,
+  onRetry,
 }) => {
   const { t } = useI18n();
+
+  // If loading and no content is cached yet, show skeleton cards under real section header
+  if (isLoading && !dailyPoem && !dailyConversation && publishedStories.length === 0) {
+    return (
+      <section aria-label="Today's Edition" className="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
+          <div>
+            <span className="text-xs uppercase tracking-widest text-stone-500 font-semibold block mb-1">
+              {t('dashboard:todays_edition_kicker', "Today's Edition")}
+            </span>
+            <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
+              {t('dashboard:daily_masterpiece_learning', "Today's Edition: Daily Immersion: Poetry & Dialogue")}
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-500 mt-1">
+              {t('dashboard:todays_edition_subhead', 'A selection of stories, ideas and conversations to explore today.')}
+            </p>
+          </div>
+          {onExploreAll && (
+            <Button variant="outline" size="sm" onClick={onExploreAll} className="self-start sm:self-auto shrink-0">
+              <span>{t('dashboard:explore_all_stories', 'Explore All')}</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1 text-stone-500" />
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-pulse">
+          <div className="h-64 rounded-xl bg-stone-100 p-5" />
+          <div className="h-64 rounded-xl bg-stone-100 p-5" />
+          <div className="h-64 rounded-xl bg-stone-100 p-5" />
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (isError && !dailyPoem && !dailyConversation && publishedStories.length === 0) {
+    return (
+      <section aria-label="Today's Edition" className="bg-white border border-amber-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-serif font-bold text-stone-900">
+                {t('dashboard:error_edition_title', "Unable to load Today's Edition")}
+              </h3>
+              <p className="text-xs text-stone-600 mt-0.5">
+                {errorMessage || t('dashboard:error_edition_desc', 'Could not retrieve daily authentic reading materials.')}
+              </p>
+            </div>
+          </div>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} icon={<RefreshCw className="w-3.5 h-3.5" />}>
+              {t('common:retry', 'Retry')}
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   if (!dailyPoem && !dailyConversation && publishedStories.length === 0) return null;
 
@@ -39,10 +103,10 @@ export const DailyContentPreview: React.FC<DailyContentPreviewProps> = ({
             {t('dashboard:todays_edition_kicker', "Today's Edition")}
           </span>
           <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
-            {t('dashboard:daily_masterpiece_learning', 'Daily Immersion: Poetry & Dialogue')}
+            {t('dashboard:daily_masterpiece_learning', "Today's Edition: Daily Immersion: Poetry & Dialogue")}
           </h2>
           <p className="text-xs sm:text-sm text-stone-500 mt-1">
-            {t('dashboard:todays_edition_subhead', 'Curated authentic literature, cultural dialogues, and short stories.')}
+            {t('dashboard:todays_edition_subhead', 'A selection of stories, ideas and conversations to explore today.')}
           </p>
         </div>
 

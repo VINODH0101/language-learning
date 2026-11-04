@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookMarked, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { BookMarked, Sparkles, ArrowRight, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 import { useI18n } from '../../../i18n/i18nContext';
 
@@ -9,6 +9,9 @@ interface VocabularySummaryProps {
   onReviewDue: () => void;
   onOpenVocabulary: () => void;
   isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
 export const VocabularySummary: React.FC<VocabularySummaryProps> = ({
@@ -17,8 +20,37 @@ export const VocabularySummary: React.FC<VocabularySummaryProps> = ({
   onReviewDue,
   onOpenVocabulary,
   isLoading = false,
+  isError = false,
+  errorMessage,
+  onRetry,
 }) => {
   const { t } = useI18n();
+
+  // Error state
+  if (isError) {
+    return (
+      <section aria-label="Vocabulary & Spaced Repetition" className="bg-white border border-amber-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-serif font-bold text-stone-900">
+                {t('dashboard:error_vocab_title', 'Unable to load vocabulary metrics')}
+              </h3>
+              <p className="text-xs text-stone-600 mt-0.5">
+                {errorMessage || t('dashboard:error_vocab_desc', 'Could not sync spaced repetition statistics.')}
+              </p>
+            </div>
+          </div>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} icon={<RefreshCw className="w-3.5 h-3.5" />}>
+              {t('common:retry', 'Retry')}
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Vocabulary & Spaced Repetition" className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-7 shadow-xs">
@@ -47,45 +79,52 @@ export const VocabularySummary: React.FC<VocabularySummaryProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5">
-        {/* Metric 1: Due Words */}
-        <div className="p-4 rounded-xl bg-stone-50/70 border border-stone-200/70">
-          <div className="text-xs font-medium text-stone-500 mb-1">
-            {t('dashboard:due_today_title', 'Due for Review Today')}
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-3xl font-bold text-stone-900">
-              {dueSRSCount}
-            </span>
-            <span className="text-xs text-stone-500 font-sans">
-              {dueSRSCount === 1 ? 'word' : 'words'}
-            </span>
-          </div>
-          <p className="text-xs text-stone-600 mt-1">
-            {dueSRSCount > 0
-              ? t('dashboard:words_ready_desc', 'Scheduled for active recall via the SM-2 algorithm.')
-              : t('dashboard:words_caught_up_desc', 'No terms pending review. New intervals will unlock tomorrow.')}
-          </p>
+      {isLoading && dueSRSCount === 0 && savedThisWeekCount === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5 animate-pulse">
+          <div className="h-28 rounded-xl bg-stone-100" />
+          <div className="h-28 rounded-xl bg-stone-100" />
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5">
+          {/* Metric 1: Due Words */}
+          <div className="p-4 rounded-xl bg-stone-50/70 border border-stone-200/70">
+            <div className="text-xs font-medium text-stone-500 mb-1">
+              {t('dashboard:due_today_title', 'Due for Review Today')}
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-serif text-3xl font-bold text-stone-900">
+                {dueSRSCount}
+              </span>
+              <span className="text-xs text-stone-500 font-sans">
+                {dueSRSCount === 1 ? 'word' : 'words'}
+              </span>
+            </div>
+            <p className="text-xs text-stone-600 mt-1">
+              {dueSRSCount > 0
+                ? t('dashboard:words_ready_desc', 'Scheduled for active recall via the SM-2 algorithm.')
+                : t('dashboard:words_caught_up_desc', 'No terms pending review. New intervals will unlock tomorrow.')}
+            </p>
+          </div>
 
-        {/* Metric 2: Saved this week */}
-        <div className="p-4 rounded-xl bg-stone-50/70 border border-stone-200/70">
-          <div className="text-xs font-medium text-stone-500 mb-1">
-            {t('dashboard:saved_recently_title', 'Saved in Past 7 Days')}
+          {/* Metric 2: Saved this week */}
+          <div className="p-4 rounded-xl bg-stone-50/70 border border-stone-200/70">
+            <div className="text-xs font-medium text-stone-500 mb-1">
+              {t('dashboard:saved_recently_title', 'Saved in Past 7 Days')}
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-serif text-3xl font-bold text-stone-900">
+                {savedThisWeekCount}
+              </span>
+              <span className="text-xs text-stone-500 font-sans">
+                {savedThisWeekCount === 1 ? 'word' : 'words'}
+              </span>
+            </div>
+            <p className="text-xs text-stone-600 mt-1">
+              {t('dashboard:saved_words_desc', 'Discovered during reading, dialogues, and contextual lookups.')}
+            </p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-3xl font-bold text-stone-900">
-              {savedThisWeekCount}
-            </span>
-            <span className="text-xs text-stone-500 font-sans">
-              {savedThisWeekCount === 1 ? 'word' : 'words'}
-            </span>
-          </div>
-          <p className="text-xs text-stone-600 mt-1">
-            {t('dashboard:saved_words_desc', 'Discovered during reading, dialogues, and contextual lookups.')}
-          </p>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3">
         <p className="text-xs text-stone-500 order-2 sm:order-1">

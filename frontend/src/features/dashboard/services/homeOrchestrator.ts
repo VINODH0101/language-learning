@@ -6,9 +6,9 @@
  * 2. Continue Learning: Resumes most recently accessed unfinished published content ->
  *    fallback to daily curriculum lesson -> fallback to recommended content -> empty state.
  * 3. Today's Edition: Curated 2-3 items combining published stories, daily poetry, and daily dialogues.
- * 4. Vocabulary Summary: Due SRS review count, recently saved words (within 7 days).
+ * 4. Vocabulary Summary: Due SRS review count, recently saved words (within 7 days) via distinct lemma union.
  * 5. Daily Learning Goal: Genuine cognitive study minutes vs configured daily goal.
- * 6. Recently Learned: Up to 3 recent learning activities from progress history.
+ * 6. Recently Learned: Up to 3 recent learning activities from progress history (batch-loaded, no N+1).
  */
 
 import {
@@ -24,6 +24,7 @@ import {
   ContentItem,
   ContentVersion,
   LearnerContentProgress,
+  UserSavedWord,
 } from '../../../types/contentCentred';
 import { contentCentredService } from '../../../services/contentCentredService';
 import { StorageService } from '../../../services/storage';
@@ -102,7 +103,22 @@ export const isWithinLast7Days = (dateStr?: string): boolean => {
 };
 
 /**
+ * Deterministic hash generator for stable daily item ordering.
+ */
+export const getDeterministicDateHash = (seed: string): number => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+};
+
+/**
  * Priority 1: Unfinished published content item.
+ *   - Prioritizes current CEFR level first, but safely falls back to any unfinished item
+ *     in target_language if course level changed, preventing loss of access.
  * Priority 2: Structured daily curriculum lesson.
  * Priority 3: Recommended published content item.
  * Priority 4: Empty state.
@@ -120,20 +136,42 @@ export const resolveContinueLearning = async (
       .filter(p => p.status === 'in_progress')
       .sort((a, b) => new Date(b.last_studied_at).getTime() - new Date(a.last_studied_at).getTime());
 
+    // Batch load candidate items to avoid N+1 queries
+    const publishedItems = await contentCentredService.getContentItems({
+      target_language: course.target_language,
+      status: 'published',
+    });
+    const publishedMap = new Map(publishedItems.map(it => [it.id, it]));
+
+    // First pass: match target_language and exact current CEFR level
     for (const prog of inProgressList) {
-      const fullItem = await contentCentredService.getContentItemById(prog.content_item_id);
-      if (
-        fullItem &&
-        fullItem.status === 'published' &&
-        fullItem.target_language === course.target_language &&
-        fullItem.version
-      ) {
-        return {
-          type: 'story',
-          item: fullItem,
-          version: fullItem.version,
-          progress: prog,
-        };
+      const item = publishedMap.get(prog.content_item_id);
+      if (item && item.primary_cefr === course.cefr_level) {
+        const fullItem = await contentCentredService.getContentItemById(item.id);
+        if (fullItem && fullItem.version) {
+          return {
+            type: 'story',
+            item: fullItem,
+            version: fullItem.version,
+            progress: prog,
+          };
+        }
+      }
+    }
+
+    // Second pass: safe fallback across any CEFR level in target language
+    for (const prog of inProgressList) {
+      const item = publishedMap.get(prog.content_item_id);
+      if (item) {
+        const fullItem = await contentCentredService.getContentItemById(item.id);
+        if (fullItem && fullItem.version) {
+          return {
+            type: 'story',
+            item: fullItem,
+            version: fullItem.version,
+            progress: prog,
+          };
+        }
       }
     }
   } catch (err) {
@@ -182,22 +220,34 @@ export const resolveContinueLearning = async (
 };
 
 /**
- * Resolves Today's Edition: Curates 2-3 items combining published stories,
- * daily poetry, and daily conversation.
+ * Resolves Today's Edition:
+ * - Deterministically selects stories based on the learner's local date string (YYYY-MM-DD).
+ * - Excludes the active Continue Learning item to prevent duplicate cards.
+ * - Pairs with authentic daily poetry and daily dialogue.
  */
 export const resolveTodaysEdition = async (
   course: Course,
   excludedItemId?: string
 ): Promise<TodaysEditionData> => {
   let stories: ContentItem[] = [];
+  const localDate = getLocalTodayDateString();
+
   try {
     const published = await contentCentredService.getContentItems({
       target_language: course.target_language,
       status: 'published',
     });
-    stories = published
-      .filter(item => item.id !== excludedItemId)
-      .slice(0, 2);
+
+    const eligible = published.filter(item => item.id !== excludedItemId);
+
+    // Deterministic shuffle using localDate as seed
+    const sorted = [...eligible].sort((a, b) => {
+      const hashA = getDeterministicDateHash(`${localDate}_${a.id}`);
+      const hashB = getDeterministicDateHash(`${localDate}_${b.id}`);
+      return hashA - hashB;
+    });
+
+    stories = sorted.slice(0, 2);
   } catch (err) {
     console.warn('Failed fetching published stories for edition:', err);
   }
@@ -220,30 +270,64 @@ export const resolveTodaysEdition = async (
 };
 
 /**
- * Resolves Vocabulary Summary metrics: Due SRS items count and words saved in past 7 days.
+ * Resolves Vocabulary Summary metrics:
+ * - Deduplicates words across both StorageService SRS items and content-centred saved words
+ *   using a distinct union of normalized lemmas/terms.
+ * - Accurately counts distinct words due for review today.
+ * - Accurately counts distinct words saved in the past 7 days (no Math.max approximation).
  */
 export const resolveVocabularySummary = async (
   course: Course,
   userId: string
 ): Promise<VocabularySummaryData> => {
   const today = getLocalTodayDateString();
+
+  const dueNormalizedTerms = new Set<string>();
+  const savedThisWeekNormalizedTerms = new Set<string>();
+
+  // 1. Process course SRS items
   const srsItems = StorageService.getSRSItems(course.target_language, userId);
+  for (const item of srsItems) {
+    const termKey = (item.vocabulary_item_id || '').trim().toLowerCase();
+    if (!termKey) continue;
 
-  const dueSRSCount = srsItems.filter(s => s.next_review_date <= today).length;
-  let savedThisWeekCount = srsItems.filter(s => isWithinLast7Days(s.last_reviewed_at || undefined)).length;
+    if (item.next_review_date <= today) {
+      dueNormalizedTerms.add(termKey);
+    }
 
+    const reviewDate = item.last_reviewed_at || (item as any).created_at;
+    if (isWithinLast7Days(reviewDate)) {
+      savedThisWeekNormalizedTerms.add(termKey);
+    }
+  }
+
+  // 2. Process content-centred saved words
   try {
-    const savedWords = await contentCentredService.getUserSavedWords(userId, course.target_language);
-    const recentWords = savedWords.filter(w => isWithinLast7Days(w.created_at));
-    // Union count approximation
-    savedThisWeekCount = Math.max(savedThisWeekCount, recentWords.length);
+    const savedWords: UserSavedWord[] = await contentCentredService.getUserSavedWords(
+      userId,
+      course.target_language
+    );
+
+    for (const w of savedWords) {
+      const termKey = (w.lemma || w.term).trim().toLowerCase();
+      if (!termKey) continue;
+
+      const nextDue = w.next_review || (w as any).next_review_date;
+      if (nextDue && nextDue <= today) {
+        dueNormalizedTerms.add(termKey);
+      }
+
+      if (isWithinLast7Days(w.created_at)) {
+        savedThisWeekNormalizedTerms.add(termKey);
+      }
+    }
   } catch (err) {
     console.warn('Failed checking content-centred saved words:', err);
   }
 
   return {
-    dueSRSCount,
-    savedThisWeekCount,
+    dueSRSCount: dueNormalizedTerms.size,
+    savedThisWeekCount: savedThisWeekNormalizedTerms.size,
   };
 };
 
@@ -270,19 +354,29 @@ export const resolveDailyGoal = (
 
 /**
  * Resolves up to 3 most recent learning activities for Section 6.
+ * Batch retrieves content items to eliminate the N+1 query pattern.
  */
 export const resolveRecentActivities = async (
   course: Course,
   userId: string
 ): Promise<RecentLearningActivity[]> => {
   const activities: RecentLearningActivity[] = [];
+  const seenIds = new Set<string>();
 
-  // 1. Check learner content progress
+  // 1. Batch load published content items for target language
   try {
+    const publishedItems = await contentCentredService.getContentItems({
+      target_language: course.target_language,
+      status: 'published',
+    });
+    const contentMap = new Map(publishedItems.map(it => [it.id, it]));
+
+    // Check learner content progress
     const progressList = await contentCentredService.getAllLearnerProgress(userId);
     for (const prog of progressList) {
-      const item = await contentCentredService.getContentItemById(prog.content_item_id);
-      if (item && item.target_language === course.target_language) {
+      const item = contentMap.get(prog.content_item_id);
+      if (item && !seenIds.has(prog.content_item_id)) {
+        seenIds.add(prog.content_item_id);
         activities.push({
           id: `prog_${prog.id}`,
           title: item.title,
@@ -296,10 +390,13 @@ export const resolveRecentActivities = async (
     console.warn('Failed loading content progress for recent activities:', err);
   }
 
-  // 2. Check unified activity events (poetry, conversation, practice)
+  // 2. Check unified activity events (poetry, conversation, practice, curriculum)
   try {
     const events = StorageService.getActivityEvents(course.target_language, userId);
     for (const ev of events) {
+      if (seenIds.has(ev.id)) continue;
+      seenIds.add(ev.id);
+
       let actType: RecentLearningActivity['type'] = 'practice';
       if (ev.activity_type.startsWith('poetry')) actType = 'poetry';
       else if (ev.activity_type.startsWith('conversation')) actType = 'conversation';

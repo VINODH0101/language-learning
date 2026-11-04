@@ -94,7 +94,7 @@ export const DailyLearningGoal: React.FC<DailyLearningGoalProps> = ({
         </span>
       </div>
 
-      <ProgressBar progress={goalProgressPct} variant="indigo" />
+      <ProgressBar progress={goalProgressPct} variant="bronze" />
 
       <div className="flex items-center justify-between text-xs text-stone-500 pt-1">
         <span className="font-medium text-stone-600">

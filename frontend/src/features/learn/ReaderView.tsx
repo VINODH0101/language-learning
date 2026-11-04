@@ -44,23 +44,87 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [showAllTranslations, setShowAllTranslations] = useState(false);
 
   const payload = version.structured_payload;
+  const allSentences = (payload.paragraphs || []).flatMap(p => p.sentences || []);
+  const totalSentences = allSentences.length;
 
-  // Track content opening
+  // Restore reading position and track session initiation
   useEffect(() => {
+    let isCancelled = false;
     const auth = authService.getState();
     const userId = auth.user?.id || 'guest_user';
-    contentCentredService.updateLearnerProgress({
-      user_id: userId,
-      content_item_id: item.id,
-      content_version_id: version.id,
-      status: 'in_progress',
-      percent_complete: 25,
-      time_spent_seconds: 10,
-    }).catch(console.warn);
-  }, [item.id, version.id]);
+
+    const restorePosition = async () => {
+      try {
+        const existing = await contentCentredService.getLearnerProgress(userId, item.id);
+        if (isCancelled) return;
+
+        const storedPosId = localStorage.getItem(`lexilume_reading_pos_${item.id}_${version.id}`);
+        let sentenceToRestore: string | null = null;
+
+        if (storedPosId && allSentences.some(s => s.id === storedPosId)) {
+          sentenceToRestore = storedPosId;
+        } else if (existing && existing.percent_complete > 0 && totalSentences > 0) {
+          const targetIdx = Math.min(
+            totalSentences - 1,
+            Math.max(0, Math.floor((existing.percent_complete / 100) * totalSentences) - 1)
+          );
+          if (allSentences[targetIdx]) {
+            sentenceToRestore = allSentences[targetIdx].id;
+          }
+        }
+
+        if (sentenceToRestore) {
+          setSelectedSentenceId(sentenceToRestore);
+          setTimeout(() => {
+            const el = document.querySelector(`[data-testid="sentence-${sentenceToRestore}"]`);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
+        }
+
+        // Maintain existing reading progress percentage or initialize to 10%
+        const initialPct = existing?.percent_complete ?? 10;
+        await contentCentredService.updateLearnerProgress({
+          user_id: userId,
+          content_item_id: item.id,
+          content_version_id: version.id,
+          status: 'in_progress',
+          percent_complete: initialPct,
+          time_spent_seconds: (existing?.time_spent_seconds || 0) + 10,
+        });
+      } catch (err) {
+        console.warn('Error restoring reading position:', err);
+      }
+    };
+
+    restorePosition();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [item.id, version.id, totalSentences]);
 
   const handleSentenceClick = (sentenceId: string) => {
     setSelectedSentenceId(prev => (prev === sentenceId ? null : sentenceId));
+
+    const sentenceIdx = allSentences.findIndex(s => s.id === sentenceId);
+    if (sentenceIdx !== -1) {
+      try {
+        localStorage.setItem(`lexilume_reading_pos_${item.id}_${version.id}`, sentenceId);
+      } catch {}
+
+      const pct = totalSentences > 0 ? Math.round(((sentenceIdx + 1) / totalSentences) * 100) : 100;
+      const auth = authService.getState();
+      const userId = auth.user?.id || 'guest_user';
+
+      contentCentredService.updateLearnerProgress({
+        user_id: userId,
+        content_item_id: item.id,
+        content_version_id: version.id,
+        status: pct >= 100 ? 'completed' : 'in_progress',
+        percent_complete: pct,
+        time_spent_seconds: Math.max(10, Math.round((sentenceIdx + 1) * 15)),
+      }).catch(console.warn);
+    }
   };
 
   const handleTokenClick = (

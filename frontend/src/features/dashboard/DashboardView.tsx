@@ -130,71 +130,96 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     return unsub;
   }, []);
 
-  // Section 2 loader (independent)
-  const loadContinue = useCallback(async (course: Course, userId: string) => {
-    setIsContinueLoading(true);
-    setContinueError(null);
-    try {
-      const res = await resolveContinueLearning(course, userId);
-      setContinueItem(res);
-    } catch (err: any) {
-      console.warn('Error resolving continue learning:', err);
-      setContinueError(err?.message || 'Failed to load continue learning progress');
-    } finally {
-      setIsContinueLoading(false);
-    }
-  }, []);
-
-  // Section 3 loader (independent)
-  const loadEdition = useCallback(async (course: Course, excludedId?: string) => {
+  // Section 3 loader (independent or orchestrated)
+  const loadEdition = useCallback(async (course: Course, excludedId?: string, isCurrent?: () => boolean) => {
     setIsEditionLoading(true);
     setEditionError(null);
     try {
       const edition = await resolveTodaysEdition(course, excludedId);
+      if (isCurrent && !isCurrent()) return;
       setDailyPoem(edition.poem);
       setDailyConversation(edition.conversation);
       setTodayStories(edition.stories);
     } catch (err: any) {
+      if (isCurrent && !isCurrent()) return;
       console.warn('Error resolving today edition:', err);
       setEditionError(err?.message || "Failed to load Today's Edition");
     } finally {
-      setIsEditionLoading(false);
+      if (!isCurrent || isCurrent()) {
+        setIsEditionLoading(false);
+      }
     }
   }, []);
 
+  // Section 2 & 3 orchestrated loader: resolves Continue Learning first, then passes story ID to exclude
+  const loadContinueAndEdition = useCallback(async (course: Course, userId: string, isCurrent?: () => boolean) => {
+    setIsContinueLoading(true);
+    setContinueError(null);
+    let resolvedItem: ContinueItemData | null = null;
+    try {
+      resolvedItem = await resolveContinueLearning(course, userId);
+      if (isCurrent && !isCurrent()) return;
+      setContinueItem(resolvedItem);
+    } catch (err: any) {
+      if (isCurrent && !isCurrent()) return;
+      console.warn('Error resolving continue learning:', err);
+      setContinueError(err?.message || 'Failed to load continue learning progress');
+    } finally {
+      if (!isCurrent || isCurrent()) {
+        setIsContinueLoading(false);
+      }
+    }
+
+    if (isCurrent && !isCurrent()) return;
+
+    // Orchestrated Section 3 loader: exclude story if any
+    const excludedId = resolvedItem?.type === 'story' ? resolvedItem.item.id : undefined;
+    await loadEdition(course, excludedId, isCurrent);
+  }, [loadEdition]);
+
   // Section 4 loader (independent)
-  const loadVocab = useCallback(async (course: Course, userId: string) => {
+  const loadVocab = useCallback(async (course: Course, userId: string, isCurrent?: () => boolean) => {
     setIsVocabLoading(true);
     setVocabError(null);
     try {
       const vocab = await resolveVocabularySummary(course, userId);
+      if (isCurrent && !isCurrent()) return;
       setDueSRSCount(vocab.dueSRSCount);
       setSavedThisWeekCount(vocab.savedThisWeekCount);
     } catch (err: any) {
+      if (isCurrent && !isCurrent()) return;
       console.warn('Error resolving vocabulary summary:', err);
       setVocabError(err?.message || 'Failed to load vocabulary metrics');
     } finally {
-      setIsVocabLoading(false);
+      if (!isCurrent || isCurrent()) {
+        setIsVocabLoading(false);
+      }
     }
   }, []);
 
   // Section 6 loader (independent)
-  const loadRecent = useCallback(async (course: Course, userId: string) => {
+  const loadRecent = useCallback(async (course: Course, userId: string, isCurrent?: () => boolean) => {
     setIsRecentLoading(true);
     setRecentError(null);
     try {
       const acts = await resolveRecentActivities(course, userId);
+      if (isCurrent && !isCurrent()) return;
       setRecentActivities(acts);
     } catch (err: any) {
+      if (isCurrent && !isCurrent()) return;
       console.warn('Error resolving recent activities:', err);
       setRecentError(err?.message || 'Failed to load recent activities');
     } finally {
-      setIsRecentLoading(false);
+      if (!isCurrent || isCurrent()) {
+        setIsRecentLoading(false);
+      }
     }
   }, []);
 
   // Orchestrate independent Home sections when activeCourse changes
   useEffect(() => {
+    let isCancelled = false;
+    const isCurrent = () => !isCancelled;
     const userId = courseService.getUserId();
     const today = getLocalTodayDateString();
 
@@ -215,23 +240,27 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     // Check active lesson progress
     getActiveProgress(activeCourse.target_language)
       .then(p => {
+        if (!isCurrent()) return;
         if (p && p.lesson_date === today) setActiveLessonProgress(p);
         else setActiveLessonProgress(null);
       })
-      .catch(() => setActiveLessonProgress(null));
+      .catch(() => {
+        if (isCurrent()) setActiveLessonProgress(null);
+      });
 
-    // Independent Section 2 loader
-    loadContinue(activeCourse, userId);
-
-    // Independent Section 3 loader
-    loadEdition(activeCourse);
+    // Orchestrated Section 2 -> Section 3
+    loadContinueAndEdition(activeCourse, userId, isCurrent);
 
     // Independent Section 4 loader
-    loadVocab(activeCourse, userId);
+    loadVocab(activeCourse, userId, isCurrent);
 
     // Independent Section 6 loader
-    loadRecent(activeCourse, userId);
-  }, [activeCourse, loadContinue, loadEdition, loadVocab, loadRecent]);
+    loadRecent(activeCourse, userId, isCurrent);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeCourse, loadContinueAndEdition, loadVocab, loadRecent]);
 
   const handleOpenCourseLesson = (course: Course) => {
     courseService.setActiveCourse(course.id);
@@ -293,7 +322,7 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           isLoading={isContinueLoading}
           isError={Boolean(continueError)}
           errorMessage={continueError || undefined}
-          onRetry={() => loadContinue(activeCourse, courseService.getUserId())}
+          onRetry={() => loadContinueAndEdition(activeCourse, courseService.getUserId())}
         />
 
         {/* 3. Today's Edition: Mixed Content Discovery */}
@@ -308,7 +337,7 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           isLoading={isEditionLoading}
           isError={Boolean(editionError)}
           errorMessage={editionError || undefined}
-          onRetry={() => loadEdition(activeCourse)}
+          onRetry={() => loadEdition(activeCourse, continueItem?.type === 'story' ? continueItem.item.id : undefined)}
         />
 
         {/* 4. Vocabulary Summary & Spaced Repetition */}

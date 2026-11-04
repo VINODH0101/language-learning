@@ -42,13 +42,19 @@ export const LearnPage: React.FC = () => {
               version: targetVersion,
               activities,
             });
+            sessionStorage.removeItem('lexilume_open_content_id');
+            sessionStorage.removeItem('lexilume_open_version_id');
+          } else {
+            console.warn(`Version ${versionId} could not be resolved for content ${contentId}`);
+            sessionStorage.removeItem('lexilume_open_content_id');
+            sessionStorage.removeItem('lexilume_open_version_id');
           }
         }
       } catch (err) {
         console.warn('Failed resuming reading from session storage:', err);
-      } finally {
         sessionStorage.removeItem('lexilume_open_content_id');
         sessionStorage.removeItem('lexilume_open_version_id');
+      } finally {
         setIsLoadingResume(false);
       }
     };

@@ -188,7 +188,7 @@ export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
             <span>{t('dashboard:reading_progress_label', 'Reading Progress')}</span>
             <span className="font-semibold text-stone-900">{pct}%</span>
           </div>
-          <ProgressBar progress={pct} variant="indigo" />
+          <ProgressBar progress={pct} variant="bronze" />
         </div>
 
         <Button
@@ -290,7 +290,7 @@ export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
             </span>
             <span className="font-semibold text-stone-800">{curriculumProgressPct}%</span>
           </div>
-          <ProgressBar progress={curriculumProgressPct} variant="indigo" />
+          <ProgressBar progress={curriculumProgressPct} variant="bronze" />
         </div>
 
         {/* Primary Action Button */}

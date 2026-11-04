@@ -4,7 +4,7 @@ import path from 'path';
 
 const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const BASE_URL = 'http://localhost:4173';
-const ROOT_DIR = path.resolve('..');
+const ROOT_DIR = process.cwd().endsWith('frontend') ? path.resolve('..') : process.cwd();
 
 const DOCS_DIR = path.join(ROOT_DIR, 'docs', 'ui', 'screenshots');
 const FRONTEND_SCREENSHOTS = path.join(ROOT_DIR, 'frontend', 'screenshots');

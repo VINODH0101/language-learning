@@ -165,6 +165,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
         ease_factor: 2.5,
         interval_days: 1,
         next_review_date: today, // due today
+        created_at: new Date().toISOString(),
         last_reviewed_at: new Date().toISOString(),
         lapse_count: 0,
         mastery_status: 'learning' as const,
@@ -176,6 +177,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
         ease_factor: 2.6,
         interval_days: 5,
         next_review_date: '2099-01-01', // not due
+        created_at: new Date().toISOString(),
         last_reviewed_at: new Date().toISOString(),
         lapse_count: 0,
         mastery_status: 'review' as const,
@@ -321,6 +323,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
         ease_factor: 2.5,
         interval_days: 1,
         next_review_date: today,
+        created_at: new Date().toISOString(),
         last_reviewed_at: new Date().toISOString(),
         lapse_count: 0,
         mastery_status: 'learning' as const,
@@ -334,7 +337,9 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
         user_id: userId,
         term: 'Café',
         lemma: 'café',
+        target_language: 'pt',
         language: 'pt',
+        next_review: today,
         next_review_date: today,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -378,5 +383,33 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     // Session storage keys should have been cleaned up
     expect(sessionStorage.getItem('lexilume_open_content_id')).toBeNull();
     expect(sessionStorage.getItem('lexilume_open_version_id')).toBeNull();
+  });
+
+  it('16. Invariant: SRS items without created_at do NOT substitute last_reviewed_at as creation date', async () => {
+    const userId = 'user_invariance_test';
+    const today = getLocalTodayDateString();
+
+    vi.spyOn(StorageService, 'getSRSItems').mockReturnValueOnce([
+      {
+        vocabulary_item_id: 'reviewed_only_term',
+        language: 'pt' as const,
+        repetition_count: 5,
+        ease_factor: 2.5,
+        interval_days: 10,
+        next_review_date: today,
+        last_reviewed_at: new Date().toISOString(), // recent review, but NO created_at
+        lapse_count: 0,
+        mastery_status: 'review' as const,
+      },
+    ] as any);
+
+    vi.spyOn(contentCentredService, 'getUserSavedWords').mockResolvedValueOnce([]);
+
+    const vocab = await resolveVocabularySummary(sampleCourse, userId);
+
+    // It is due today
+    expect(vocab.dueSRSCount).toBe(1);
+    // But since it has no created_at, review date is NOT fabricated as creation date
+    expect(vocab.savedThisWeekCount).toBe(0);
   });
 });

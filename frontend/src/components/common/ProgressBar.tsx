@@ -4,7 +4,7 @@ interface ProgressBarProps {
   progress: number; // 0 to 100
   label?: string;
   sublabel?: string;
-  variant?: 'emerald' | 'amber' | 'indigo' | 'sky';
+  variant?: 'emerald' | 'amber' | 'indigo' | 'sky' | 'bronze';
   className?: string;
 }
 
@@ -22,6 +22,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     emerald: 'bg-emerald-500',
     amber: 'bg-amber-500',
     sky: 'bg-sky-500',
+    bronze: 'bg-[#9B7653]',
   }[variant];
 
   return (

@@ -480,9 +480,11 @@ export class StorageService {
   /**
    * Retrieves actual tracked study time in minutes for today.
    * Never returns fabricated minutes. If user has not studied today, returns 0.
+   * Strictly uses learner local calendar date (YYYY-MM-DD) to prevent UTC rollover discrepancy.
    */
   static getTodayStudyMinutes(userId?: string): number {
-    const today = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const key = this.getKey(`polyglot_study_minutes_${today}`, userId);
     try {
       const stored = localStorage.getItem(key);
@@ -491,9 +493,15 @@ export class StorageService {
       }
     } catch {}
 
-    // Calculate actual elapsed minutes from today's recorded exercise attempts
+    // Calculate actual elapsed minutes from today's recorded exercise attempts using local calendar date
     const attempts = this.getExerciseAttempts(userId);
-    const todayAttempts = attempts.filter(a => a.timestamp.startsWith(today));
+    const todayAttempts = attempts.filter(a => {
+      if (!a.timestamp) return false;
+      const ad = new Date(a.timestamp);
+      if (isNaN(ad.getTime())) return a.timestamp.startsWith(today);
+      const aLocal = `${ad.getFullYear()}-${String(ad.getMonth() + 1).padStart(2, '0')}-${String(ad.getDate()).padStart(2, '0')}`;
+      return aLocal === today;
+    });
     if (todayAttempts.length === 0) return 0;
 
     // Genuine calculation: average ~1.5 minutes per attempt actively completed
@@ -502,10 +510,12 @@ export class StorageService {
 
   /**
    * Records genuine learning duration in minutes for today.
+   * Strictly uses learner local calendar date (YYYY-MM-DD).
    */
   static addTodayStudyMinutes(minutes: number, userId?: string): void {
     if (minutes <= 0) return;
-    const today = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const key = this.getKey(`polyglot_study_minutes_${today}`, userId);
     const current = this.getTodayStudyMinutes(userId);
     try {

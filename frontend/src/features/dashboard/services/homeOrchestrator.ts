@@ -14,6 +14,7 @@
 import {
   Course,
   Language,
+  CEFRLevel,
   DailyPoem,
   DailyConversation,
   DailyLessonPayload,
@@ -115,8 +116,22 @@ export const getDeterministicDateHash = (seed: string): number => {
   return Math.abs(hash);
 };
 
+const CEFR_ORDER: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1'];
+
+/**
+ * Checks if content CEFR level is pedagogically compatible (within 1 CEFR level)
+ * with the learner's current course level.
+ */
+export const isCEFRCompatible = (contentCefr: CEFRLevel, learnerCefr: CEFRLevel): boolean => {
+  const cIdx = CEFR_ORDER.indexOf(contentCefr);
+  const lIdx = CEFR_ORDER.indexOf(learnerCefr);
+  return cIdx !== -1 && lIdx !== -1 && Math.abs(cIdx - lIdx) <= 1;
+};
+
 /**
  * Priority 1: Unfinished published content item.
+ *   - Strictly restores the exact ContentVersion recorded in LearnerContentProgress.
+ *   - Never silently binds to latest version if recorded version is inaccessible.
  *   - Prioritizes current CEFR level first, but safely falls back to any unfinished item
  *     in target_language if course level changed, preventing loss of access.
  * Priority 2: Structured daily curriculum lesson.
@@ -134,45 +149,54 @@ export const resolveContinueLearning = async (
     const allProgress = await contentCentredService.getAllLearnerProgress(userId);
     const inProgressList = allProgress
       .filter(p => p.status === 'in_progress')
-      .sort((a, b) => new Date(b.last_studied_at).getTime() - new Date(a.last_studied_at).getTime());
+      .sort((a, b) => new Date(b.last_studied_at || b.updated_at || b.created_at).getTime() - new Date(a.last_studied_at || a.updated_at || a.created_at).getTime());
 
-    // Batch load candidate items to avoid N+1 queries
-    const publishedItems = await contentCentredService.getContentItems({
-      target_language: course.target_language,
-      status: 'published',
-    });
-    const publishedMap = new Map(publishedItems.map(it => [it.id, it]));
+    const tryResolveStory = async (
+      prog: LearnerContentProgress,
+      requireCEFRMatch: boolean
+    ): Promise<ContinueItemData | null> => {
+      // Invariant: If prog specifies a content_version_id, fetch that EXACT version.
+      // Do NOT silently bind to latest version if exact version is missing or inaccessible.
+      let version: ContentVersion | null = null;
+      if (prog.content_version_id) {
+        version = await contentCentredService.getContentVersion(prog.content_version_id);
+        if (!version || version.content_item_id !== prog.content_item_id) {
+          console.warn(`Exact version ${prog.content_version_id} for item ${prog.content_item_id} inaccessible; skipping candidate.`);
+          return null;
+        }
+      }
+
+      const fullItem = await contentCentredService.getContentItemById(prog.content_item_id);
+      if (!fullItem || fullItem.status !== 'published' || fullItem.target_language !== course.target_language) {
+        return null;
+      }
+
+      const effectiveVersion = version || fullItem.version;
+      if (!effectiveVersion) return null;
+
+      const storyLevel = effectiveVersion.cefr_level || fullItem.primary_cefr;
+      if (requireCEFRMatch && storyLevel !== course.cefr_level) {
+        return null;
+      }
+
+      return {
+        type: 'story',
+        item: fullItem,
+        version: effectiveVersion,
+        progress: prog,
+      };
+    };
 
     // First pass: match target_language and exact current CEFR level
     for (const prog of inProgressList) {
-      const item = publishedMap.get(prog.content_item_id);
-      if (item && item.primary_cefr === course.cefr_level) {
-        const fullItem = await contentCentredService.getContentItemById(item.id);
-        if (fullItem && fullItem.version) {
-          return {
-            type: 'story',
-            item: fullItem,
-            version: fullItem.version,
-            progress: prog,
-          };
-        }
-      }
+      const resolved = await tryResolveStory(prog, true);
+      if (resolved) return resolved;
     }
 
     // Second pass: safe fallback across any CEFR level in target language
     for (const prog of inProgressList) {
-      const item = publishedMap.get(prog.content_item_id);
-      if (item) {
-        const fullItem = await contentCentredService.getContentItemById(item.id);
-        if (fullItem && fullItem.version) {
-          return {
-            type: 'story',
-            item: fullItem,
-            version: fullItem.version,
-            progress: prog,
-          };
-        }
-      }
+      const resolved = await tryResolveStory(prog, false);
+      if (resolved) return resolved;
     }
   } catch (err) {
     console.warn('Failed resolving in-progress story, falling back:', err);
@@ -223,7 +247,9 @@ export const resolveContinueLearning = async (
  * Resolves Today's Edition:
  * - Deterministically selects stories based on the learner's local date string (YYYY-MM-DD).
  * - Excludes the active Continue Learning item to prevent duplicate cards.
+ * - Filters for pedagogical CEFR compatibility (within 1 CEFR level of the active course).
  * - Pairs with authentic daily poetry and daily dialogue.
+ * - Does NOT swallow errors, allowing callers to handle editionError.
  */
 export const resolveTodaysEdition = async (
   course: Course,
@@ -232,34 +258,41 @@ export const resolveTodaysEdition = async (
   let stories: ContentItem[] = [];
   const localDate = getLocalTodayDateString();
 
-  try {
-    const published = await contentCentredService.getContentItems({
-      target_language: course.target_language,
-      status: 'published',
-    });
+  // Invariant: Do NOT silently swallow errors with empty array; propagate to let caller handle editionError!
+  const published = await contentCentredService.getContentItems({
+    target_language: course.target_language,
+    status: 'published',
+  });
 
-    const eligible = published.filter(item => item.id !== excludedItemId);
+  const nonExcluded = published.filter(item => item.id !== excludedItemId);
+  const cefrMatched = nonExcluded.filter(item => {
+    if (item.primary_cefr && course.cefr_level) {
+      return isCEFRCompatible(item.primary_cefr, course.cefr_level);
+    }
+    return true;
+  });
 
-    // Deterministic shuffle using localDate as seed
-    const sorted = [...eligible].sort((a, b) => {
-      const hashA = getDeterministicDateHash(`${localDate}_${a.id}`);
-      const hashB = getDeterministicDateHash(`${localDate}_${b.id}`);
-      return hashA - hashB;
-    });
+  const eligible = cefrMatched.length > 0 ? cefrMatched : nonExcluded;
 
-    stories = sorted.slice(0, 2);
-  } catch (err) {
-    console.warn('Failed fetching published stories for edition:', err);
-  }
+  // Deterministic shuffle using localDate as seed
+  const sorted = [...eligible].sort((a, b) => {
+    const hashA = getDeterministicDateHash(`${localDate}_${a.id}`);
+    const hashB = getDeterministicDateHash(`${localDate}_${b.id}`);
+    return hashA - hashB;
+  });
+
+  stories = sorted.slice(0, 2);
 
   const poem = dailyContentService.getDailyPoem(
     course.target_language,
-    course.explanation_language
+    course.explanation_language,
+    course.cefr_level
   );
 
   const conversation = dailyContentService.getDailyConversation(
     course.target_language,
-    course.explanation_language
+    course.explanation_language,
+    course.cefr_level
   );
 
   return {
@@ -272,9 +305,11 @@ export const resolveTodaysEdition = async (
 /**
  * Resolves Vocabulary Summary metrics:
  * - Deduplicates words across both StorageService SRS items and content-centred saved words
- *   using a distinct union of normalized lemmas/terms.
+ *   using a canonical identity key (preferring legacy_srs_item_id or lemma/term).
  * - Accurately counts distinct words due for review today.
- * - Accurately counts distinct words saved in the past 7 days (no Math.max approximation).
+ * - Accurately counts distinct words saved in the past 7 days based on authoritative creation timestamp
+ *   (never substituting last_reviewed_at as creation date).
+ * - Does NOT swallow errors, allowing callers to handle vocabError.
  */
 export const resolveVocabularySummary = async (
   course: Course,
@@ -282,52 +317,56 @@ export const resolveVocabularySummary = async (
 ): Promise<VocabularySummaryData> => {
   const today = getLocalTodayDateString();
 
-  const dueNormalizedTerms = new Set<string>();
-  const savedThisWeekNormalizedTerms = new Set<string>();
+  const dueCanonicalKeys = new Set<string>();
+  const savedThisWeekCanonicalKeys = new Set<string>();
 
-  // 1. Process course SRS items
+  // 1. Process course SRS items (strictly scoped to course.target_language)
   const srsItems = StorageService.getSRSItems(course.target_language, userId);
   for (const item of srsItems) {
+    if (item.language && item.language !== course.target_language) continue;
     const termKey = (item.vocabulary_item_id || '').trim().toLowerCase();
     if (!termKey) continue;
 
-    if (item.next_review_date <= today) {
-      dueNormalizedTerms.add(termKey);
+    if (item.next_review_date && item.next_review_date <= today) {
+      dueCanonicalKeys.add(termKey);
     }
 
-    const reviewDate = item.last_reviewed_at || (item as any).created_at;
-    if (isWithinLast7Days(reviewDate)) {
-      savedThisWeekNormalizedTerms.add(termKey);
+    // Invariant: DO NOT use last_reviewed_at as creation date substitute.
+    // Only count if an explicit created_at exists on the SRS item.
+    const createdAt = (item as any).created_at;
+    if (createdAt && isWithinLast7Days(createdAt)) {
+      savedThisWeekCanonicalKeys.add(termKey);
     }
   }
 
-  // 2. Process content-centred saved words
-  try {
-    const savedWords: UserSavedWord[] = await contentCentredService.getUserSavedWords(
-      userId,
-      course.target_language
-    );
+  // 2. Process content-centred saved words (strictly scoped to course.target_language)
+  // Let errors propagate to caller so caller can present error state to the user instead of fake zeros!
+  const savedWords: UserSavedWord[] = await contentCentredService.getUserSavedWords(
+    userId,
+    course.target_language
+  );
 
-    for (const w of savedWords) {
-      const termKey = (w.lemma || w.term).trim().toLowerCase();
-      if (!termKey) continue;
+  for (const w of savedWords) {
+    const targetLang = w.target_language || (w as any).language;
+    if (targetLang && targetLang !== course.target_language) continue;
+    // Canonical mapping: prefer legacy_srs_item_id if set, else lemma or term
+    const canonicalKey = (w.legacy_srs_item_id || w.lemma || w.term).trim().toLowerCase();
+    if (!canonicalKey) continue;
 
-      const nextDue = w.next_review || (w as any).next_review_date;
-      if (nextDue && nextDue <= today) {
-        dueNormalizedTerms.add(termKey);
-      }
-
-      if (isWithinLast7Days(w.created_at)) {
-        savedThisWeekNormalizedTerms.add(termKey);
-      }
+    const nextDue = w.next_review || (w as any).next_review_date;
+    if (nextDue && nextDue <= today) {
+      dueCanonicalKeys.add(canonicalKey);
     }
-  } catch (err) {
-    console.warn('Failed checking content-centred saved words:', err);
+
+    // Authoritative creation date: w.created_at
+    if (w.created_at && isWithinLast7Days(w.created_at)) {
+      savedThisWeekCanonicalKeys.add(canonicalKey);
+    }
   }
 
   return {
-    dueSRSCount: dueNormalizedTerms.size,
-    savedThisWeekCount: savedThisWeekNormalizedTerms.size,
+    dueSRSCount: dueCanonicalKeys.size,
+    savedThisWeekCount: savedThisWeekCanonicalKeys.size,
   };
 };
 

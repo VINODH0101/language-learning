@@ -180,6 +180,18 @@ export const AdminContentStudio: React.FC<AdminContentStudioProps> = ({ initialV
         />
       )}
 
+      {activeView === 'monitor' && !activeJob && (
+        <div className="bg-white border border-stone-200 rounded-2xl p-8 shadow-sm text-center space-y-2">
+          <h3 className="font-serif text-lg font-bold text-stone-900">
+            No processing job in progress
+          </h3>
+          <p className="text-xs text-stone-600 max-w-md mx-auto">
+            Start a content import to launch the deterministic processing pipeline and monitor
+            its stages here.
+          </p>
+        </div>
+      )}
+
       {/* View: Review Editor */}
       {activeView === 'review' && selectedItem && selectedVersion && (
         <ContentReviewEditor

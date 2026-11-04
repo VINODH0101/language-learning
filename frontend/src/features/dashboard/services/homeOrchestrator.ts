@@ -52,8 +52,26 @@ export type ContinueItemData =
       version?: ContentVersion;
     }
   | {
+      type: 'recovery';
+      item: ContentItem | null;
+      requestedVersionId: string;
+      reason: 'version_unavailable' | 'version_mismatch';
+    }
+  | {
       type: 'empty';
     };
+
+/**
+ * Returns the content item id represented by a Continue Learning resolution.
+ * Used to guarantee the same item never appears twice between Continue Learning
+ * and Today's Edition.
+ */
+export const getContinueContentItemId = (item: ContinueItemData | null): string | undefined => {
+  if (!item) return undefined;
+  if (item.type === 'story' || item.type === 'recommended') return item.item.id;
+  if (item.type === 'recovery') return item.item?.id;
+  return undefined;
+};
 
 export interface TodaysEditionData {
   stories: ContentItem[];
@@ -167,11 +185,20 @@ export const buildCanonicalVocabIdentity = (
 };
 
 /**
- * Priority 1: Unfinished published content item.
+ * Detects legacy synthetic SRS identifiers (e.g. "srs_cafe_123", "legacy_42").
+ * Such IDs may represent a real saved word, but without an explicit mapping to
+ * a canonical lemma/term they must not be counted as a confirmed vocabulary word.
+ */
+export const isLegacySyntheticVocabId = (value?: string | null): boolean =>
+  Boolean(value && /^(srs|legacy|legacy_srs|vocab_item)[_-]/i.test(value.trim()));
+
+/**
+ * Priority 1: Most recently accessed unfinished published content item.
  *   - Strictly restores the exact ContentVersion recorded in LearnerContentProgress.
- *   - Never silently binds to latest version if recorded version is inaccessible.
- *   - Prioritizes current CEFR level first, but safely falls back to any unfinished item
- *     in target_language if course level changed, preventing loss of access.
+ *   - If that exact version is unavailable or mismatched, returns a recovery state
+ *     instead of silently opening a different version.
+ *   - CEFR level never overrides recency for an item the learner already started;
+ *     unfinished work in the target language always remains resumable.
  * Priority 2: Structured daily curriculum lesson.
  * Priority 3: Recommended published content item.
  *   - Excludes already completed items.
@@ -192,32 +219,41 @@ export const resolveContinueLearning = async (
     .filter(p => p.status === 'in_progress')
     .sort((a, b) => new Date(b.last_studied_at || b.updated_at || b.created_at).getTime() - new Date(a.last_studied_at || a.updated_at || a.created_at).getTime());
 
-  const tryResolveStory = async (
-    prog: LearnerContentProgress,
-    requireCEFRMatch: boolean
-  ): Promise<ContinueItemData | null> => {
-    // Invariant: If prog specifies a content_version_id, fetch that EXACT version.
-    // Do NOT silently bind to latest version if exact version is missing or inaccessible.
+  for (const prog of inProgressList) {
+    const fullItem = await contentCentredService.getContentItemById(prog.content_item_id);
+
+    // Never surface unpublished, archived, or out-of-language content.
+    if (
+      !fullItem ||
+      fullItem.status !== 'published' ||
+      fullItem.target_language !== course.target_language
+    ) {
+      continue;
+    }
+
+    // Invariant: If progress specifies a content_version_id, restore that EXACT version.
+    // Never silently substitute the latest version when the recorded edition is missing.
     let version: ContentVersion | null = null;
     if (prog.content_version_id) {
       version = await contentCentredService.getContentVersion(prog.content_version_id);
       if (!version || version.content_item_id !== prog.content_item_id) {
-        console.warn(`Exact version ${prog.content_version_id} for item ${prog.content_item_id} inaccessible; skipping candidate.`);
-        return null;
+        return {
+          type: 'recovery',
+          item: fullItem,
+          requestedVersionId: prog.content_version_id,
+          reason: version ? 'version_mismatch' : 'version_unavailable',
+        };
       }
     }
 
-    const fullItem = await contentCentredService.getContentItemById(prog.content_item_id);
-    if (!fullItem || fullItem.status !== 'published' || fullItem.target_language !== course.target_language) {
-      return null;
-    }
-
     const effectiveVersion = version || fullItem.version;
-    if (!effectiveVersion) return null;
-
-    const storyLevel = effectiveVersion.cefr_level || fullItem.primary_cefr;
-    if (requireCEFRMatch && storyLevel !== course.cefr_level) {
-      return null;
+    if (!effectiveVersion) {
+      return {
+        type: 'recovery',
+        item: fullItem,
+        requestedVersionId: prog.content_version_id || '',
+        reason: 'version_unavailable',
+      };
     }
 
     return {
@@ -226,18 +262,6 @@ export const resolveContinueLearning = async (
       version: effectiveVersion,
       progress: prog,
     };
-  };
-
-  // First pass: match target_language and exact current CEFR level
-  for (const prog of inProgressList) {
-    const resolved = await tryResolveStory(prog, true);
-    if (resolved) return resolved;
-  }
-
-  // Second pass: safe fallback across any CEFR level in target language
-  for (const prog of inProgressList) {
-    const resolved = await tryResolveStory(prog, false);
-    if (resolved) return resolved;
   }
 
   // 2. Fallback to structured daily curriculum lesson
@@ -303,9 +327,6 @@ export const resolveContinueLearning = async (
     item: full || selected,
     version: full?.version,
   };
-
-  // 4. Genuine empty state (catalog has zero matching published content)
-  return { type: 'empty' };
 };
 
 /**
@@ -325,6 +346,18 @@ export const resolveTodaysEdition = async (
 ): Promise<TodaysEditionData> => {
   let stories: ContentItem[] = [];
   const localDate = getLocalTodayDateString();
+
+  const poem = dailyContentService.getDailyPoem(
+    course.target_language,
+    course.explanation_language,
+    course.cefr_level
+  );
+
+  const conversation = dailyContentService.getDailyConversation(
+    course.target_language,
+    course.explanation_language,
+    course.cefr_level
+  );
 
   // Invariant: Do NOT silently swallow errors with empty array; propagate to let caller handle editionError!
   const published = await contentCentredService.getContentItems({
@@ -352,19 +385,10 @@ export const resolveTodaysEdition = async (
     return hashA - hashB;
   });
 
-  stories = sorted.slice(0, 2);
-
-  const poem = dailyContentService.getDailyPoem(
-    course.target_language,
-    course.explanation_language,
-    course.cefr_level
-  );
-
-  const conversation = dailyContentService.getDailyConversation(
-    course.target_language,
-    course.explanation_language,
-    course.cefr_level
-  );
+  // Curated edition is capped at three items in total. Poetry and dialogue are
+  // included first; published stories fill any remaining slots only.
+  const availableSlots = 3 - (poem ? 1 : 0) - (conversation ? 1 : 0);
+  stories = sorted.slice(0, Math.max(0, availableSlots));
 
   return {
     stories,
@@ -444,9 +468,14 @@ export const resolveVocabularySummary = async (
 
     const rawItemId = item.vocabulary_item_id;
     const scopedItemId = `${targetLang.toLowerCase()}:${normalizeCanonicalVocabKey(rawItemId)}`;
+    const mappedCanonicalKey =
+      legacyIdToCanonicalMap.get(scopedItemId) || legacyIdToCanonicalMap.get(rawItemId);
+
+    // An unmatched legacy synthetic ID is not a confirmed canonical word.
+    if (!mappedCanonicalKey && isLegacySyntheticVocabId(rawItemId)) continue;
+
     // Resolve alias if mapped from a UserSavedWord legacy_srs_item_id; otherwise build canonical key
-    const canonicalKey = legacyIdToCanonicalMap.get(scopedItemId) ||
-      legacyIdToCanonicalMap.get(rawItemId) ||
+    const canonicalKey = mappedCanonicalKey ||
       buildCanonicalVocabIdentity(targetLang, rawItemId, (item as any).lemma, (item as any).term);
     if (!canonicalKey) continue;
 

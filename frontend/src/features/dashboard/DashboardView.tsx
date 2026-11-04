@@ -32,6 +32,7 @@ import {
   ContinueItemData,
   RecentLearningActivity,
   getLocalTodayDateString,
+  getContinueContentItemId,
   resolveContinueLearning,
   resolveTodaysEdition,
   resolveVocabularySummary,
@@ -172,8 +173,8 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
 
     if (isCurrent && !isCurrent()) return;
 
-    // Orchestrated Section 3 loader: exclude story if any
-    const excludedId = resolvedItem?.type === 'story' ? resolvedItem.item.id : undefined;
+    // Orchestrated Section 3 loader: never duplicate the Continue Learning item.
+    const excludedId = getContinueContentItemId(resolvedItem);
     await loadEdition(course, excludedId, isCurrent);
   }, [loadEdition]);
 
@@ -271,6 +272,10 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
   };
 
   const handleContinue = (item: ContinueItemData) => {
+    if (item.type === 'recovery') {
+      onNavigateTab('learn');
+      return;
+    }
     if (item.type === 'story' || item.type === 'recommended') {
       try {
         sessionStorage.setItem('lexilume_open_content_id', item.item.id);
@@ -337,7 +342,7 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           isLoading={isEditionLoading}
           isError={Boolean(editionError)}
           errorMessage={editionError || undefined}
-          onRetry={() => loadEdition(activeCourse, continueItem?.type === 'story' ? continueItem.item.id : undefined)}
+          onRetry={() => loadEdition(activeCourse, getContinueContentItemId(continueItem))}
         />
 
         {/* 4. Vocabulary Summary & Spaced Repetition */}

@@ -57,34 +57,30 @@ import { AdminAuditLogs } from './AdminAuditLogs';
 import { AdminContentStudio } from './content-studio/AdminContentStudio';
 import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
+import type { AdminWorkbenchTab } from './adminNavigation';
 
-export type AdminWorkbenchTab =
-  | 'overview'
-  | 'content_studio'
-  | 'content_import'
-  | 'processing_studio'
-  | 'review'
-  | 'settings'
-  | 'users'
-  | 'languages'
-  | 'cefr_audit'
-  | 'providers'
-  | 'jobs'
-  | 'duplicates'
-  | 'datasets'
-  | 'daily_content'
-  | 'audit';
+export type { AdminWorkbenchTab } from './adminNavigation';
 
 interface AdminWorkbenchProps {
   initialTab?: AdminWorkbenchTab;
+  activeTab?: AdminWorkbenchTab;
+  onSelectTab?: (tab: AdminWorkbenchTab) => void;
   onNavigateTab?: (tab: any) => void;
 }
 
 export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
   initialTab = 'review',
+  activeTab: controlledTab,
+  onSelectTab,
 }) => {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<AdminWorkbenchTab>(initialTab);
+  const [internalTab, setInternalTab] = useState<AdminWorkbenchTab>(initialTab);
+  const activeTab = controlledTab ?? internalTab;
+
+  const selectTab = (tab: AdminWorkbenchTab) => {
+    if (controlledTab === undefined) setInternalTab(tab);
+    onSelectTab?.(tab);
+  };
 
   // 1. Content Review State
   const [reviewItems, setReviewItems] = useState<PendingContentItem[]>(() => INITIAL_REVIEW_ITEMS);
@@ -219,7 +215,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as AdminWorkbenchTab)}
+              onClick={() => selectTab(tab.id as AdminWorkbenchTab)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition ${
                 activeTab === tab.id
                   ? 'bg-stone-900 text-white shadow-xs'
@@ -248,7 +244,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 0. Overview Tab */}
       {activeTab === 'overview' && (
-        <AdminOverview onNavigateTab={tab => setActiveTab(tab as AdminWorkbenchTab)} />
+        <AdminOverview onNavigateTab={tab => selectTab((tab === 'operations' ? 'providers' : tab) as AdminWorkbenchTab)} />
       )}
 
       {/* 0.1 Users Tab */}

@@ -27,6 +27,12 @@ import { Logo } from './Logo';
 import { InterfaceLanguageSelector } from './InterfaceLanguageSelector';
 import { SyncStatusBadge } from './SyncStatusBadge';
 import { BRANDING } from '../../config/branding';
+import {
+  ADMIN_PRIMARY_DESTINATIONS,
+  AdminPrimaryDestination,
+  AdminWorkbenchTab,
+  DEFAULT_ADMIN_DESTINATION,
+} from '../../features/admin/adminNavigation';
 
 export type NavTab =
   | 'learn'
@@ -47,14 +53,27 @@ export type NavTab =
 interface NavigationProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
+  adminTab?: AdminWorkbenchTab;
+  onSelectAdminTab?: (tab: AdminWorkbenchTab) => void;
   streakDays?: number;
   onOpenAuth: () => void;
   onOpenOnboarding: () => void;
 }
 
+const ADMIN_DESTINATION_ICONS = {
+  overview: LayoutDashboard,
+  content_studio: BookOpen,
+  content_import: Sparkles,
+  processing_studio: TrendingUp,
+  review: Shield,
+  settings: Settings,
+} as const;
+
 export const Navigation: React.FC<NavigationProps> = ({
   activeTab,
   onSelectTab,
+  adminTab,
+  onSelectAdminTab,
   onOpenAuth,
   onOpenOnboarding,
 }) => {
@@ -62,6 +81,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const [authState, setAuthState] = useState<AuthState>(authService.getState());
   const [isLearnDropdownOpen, setIsLearnDropdownOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(() => {
     try {
       if (typeof window !== 'undefined' && window.location.search) {
@@ -72,6 +92,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   });
   const learnDropdownRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const adminMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubAuth = authService.subscribe(setAuthState);
@@ -101,6 +122,9 @@ export const Navigation: React.FC<NavigationProps> = ({
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
         setIsProfileMenuOpen(false);
       }
+      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
+        setIsAdminMenuOpen(false);
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -108,6 +132,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         setIsLearnDropdownOpen(false);
         setIsProfileMenuOpen(false);
         setIsMobileDrawerOpen(false);
+        setIsAdminMenuOpen(false);
       }
     };
 
@@ -214,78 +239,149 @@ export const Navigation: React.FC<NavigationProps> = ({
     }
   };
 
+  const currentAdminTab: AdminWorkbenchTab = adminTab ?? DEFAULT_ADMIN_DESTINATION;
+  const currentAdminDestination =
+    ADMIN_PRIMARY_DESTINATIONS.find(destination => destination.id === currentAdminTab) ||
+    ADMIN_PRIMARY_DESTINATIONS[0];
+
+  const handleSelectAdminDestination = (destination: AdminPrimaryDestination) => {
+    setIsAdminMenuOpen(false);
+    if (onSelectAdminTab) {
+      onSelectAdminTab(destination);
+    } else {
+      onSelectTab('admin');
+    }
+  };
+
   // Dedicated Admin Navigation Header when viewing AdminDesk
   if (activeTab === 'admin' && authState.role === 'admin') {
     return (
       <header className="bg-[#FDFBF7]/95 border-b border-stone-200 sticky top-0 z-40 backdrop-blur-md w-full shadow-xs">
         <div className="w-full px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 w-full">
+          <div className="flex items-center justify-between h-16 w-full gap-2">
             {/* Left: Admin Logo & Exit to Learner App */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <div
                 role="button"
                 tabIndex={0}
                 className="flex items-center gap-2 cursor-pointer shrink-0 select-none group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
-                onClick={() => handleSelectNavTab('admin')}
+                onClick={() => handleSelectAdminDestination(DEFAULT_ADMIN_DESTINATION)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') handleSelectNavTab('admin');
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleSelectAdminDestination(DEFAULT_ADMIN_DESTINATION);
+                  }
                 }}
                 aria-label="Lexilume Admin Desk"
               >
                 <Logo size="md" />
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-800 border border-stone-300 uppercase tracking-wider">
+                <span className="hidden 2xl:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-800 border border-stone-300 uppercase tracking-wider">
                   Admin Desk
                 </span>
               </div>
 
               <button
                 onClick={() => handleSelectNavTab('dashboard')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 transition cursor-pointer border border-stone-200"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 transition cursor-pointer border border-stone-200 shrink-0"
                 aria-label="Return to Learner View"
                 title="Return to Learner View"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Learner App</span>
+                <span className="hidden lg:inline">Learner App</span>
               </button>
             </div>
 
-            {/* Center: Admin Primary Destinations */}
-            <nav className="hidden lg:flex items-center gap-1 mx-auto" aria-label="Admin Destinations">
-              {[
-                { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-                { id: 'content_studio', label: 'Content Library', icon: BookOpen },
-                { id: 'content_import', label: 'Import Content', icon: Sparkles },
-                { id: 'processing_studio', label: 'Processing Studio', icon: TrendingUp },
-                { id: 'review', label: 'Review & Publish', icon: Shield },
-                { id: 'settings', label: 'Settings', icon: Settings },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelectNavTab('admin')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-stone-700 hover:text-stone-900 hover:bg-stone-100 transition cursor-pointer"
-                >
-                  <item.icon className="w-3.5 h-3.5 text-stone-500" />
-                  <span>{item.label}</span>
-                </button>
-              ))}
+            {/* Center: Desktop Admin Primary Destinations */}
+            <nav className="hidden xl:flex items-center gap-0.5 mx-auto shrink-0" aria-label="Admin Destinations">
+              {ADMIN_PRIMARY_DESTINATIONS.map((item) => {
+                const Icon = ADMIN_DESTINATION_ICONS[item.id];
+                const isActive = currentAdminTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSelectAdminDestination(item.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      isActive
+                        ? 'bg-stone-900 text-white shadow-xs'
+                        : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-stone-500'}`} />
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  </button>
+                );
+              })}
             </nav>
 
             {/* Right: Sync Status + Language + Sign Out */}
-            <div className="flex items-center gap-2 shrink-0">
-              <SyncStatusBadge />
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="hidden 2xl:block">
+                <SyncStatusBadge />
+              </div>
               <InterfaceLanguageSelector />
               <button
                 onClick={() => {
                   authService.signOut();
                   handleSelectNavTab('dashboard');
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 border border-stone-200 hover:border-rose-200 text-xs font-bold text-rose-700 transition cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 border border-stone-200 hover:border-rose-200 text-xs font-bold text-rose-700 transition cursor-pointer"
                 aria-label="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{t('nav_sign_out')}</span>
               </button>
             </div>
+          </div>
+
+          {/* Tablet & Mobile: Current destination with an accessible selector */}
+          <div className="xl:hidden border-t border-stone-200 py-1.5" ref={adminMenuRef}>
+            <button
+              onClick={() => setIsAdminMenuOpen(open => !open)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200 text-xs font-semibold text-stone-800 hover:bg-stone-100 transition cursor-pointer min-h-[44px]"
+              aria-label="Admin navigation menu"
+              aria-expanded={isAdminMenuOpen}
+              aria-haspopup="true"
+            >
+              <span className="flex items-center gap-2">
+                {(() => {
+                  const CurrentIcon = ADMIN_DESTINATION_ICONS[currentAdminDestination.id];
+                  return <CurrentIcon className="w-4 h-4 text-stone-600" />;
+                })()}
+                <span>{currentAdminDestination.label}</span>
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-stone-500 transition-transform ${
+                  isAdminMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {isAdminMenuOpen && (
+              <nav
+                aria-label="Admin Destinations Mobile"
+                className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-1.5 bg-[#FDFBF7] border border-stone-200 rounded-xl shadow-lg"
+              >
+                {ADMIN_PRIMARY_DESTINATIONS.map((item) => {
+                  const Icon = ADMIN_DESTINATION_ICONS[item.id];
+                  const isActive = currentAdminTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectAdminDestination(item.id)}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                        isActive
+                          ? 'bg-stone-900 text-white'
+                          : 'text-stone-800 hover:bg-stone-100'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-500'}`} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
           </div>
         </div>
       </header>

@@ -478,14 +478,28 @@ export class StorageService {
   // --- Real Learning Duration Tracking (Zero-Fabrication) ---
 
   /**
+   * Returns the learner's local calendar date key (YYYY-MM-DD).
+   * Using local date parts prevents UTC rollover from shifting a learner's
+   * study minutes into the adjacent day.
+   */
+  static getLocalDateKey(date: Date = new Date()): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  /**
    * Retrieves actual tracked study time in minutes for today.
    * Never returns fabricated minutes. If user has not studied today, returns 0.
    * Strictly uses learner local calendar date (YYYY-MM-DD) to prevent UTC rollover discrepancy.
    */
   static getTodayStudyMinutes(userId?: string): number {
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const key = this.getKey(`polyglot_study_minutes_${today}`, userId);
+    return this.getStudyMinutesForDate(this.getLocalDateKey(), userId);
+  }
+
+  /**
+   * Retrieves tracked study minutes for an explicit local date key.
+   */
+  static getStudyMinutesForDate(dateKey: string, userId?: string): number {
+    const key = this.getKey(`polyglot_study_minutes_${dateKey}`, userId);
     try {
       const stored = localStorage.getItem(key);
       if (stored !== null) {
@@ -494,7 +508,7 @@ export class StorageService {
     } catch {}
 
     // Derives strictly from genuine tracked active study seconds; never estimates from exercise count or arbitrary durations
-    const seconds = this.getTodayStudySeconds(userId);
+    const seconds = this.getStudySecondsForDate(dateKey, userId);
     return Math.floor(seconds / 60);
   }
 
@@ -502,9 +516,14 @@ export class StorageService {
    * Retrieves genuine tracked active learning seconds for today.
    */
   static getTodayStudySeconds(userId?: string): number {
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const key = this.getKey(`polyglot_study_seconds_${today}`, userId);
+    return this.getStudySecondsForDate(this.getLocalDateKey(), userId);
+  }
+
+  /**
+   * Retrieves tracked active seconds for an explicit local date key.
+   */
+  static getStudySecondsForDate(dateKey: string, userId?: string): number {
+    const key = this.getKey(`polyglot_study_seconds_${dateKey}`, userId);
     try {
       const stored = localStorage.getItem(key);
       if (stored !== null) {
@@ -519,23 +538,40 @@ export class StorageService {
    * Converts accumulated seconds into whole minutes once 60s increments are reached.
    * Returns { addedMinutes, totalTodaySeconds }.
    */
-  static addTodayActiveSeconds(seconds: number, userId?: string): { addedMinutes: number; totalTodaySeconds: number } {
-    if (seconds <= 0) {
-      return { addedMinutes: 0, totalTodaySeconds: this.getTodayStudySeconds(userId) };
-    }
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const secKey = this.getKey(`polyglot_study_seconds_${today}`, userId);
-    const minKey = this.getKey(`polyglot_study_minutes_${today}`, userId);
+  static addTodayActiveSeconds(
+    seconds: number,
+    userId?: string,
+    dateKey: string = this.getLocalDateKey()
+  ): { addedMinutes: number; totalTodaySeconds: number } {
+    return this.addActiveSecondsForDate(seconds, dateKey, userId);
+  }
 
-    const prevSeconds = this.getTodayStudySeconds(userId);
+  /**
+   * Records genuine active seconds against an explicit local date key.
+   * Used by the active-reading timer when a session crosses local midnight,
+   * so pre-midnight seconds remain attributed to the previous day.
+   */
+  static addActiveSecondsForDate(
+    seconds: number,
+    dateKey: string,
+    userId?: string
+  ): { addedMinutes: number; totalTodaySeconds: number } {
+    if (seconds <= 0) {
+      return { addedMinutes: 0, totalTodaySeconds: this.getStudySecondsForDate(dateKey, userId) };
+    }
+    const secKey = this.getKey(`polyglot_study_seconds_${dateKey}`, userId);
+    const minKey = this.getKey(`polyglot_study_minutes_${dateKey}`, userId);
+
+    const prevSeconds = this.getStudySecondsForDate(dateKey, userId);
     const totalSeconds = prevSeconds + seconds;
 
     const prevFullMinutes = Math.floor(prevSeconds / 60);
     const newFullMinutes = Math.floor(totalSeconds / 60);
     const deltaMinutes = newFullMinutes - prevFullMinutes;
 
-    let currentStoredMins = 0;
+    // Fall back to whole minutes derivable from persisted seconds so legacy
+    // records that only have a seconds key are never under-reported later.
+    let currentStoredMins = prevFullMinutes;
     try {
       const stored = localStorage.getItem(minKey);
       if (stored !== null) {
@@ -561,9 +597,7 @@ export class StorageService {
    */
   static addTodayStudyMinutes(minutes: number, userId?: string): void {
     if (minutes <= 0) return;
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const key = this.getKey(`polyglot_study_minutes_${today}`, userId);
+    const key = this.getKey(`polyglot_study_minutes_${this.getLocalDateKey()}`, userId);
     const current = this.getTodayStudyMinutes(userId);
     try {
       localStorage.setItem(key, String(current + minutes));

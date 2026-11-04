@@ -286,8 +286,8 @@ class DailyContentService {
     const all = this.getLocalPoetry();
     const active = all.filter(p => p.is_active && p.learning_language === learningLanguage);
     if (active.length === 0) {
-      const anyLang = all.find(p => p.learning_language === learningLanguage);
-      return anyLang || all[0] || null;
+      // Never substitute archived content or another target language.
+      return null;
     }
     if (cefrLevel) {
       const matchLevel = active.find(p => p.cefr_level === cefrLevel);
@@ -300,8 +300,8 @@ class DailyContentService {
     const all = this.getLocalConversations();
     const active = all.filter(c => c.is_active && c.learning_language === learningLanguage);
     if (active.length === 0) {
-      const anyLang = all.find(c => c.learning_language === learningLanguage);
-      return anyLang || all[0] || null;
+      // Never substitute archived content or another target language.
+      return null;
     }
     if (cefrLevel) {
       const matchLevel = active.find(c => c.cefr_level === cefrLevel);
@@ -359,9 +359,8 @@ class DailyContentService {
     const all = this.getLocalPoetry();
     const active = all.filter(p => p.is_active && p.learning_language === learningLanguage);
     if (active.length === 0) {
-      // Useful fallback: return any active poem for this language or first available
-      const anyLang = all.find(p => p.learning_language === learningLanguage);
-      return anyLang || all[0] || null;
+      // Never substitute archived content or another target language.
+      return null;
     }
     if (cefrLevel) {
       const matchLevel = active.find(p => p.cefr_level === cefrLevel);
@@ -413,8 +412,8 @@ class DailyContentService {
     const all = this.getLocalConversations();
     const active = all.filter(c => c.is_active && c.learning_language === learningLanguage);
     if (active.length === 0) {
-      const anyLang = all.find(c => c.learning_language === learningLanguage);
-      return anyLang || all[0] || null;
+      // Never substitute archived content or another target language.
+      return null;
     }
     if (cefrLevel) {
       const matchLevel = active.find(c => c.cefr_level === cefrLevel);

@@ -3,16 +3,21 @@ import { Navigation, NavTab } from '../../components/common/Navigation';
 import { AuthModal } from '../../components/auth/AuthModal';
 import { GuidedOnboardingModal } from '../../components/onboarding/GuidedOnboardingModal';
 import { BRANDING } from '../../config/branding';
+import type { AdminWorkbenchTab } from '../../features/admin/adminNavigation';
 
 export interface AppLayoutProps extends PropsWithChildren {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
+  adminTab?: AdminWorkbenchTab;
+  onSelectAdminTab?: (tab: AdminWorkbenchTab) => void;
   streakDays: number;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   activeTab,
   onSelectTab,
+  adminTab,
+  onSelectAdminTab,
   streakDays,
   children,
 }) => {
@@ -25,6 +30,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <Navigation
         activeTab={activeTab}
         onSelectTab={onSelectTab}
+        adminTab={adminTab}
+        onSelectAdminTab={onSelectAdminTab}
         streakDays={streakDays}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onOpenOnboarding={() => setIsOnboardingModalOpen(true)}

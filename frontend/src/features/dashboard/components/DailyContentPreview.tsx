@@ -95,6 +95,13 @@ export const DailyContentPreview: React.FC<DailyContentPreviewProps> = ({
 
   if (!dailyPoem && !dailyConversation && publishedStories.length === 0) return null;
 
+  // Today's Edition is capped at three items in total. Poetry and dialogue are
+  // included first; published stories only fill any remaining slots.
+  const visibleStories = publishedStories.slice(
+    0,
+    Math.max(0, 3 - (dailyPoem ? 1 : 0) - (dailyConversation ? 1 : 0))
+  );
+
   return (
     <section aria-label="Today's Edition" className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
@@ -214,7 +221,7 @@ export const DailyContentPreview: React.FC<DailyContentPreviewProps> = ({
         )}
 
         {/* 3. Published Short Story / Culture Article */}
-        {publishedStories.slice(0, 1).map(story => (
+        {visibleStories.map(story => (
           <article
             key={story.id}
             onClick={() => onOpenStory ? onOpenStory(story) : (onExploreAll && onExploreAll())}

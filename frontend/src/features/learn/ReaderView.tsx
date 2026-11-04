@@ -56,7 +56,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const hasInteractedRef = useRef<boolean>(false);
   const isIdleRef = useRef<boolean>(true);
   const isTabVisibleRef = useRef<boolean>(typeof document !== 'undefined' ? document.visibilityState === 'visible' : true);
-  const accumulatedStudyMinutesRef = useRef<number>(0);
+  const activeDateKeyRef = useRef<string>(StorageService.getLocalDateKey());
 
   const INACTIVITY_THRESHOLD_MS = 60_000; // 60 seconds of inactivity pauses tracking
   const FLUSH_INTERVAL_SECONDS = 15; // flush to persistent storage every 15s of active reading
@@ -68,8 +68,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     isIdleRef.current = false;
   }, []);
 
-  // Flush genuine active reading time to persistent storage and progress
-  const flushActiveTime = useCallback(async () => {
+  // Flush genuine active reading time to persistent storage and progress.
+  // dateKey is explicit so seconds earned before local midnight are never
+  // attributed to the following day when a session crosses midnight.
+  const flushActiveTime = useCallback(async (dateKey: string = activeDateKeyRef.current) => {
     const unflushed = unflushedSecondsRef.current;
     if (unflushed <= 0) return;
 
@@ -80,7 +82,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
     // 1. Authoritative local persistence first (synchronous & robust across network drops)
     try {
-      StorageService.addTodayActiveSeconds(unflushed, userId);
+      StorageService.addTodayActiveSeconds(unflushed, userId, dateKey);
     } catch (localErr) {
       console.warn('Error saving active seconds locally:', localErr);
     }
@@ -130,6 +132,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
     // Heartbeat ticker: runs every 1 second
     const intervalId = window.setInterval(() => {
+      // Local midnight rollover: flush earned seconds to the day they belong to.
+      const todayKey = StorageService.getLocalDateKey();
+      if (todayKey !== activeDateKeyRef.current) {
+        flushActiveTime(activeDateKeyRef.current);
+        activeDateKeyRef.current = todayKey;
+      }
+
       // Pause if tab is hidden
       if (!isTabVisibleRef.current) return;
 

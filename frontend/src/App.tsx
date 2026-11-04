@@ -31,7 +31,7 @@ const RouteLoadingFallback: React.FC = () => (
 );
 
 export const AppContent: React.FC = () => {
-  const { currentRoute, navigate } = useAppRouter('dashboard');
+  const { currentRoute, adminTab, navigate, navigateAdmin } = useAppRouter('dashboard');
   const [streakDays, setStreakDays] = useState(1);
 
   // One-time initialization on mount (prevents repeated initialization on route changes)
@@ -82,6 +82,8 @@ export const AppContent: React.FC = () => {
     <AppLayout
       activeTab={currentRoute}
       onSelectTab={handleSelectTab}
+      adminTab={adminTab}
+      onSelectAdminTab={navigateAdmin}
       streakDays={streakDays}
     >
       <Suspense fallback={<RouteLoadingFallback />}>
@@ -98,7 +100,13 @@ export const AppContent: React.FC = () => {
         {currentRoute === 'practice' && <PracticePage />}
         {currentRoute === 'progress' && <ProgressPage />}
         {currentRoute === 'settings' && <SettingsPage />}
-        {currentRoute === 'admin' && <AdminPage onNavigateTab={handleSelectTab} />}
+        {currentRoute === 'admin' && (
+          <AdminPage
+            onNavigateTab={handleSelectTab}
+            activeAdminTab={adminTab}
+            onSelectAdminTab={navigateAdmin}
+          />
+        )}
       </Suspense>
     </AppLayout>
   );

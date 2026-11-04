@@ -15,12 +15,22 @@ import { useI18n } from '../i18n/i18nContext';
 import { authService } from '../services/auth';
 import { Button } from '../components/common/Button';
 import { AdminWorkbench } from '../features/admin/AdminWorkbench';
+import {
+  AdminWorkbenchTab,
+  DEFAULT_ADMIN_DESTINATION,
+} from '../features/admin/adminNavigation';
 
 interface AdminPageProps {
   onNavigateTab: (tab: any) => void;
+  activeAdminTab?: AdminWorkbenchTab;
+  onSelectAdminTab?: (tab: AdminWorkbenchTab) => void;
 }
 
-export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
+export const AdminPage: React.FC<AdminPageProps> = ({
+  onNavigateTab,
+  activeAdminTab,
+  onSelectAdminTab,
+}) => {
   const { t } = useI18n();
   const authState = authService.getState();
 
@@ -51,7 +61,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <AdminWorkbench initialTab="overview" onNavigateTab={onNavigateTab} />
+      <AdminWorkbench
+        initialTab={DEFAULT_ADMIN_DESTINATION}
+        activeTab={activeAdminTab}
+        onSelectTab={onSelectAdminTab}
+        onNavigateTab={onNavigateTab}
+      />
     </div>
   );
 };

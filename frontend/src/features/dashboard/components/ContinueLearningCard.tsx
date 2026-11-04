@@ -131,7 +131,58 @@ export const ContinueLearningCard: React.FC<ContinueLearningCardProps> = ({
     Math.round((completedNodesCount / Math.max(1, totalCurriculumNodes)) * 100)
   );
 
-  // 1. Unfinished authentic story
+  // 1. Exact edition recovery state
+  if (continueItem && continueItem.type === 'recovery') {
+    return (
+      <section
+        aria-label="Continue Learning"
+        className="bg-white border border-amber-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4"
+      >
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-amber-900 block">
+              {t('dash_resume_lesson_title', 'Resume Reading')}
+            </span>
+            <h2 className="font-serif text-xl sm:text-2xl font-bold text-stone-900 mt-1">
+              {t('dashboard:continue_recovery_title', 'Exact Edition Unavailable')}
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-600 mt-1.5 max-w-2xl leading-relaxed">
+              {continueItem.reason === 'version_mismatch'
+                ? t(
+                    'dashboard:continue_recovery_mismatch',
+                    'The saved edition does not match the content item. Your progress is preserved and will not be reopened in a different edition.'
+                  )
+                : t(
+                    'dashboard:continue_recovery_missing',
+                    'The edition you were reading is no longer available. Your progress is preserved, but another version will not be opened automatically.'
+                  )}
+            </p>
+            {continueItem.item && (
+              <p className="text-xs text-stone-500 mt-2">
+                {continueItem.item.title}
+                {continueItem.requestedVersionId
+                  ? ` • ${t('dashboard:continue_recovery_version', 'Requested edition')}: ${continueItem.requestedVersionId}`
+                  : ''}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          size="md"
+          className="w-full sm:w-auto min-h-[44px]"
+          icon={<Compass className="w-4 h-4" />}
+          onClick={() => onExploreCatalog && onExploreCatalog()}
+        >
+          {t('dashboard:browse_library_btn', 'Explore Library')}
+        </Button>
+      </section>
+    );
+  }
+
+  // 2. Unfinished authentic story
   if (continueItem && continueItem.type === 'story') {
     const { item, version, progress } = continueItem;
     const pct = Math.min(100, Math.max(0, Math.round(progress.percent_complete || 0)));

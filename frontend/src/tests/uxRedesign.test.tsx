@@ -73,7 +73,7 @@ describe('Step 7: Lexilume UX & UI Redesign Suite', () => {
   });
 
   describe('2. 8-Step Guided Onboarding Experience', () => {
-    it('walks through the 8 steps and includes all 13 supported languages', async () => {
+    it('walks through the 8 steps and includes only the three supported languages', async () => {
       const mockClose = vi.fn();
       const mockStartLesson = vi.fn();
 
@@ -92,14 +92,15 @@ describe('Step 7: Lexilume UX & UI Redesign Suite', () => {
       const contBtn1 = screen.getByRole('button', { name: /Continuar|Continue/i });
       fireEvent.click(contBtn1);
 
-      // Step 2: Choose Target Language (All 13 supported languages)
+      // Step 2: Choose Target Language (Portuguese, English, Spanish only)
       expect(screen.getByText(/2\. Escolha o Idioma que Deseja Aprender/i)).toBeDefined();
-      // Verify languages like French, German, Japanese, Russian, Tamil exist
-      expect(screen.getByText(/Français/i)).toBeDefined();
-      expect(screen.getByText(/Deutsch/i)).toBeDefined();
-      expect(screen.getByText(/日本語/i)).toBeDefined();
-      expect(screen.getByText(/Русский/i)).toBeDefined();
-      expect(screen.getByText(/தமிழ்/i)).toBeDefined();
+      expect(screen.getByText(/Português \(Portuguese\)/i)).toBeDefined();
+      expect(screen.getByText(/English \(English\)/i)).toBeDefined();
+      expect(screen.getByText(/Español \(Spanish\)/i)).toBeDefined();
+      // Languages outside the product scope must not be offered.
+      expect(screen.queryByText(/Français/i)).toBeNull();
+      expect(screen.queryByText(/Deutsch/i)).toBeNull();
+      expect(screen.queryByText(/日本語/i)).toBeNull();
 
       // Select Portuguese
       const ptOpt = screen.getByText(/Português \(Portuguese\)/i);

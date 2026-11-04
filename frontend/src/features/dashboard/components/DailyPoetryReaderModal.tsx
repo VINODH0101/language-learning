@@ -6,6 +6,7 @@ import { Badge } from '../../../components/common/Badge';
 import { SpeechService } from '../../../services/speech';
 import { activityService } from '../../../services/activityService';
 import { useI18n } from '../../../i18n/i18nContext';
+import { getLanguageName } from '../../../lib/languages/languageMatrix';
 import { toast } from 'sonner';
 
 interface DailyPoetryReaderModalProps {
@@ -19,7 +20,7 @@ export const DailyPoetryReaderModal: React.FC<DailyPoetryReaderModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { t } = useI18n();
+  const { t, interfaceLanguage } = useI18n();
   const [showTranslation, setShowTranslation] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -47,53 +48,36 @@ export const DailyPoetryReaderModal: React.FC<DailyPoetryReaderModalProps> = ({
     toast.success(t('learning:poem_completed', 'Masterpiece poem study recorded!'));
   };
 
-  const getLanguageName = (lang: string) => {
-    const map: Record<string, string> = {
-      pt: 'Portuguese',
-      es: 'Spanish',
-      en: 'English',
-      fr: 'French',
-      de: 'German',
-      it: 'Italian',
-      ja: 'Japanese',
-      zh: 'Chinese',
-      ta: 'Tamil',
-      ru: 'Russian',
-      nl: 'Dutch',
-      ko: 'Korean',
-      tr: 'Turkish',
-    };
-    return map[lang] || lang.toUpperCase();
-  };
-
   const stanzas = poem.full_text.split('\n\n').map(s => s.trim()).filter(Boolean);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/30 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#FDFBF7] border border-stone-200 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-800 flex items-start justify-between sticky top-0 bg-slate-900/95 backdrop-blur-md z-10">
+        <div className="p-6 border-b border-stone-200 flex items-start justify-between sticky top-0 bg-[#FDFBF7]/95 backdrop-blur-md z-10">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="p-1.5 rounded-lg bg-indigo-950 border border-indigo-700/60 text-indigo-400">
+              <span className="p-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
                 <Feather className="w-4 h-4" />
               </span>
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
                 {t('dashboard:daily_poetry', 'Daily Masterpiece Poetry')}
               </span>
-              <Badge variant="indigo" size="sm">{poem.cefr_level}</Badge>
-              <Badge variant="slate" size="sm">{getLanguageName(poem.learning_language)}</Badge>
+              <Badge variant="amber" size="sm">{poem.cefr_level}</Badge>
+              <Badge variant="slate" size="sm">
+                {getLanguageName(poem.learning_language, interfaceLanguage as any)}
+              </Badge>
               {poem.country_name && (
-                <span className="text-xs text-slate-400">({poem.country_name})</span>
+                <span className="text-xs text-stone-500">({poem.country_name})</span>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-100">{poem.title}</h2>
-            <p className="text-xs text-slate-400">{poem.author}</p>
+            <h2 className="font-serif text-xl sm:text-2xl font-bold text-stone-900">{poem.title}</h2>
+            <p className="text-xs text-stone-500">{poem.author}</p>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition cursor-pointer"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -103,13 +87,13 @@ export const DailyPoetryReaderModal: React.FC<DailyPoetryReaderModalProps> = ({
         {/* Modal Content */}
         <div className="p-6 space-y-6 flex-1">
           {/* Action Toolbar */}
-          <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+          <div className="flex items-center justify-between gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
             <Button
               variant="outline"
               size="sm"
-              icon={<Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'text-indigo-400 animate-pulse' : ''}`} />}
+              icon={<Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'text-amber-700 animate-pulse' : ''}`} />}
               onClick={handlePlayAudio}
-              className="text-xs text-indigo-300 border-indigo-700/60 hover:bg-indigo-950/50 min-h-[38px] cursor-pointer"
+              className="text-xs text-stone-700 border-stone-300 hover:bg-stone-100 min-h-[38px] cursor-pointer"
             >
               {isPlayingAudio ? t('learning:playing', 'Playing Audio...') : t('learning:listen_poem', 'Listen to Verses')}
             </Button>
@@ -120,7 +104,7 @@ export const DailyPoetryReaderModal: React.FC<DailyPoetryReaderModalProps> = ({
                 size="sm"
                 icon={showTranslation ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 onClick={() => setShowTranslation(!showTranslation)}
-                className="text-xs text-slate-300 hover:text-white min-h-[38px] cursor-pointer"
+                className="text-xs text-stone-600 hover:text-stone-900 min-h-[38px] cursor-pointer"
               >
                 {showTranslation ? t('common:hide_translation', 'Hide Translation') : t('common:show_translation', 'Show Translation')}
               </Button>
@@ -131,15 +115,15 @@ export const DailyPoetryReaderModal: React.FC<DailyPoetryReaderModalProps> = ({
           <div className="space-y-6 px-2 sm:px-4 py-2">
             {stanzas.map((stanza, idx) => (
               <div key={idx} className="space-y-2">
-                <div className="font-serif text-slate-100 text-base sm:text-lg leading-relaxed whitespace-pre-line tracking-wide">
+                <div className="font-serif text-stone-900 text-base sm:text-lg leading-relaxed whitespace-pre-line tracking-wide">
                   {stanza}
                 </div>
               </div>
             ))}
 
             {showTranslation && poem.translation && (
-              <div className="text-xs sm:text-sm text-indigo-300/80 italic pl-3 border-l-2 border-indigo-500/50 leading-relaxed mt-4">
-                <span className="block font-semibold not-italic text-slate-400 text-xs mb-1 uppercase tracking-wider">Translation:</span>
+              <div className="text-xs sm:text-sm text-stone-600 italic pl-3 border-l-2 border-amber-500/60 leading-relaxed mt-4">
+                <span className="block font-semibold not-italic text-stone-500 text-xs mb-1 uppercase tracking-wider">Translation:</span>
                 {poem.translation}
               </div>
             )}
@@ -147,12 +131,12 @@ export const DailyPoetryReaderModal: React.FC<DailyPoetryReaderModalProps> = ({
 
           {/* Cultural & Pedagogical Context Note */}
           {poem.cultural_context && (
-            <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-800/40 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
+            <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                <Sparkles className="w-4 h-4 text-amber-700" />
                 <span>{t('dashboard:cultural_context', 'Cultural & Literary Insight')}</span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <p className="text-xs text-stone-700 leading-relaxed">
                 {poem.cultural_context}
               </p>
             </div>
@@ -160,11 +144,11 @@ export const DailyPoetryReaderModal: React.FC<DailyPoetryReaderModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-800 flex items-center justify-between sticky bottom-0 bg-slate-900/95 backdrop-blur-md">
+        <div className="p-4 border-t border-stone-200 flex items-center justify-between sticky bottom-0 bg-[#FDFBF7]/95 backdrop-blur-md">
           <Button
             variant={isCompleted ? 'secondary' : 'primary'}
             size="sm"
-            icon={<CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-emerald-400' : ''}`} />}
+            icon={<CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-amber-700' : ''}`} />}
             onClick={handleMarkComplete}
             disabled={isCompleted}
             className="min-h-[40px] text-xs cursor-pointer"

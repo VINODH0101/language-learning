@@ -106,14 +106,14 @@ describe('Lexilume Progress Page Redesign & Learning Analytics Suite', () => {
     );
 
     // Switch to English via quick button
-    const enButton = screen.getByRole('button', { name: /^English$/i });
+    const enButton = screen.getByRole('button', { name: /^(English|Inglês)$/i });
     fireEvent.click(enButton);
 
     // Shows English curriculum node from enCurriculum
     expect(screen.getByText(/Introductions and Daily Routines in the Present Simple/i)).toBeDefined();
 
     // Switch to Spanish via quick button
-    const esButton = screen.getByRole('button', { name: /^Español$/i });
+    const esButton = screen.getByRole('button', { name: /^(Spanish|Español)$/i });
     fireEvent.click(esButton);
 
     // Shows Spanish curriculum node from esCurriculum

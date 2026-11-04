@@ -3,7 +3,7 @@
  * Pillar 4 of the Administrative Workbench
  * 
  * Features:
- * - Publication of Daily Poetry & Daily Conversations across all 13 supported languages.
+ * - Publication of Daily Poetry & Daily Conversations for Portuguese, English and Spanish.
  * - Strict exclusion of Hindi ('hi') with both UI filtering and service validation.
  * - Safe replacement semantics: publishing archives previous active content in that scope.
  * - Dialogue turns builder with move up, move down, remove, and add turn actions.
@@ -31,15 +31,17 @@ import {
   Volume2,
 } from 'lucide-react';
 import { Language, CEFRLevel, DailyPoem, DailyConversation, DialogueLine, DailyContentState } from '../../types';
-import { SUPPORTED_LEARNING_LANGUAGES, getLanguageName } from '../../lib/languages/languageMatrix';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 import { dailyContentService } from '../../services/dailyContentService';
 import { adminService } from '../../services/adminService';
 import { FALLBACK_COUNTRIES } from '../../services/providers/countries/countryProvider';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
+import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 export const AdminDailyContentStudio: React.FC = () => {
+  const { t } = useI18n();
   const [contentState, setContentState] = useState<DailyContentState>({
     activePoetry: [],
     activeConversations: [],
@@ -102,11 +104,11 @@ export const AdminDailyContentStudio: React.FC = () => {
   const handlePublishPoem = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!poemTitle.trim() || !poemAuthor.trim() || !poemFullText.trim()) {
-      toast.error('Preencha título, autor e texto completo do poema.');
+      toast.error(t('admin:studio_error_poem_required', 'Fill in title, author and full poem text.'));
       return;
     }
     if ((poemLanguage as string) === 'hi') {
-      toast.error('Invariante do Sistema: O idioma Hindi está expressamente excluído.');
+      toast.error(t('admin:studio_error_hindi', 'System invariant: Hindi is strictly excluded.'));
       return;
     }
 
@@ -131,7 +133,7 @@ export const AdminDailyContentStudio: React.FC = () => {
         cefrLevel: poemCefr,
       });
 
-      toast.success(`Poema "${poemTitle}" publicado com sucesso! Versão anterior arquivada.`);
+      toast.success(t('admin:studio_poem_published', 'Poem \"{{title}}\" published successfully! Previous version archived.', { title: poemTitle }));
       setIsCreating(false);
       setIsPreviewOpen(false);
       setPoemTitle('');
@@ -142,18 +144,18 @@ export const AdminDailyContentStudio: React.FC = () => {
       setPoemTranslation('');
       await loadData();
     } catch {
-      toast.error('Erro ao publicar poema.');
+      toast.error(t('admin:studio_error_publish_poem', 'Error publishing poem.'));
     }
   };
 
   const handlePublishConversation = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!convoTitle.trim() || !convoScenario.trim() || convoLines.length === 0 || !convoLines[0].line.trim()) {
-      toast.error('Preencha título, cenário e pelo menos uma fala de diálogo.');
+      toast.error(t('admin:studio_error_dialogue_required', 'Fill in title, scenario and at least one dialogue line.'));
       return;
     }
     if ((convoLanguage as string) === 'hi') {
-      toast.error('Invariante do Sistema: O idioma Hindi está expressamente excluído.');
+      toast.error(t('admin:studio_error_hindi', 'System invariant: Hindi is strictly excluded.'));
       return;
     }
 
@@ -177,7 +179,7 @@ export const AdminDailyContentStudio: React.FC = () => {
         turnsCount: convoLines.length,
       });
 
-      toast.success(`Diálogo "${convoTitle}" publicado com sucesso! Versão anterior arquivada.`);
+      toast.success(t('admin:studio_dialogue_published', 'Dialogue \"{{title}}\" published successfully! Previous version archived.', { title: convoTitle }));
       setIsCreating(false);
       setIsPreviewOpen(false);
       setConvoTitle('');
@@ -189,21 +191,21 @@ export const AdminDailyContentStudio: React.FC = () => {
       ]);
       await loadData();
     } catch {
-      toast.error('Erro ao publicar diálogo.');
+      toast.error(t('admin:studio_error_publish_dialogue', 'Error publishing dialogue.'));
     }
   };
 
   const handleArchivePoem = async (id: string, title: string) => {
     await dailyContentService.archivePoem(id);
     await adminService.logAdminAction('archive_poem', undefined, { id, title });
-    toast.info(`Poema "${title}" foi arquivado.`);
+    toast.info(t('admin:studio_poem_archived', 'Poem \"{{title}}\" was archived.', { title }));
     await loadData();
   };
 
   const handleArchiveConversation = async (id: string, title: string) => {
     await dailyContentService.archiveConversation(id);
     await adminService.logAdminAction('archive_conversation', undefined, { id, title });
-    toast.info(`Diálogo "${title}" foi arquivado.`);
+    toast.info(t('admin:studio_dialogue_archived', 'Dialogue \"{{title}}\" was archived.', { title }));
     await loadData();
   };
 
@@ -269,7 +271,7 @@ export const AdminDailyContentStudio: React.FC = () => {
         setPoemCountryName('United Kingdom');
         setPoemCountryCode('GB');
       }
-      toast.info('Rascunho literário exemplar carregado no formulário!');
+      toast.info(t('admin:studio_draft_loaded', 'Example literary draft loaded into the form!'));
     } else {
       setConvoTitle('Na Padaria Tradicional');
       setConvoScenario('Comprar pão quente e interagir com o atendente matinal');
@@ -283,7 +285,7 @@ export const AdminDailyContentStudio: React.FC = () => {
         { speaker: 'Cliente', line: 'Apenas meio quilo, e também dois pastéis de nata bem estaladiços.', translation: 'Just half a kilo, and also two very crispy custard tarts.' },
         { speaker: 'Padeiro', line: 'Com certeza! São três euros e vinte no total.', translation: 'Certainly! That is three euros and twenty in total.' },
       ]);
-      toast.info('Rascunho de diálogo comunicativo carregado!');
+      toast.info(t('admin:studio_dialogue_draft_loaded', 'Dialogue draft loaded!'));
     }
   };
 
@@ -305,22 +307,27 @@ export const AdminDailyContentStudio: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Studio Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="p-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
+            <span className="p-1 rounded-lg bg-amber-500/10 border border-amber-400/20 text-amber-700">
               <Sparkles className="w-4 h-4" />
             </span>
-            <span className="text-xs font-bold text-rose-400 uppercase tracking-wider">
-              Estúdio de Conteúdo Diário
+            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+              {t('admin:studio_kicker', 'Daily Content Studio')}
             </span>
-            <Badge variant="rose" size="sm">
-              Semântica Segura de Substituição
+            <Badge variant="amber" size="sm">
+              {t('admin:studio_safe_badge', 'Safe Replacement Semantics')}
             </Badge>
           </div>
-          <h2 className="text-xl font-bold text-slate-100">Gestão de Poesia & Diálogos do Dia</h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Publique ou arquive obras-primas literárias e diálogos autênticos nos 13 idiomas suportados. O novo item ativo arquiva o anterior sem apagar registros ou quebrar revisões SRS.
+          <h2 className="font-serif text-xl font-bold text-stone-900">
+            {t('admin:studio_heading', 'Poetry & Dialogue Management')}
+          </h2>
+          <p className="text-xs text-stone-500 mt-1 max-w-2xl">
+            {t(
+              'admin:studio_desc',
+              'Publish or archive literary poems and authentic dialogues for the three supported languages (PT · EN · ES). A newly activated item archives the previous one without deleting records or breaking SRS reviews.'
+            )}
           </p>
         </div>
 
@@ -330,9 +337,11 @@ export const AdminDailyContentStudio: React.FC = () => {
             size="sm"
             icon={<Plus className="w-4 h-4" />}
             onClick={() => setIsCreating(!isCreating)}
-            className="bg-rose-600 hover:bg-rose-500 cursor-pointer"
+            className="cursor-pointer"
           >
-            {isCreating ? 'Fechar Formulário' : 'Publicar Novo Conteúdo'}
+            {isCreating
+              ? t('admin:studio_close_form', 'Close Form')
+              : t('admin:studio_publish', 'Publish New Content')}
           </Button>
           <Button
             variant="outline"
@@ -341,17 +350,17 @@ export const AdminDailyContentStudio: React.FC = () => {
             onClick={loadData}
             className="cursor-pointer"
           >
-            Atualizar
+            {t('admin:studio_update', 'Refresh')}
           </Button>
         </div>
       </div>
 
       {/* Creation Form Drawer */}
       {isCreating && (
-        <div className="bg-slate-900 border-2 border-rose-500/40 rounded-2xl p-6 shadow-lg space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="bg-white border-2 border-rose-500/40 rounded-2xl p-6 shadow-lg space-y-5">
+          <div className="flex items-center justify-between border-b border-stone-200 pb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-rose-400 uppercase">Novo Conteúdo Diário</span>
+              <span className="text-xs font-bold text-rose-700 uppercase">{t('admin:studio_new_content', 'New Daily Content')}</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -360,10 +369,10 @@ export const AdminDailyContentStudio: React.FC = () => {
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition ${
                   selectedSubTab === 'poetry'
                     ? 'bg-rose-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
                 }`}
               >
-                Poesia Literária
+                {t('admin:studio_tab_poetry', 'Poetry')}
               </button>
               <button
                 type="button"
@@ -371,20 +380,20 @@ export const AdminDailyContentStudio: React.FC = () => {
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition ${
                   selectedSubTab === 'conversation'
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
                 }`}
               >
-                Diálogo Imersivo
+                {t('admin:studio_tab_dialogue', 'Immersive Dialogue')}
               </button>
               <Button
                 variant="outline"
                 size="sm"
                 type="button"
-                icon={<Sparkles className="w-3.5 h-3.5 text-amber-400" />}
+                icon={<Sparkles className="w-3.5 h-3.5 text-amber-700" />}
                 onClick={handleLoadExemplarDraft}
-                className="cursor-pointer text-amber-300 border-amber-500/30"
+                className="cursor-pointer text-amber-700 border-amber-500/30"
               >
-                Preencher Rascunho Exemplar
+                {t('admin:studio_load_draft', 'Load Example Draft')}
               </Button>
             </div>
           </div>
@@ -393,36 +402,36 @@ export const AdminDailyContentStudio: React.FC = () => {
             <form onSubmit={handlePublishPoem} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">Título do Poema *</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_poem_title', 'Poem Title *')}</label>
                   <input
                     type="text"
                     required
                     value={poemTitle}
                     onChange={e => setPoemTitle(e.target.value)}
-                    placeholder="Ex: Tabacaria"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    placeholder={t('admin:studio_poem_title_example', 'e.g. Tabacaria')}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">Autor *</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_author', 'Author *')}</label>
                   <input
                     type="text"
                     required
                     value={poemAuthor}
                     onChange={e => setPoemAuthor(e.target.value)}
-                    placeholder="Ex: Álvaro de Campos"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    placeholder={t('admin:studio_author_example', 'e.g. Álvaro de Campos')}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-slate-300 font-semibold block">Idioma *</label>
+                    <label className="text-stone-700 font-semibold block">{t('admin:studio_language', 'Language *')}</label>
                     <select
                       value={poemLanguage}
                       onChange={e => setPoemLanguage(e.target.value as Language)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                     >
-                      {SUPPORTED_LEARNING_LANGUAGES.map(lang => (
+                      {(['pt', 'es', 'en'] as const).map(lang => (
                         <option key={lang} value={lang}>
                           {lang.toUpperCase()} — {getLanguageName(lang)}
                         </option>
@@ -430,11 +439,11 @@ export const AdminDailyContentStudio: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-slate-300 font-semibold block">Nível CEFR *</label>
+                    <label className="text-stone-700 font-semibold block">{t('admin:studio_cefr', 'CEFR Level *')}</label>
                     <select
                       value={poemCefr}
                       onChange={e => setPoemCefr(e.target.value as CEFRLevel)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                     >
                       <option value="A1">A1</option>
                       <option value="A2">A2</option>
@@ -449,11 +458,11 @@ export const AdminDailyContentStudio: React.FC = () => {
               {/* Country Selection Linked to FALLBACK_COUNTRIES */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">País de Atribuição Cultural</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_country', 'Cultural Attribution Country')}</label>
                   <select
                     value={poemCountryCode}
                     onChange={e => handleCountrySelect(e.target.value, 'poem')}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   >
                     {FALLBACK_COUNTRIES.map(c => (
                       <option key={c.code} value={c.code}>
@@ -463,54 +472,54 @@ export const AdminDailyContentStudio: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">Excerto para o Card (resumo)</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_excerpt_label', 'Card Excerpt (summary)')}</label>
                   <input
                     type="text"
                     value={poemExcerpt}
                     onChange={e => setPoemExcerpt(e.target.value)}
-                    placeholder="Primeiros versos ou linha marcante..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    placeholder={t('admin:studio_poem_excerpt_placeholder', 'Opening verses or a memorable line...')}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-300 font-semibold block">Texto Completo do Poema (linhas e estrofes) *</label>
+                <label className="text-stone-700 font-semibold block">{t('admin:studio_poem_full', 'Full Poem Text (lines and stanzas) *')}</label>
                 <textarea
                   required
                   rows={6}
                   value={poemFullText}
                   onChange={e => setPoemFullText(e.target.value)}
-                  placeholder="Insira os versos completos..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 font-serif leading-relaxed"
+                  placeholder={t('admin:studio_full_text_placeholder', 'Enter the full verses...')}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-stone-800 font-serif leading-relaxed"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-300 font-semibold block">Tradução Pedagógica</label>
+                <label className="text-stone-700 font-semibold block">{t('admin:studio_translation', 'Pedagogical Translation')}</label>
                 <textarea
                   rows={3}
                   value={poemTranslation}
                   onChange={e => setPoemTranslation(e.target.value)}
-                  placeholder="Tradução literal/pedagógica de auxílio..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200"
+                  placeholder={t('admin:studio_translation_placeholder', 'Literal/pedagogical support translation...')}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-stone-800"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-300 font-semibold block">Contexto Cultural & Pedagógico</label>
+                <label className="text-stone-700 font-semibold block">{t('admin:studio_cultural_context', 'Cultural & Pedagogical Context')}</label>
                 <textarea
                   rows={2}
                   value={poemCulturalContext}
                   onChange={e => setPoemCulturalContext(e.target.value)}
-                  placeholder="Comentário histórico, movimento estético e vocabulário relevante..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200"
+                  placeholder={t('admin:studio_cultural_context_placeholder', 'Historical commentary, aesthetic movement and relevant vocabulary...')}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-stone-800"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex justify-end gap-2 pt-2 border-t border-stone-200">
                 <Button variant="outline" size="sm" type="button" onClick={() => setIsCreating(false)}>
-                  Cancelar
+                  {t('admin:studio_cancel', 'Cancel')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -520,10 +529,10 @@ export const AdminDailyContentStudio: React.FC = () => {
                   onClick={() => setIsPreviewOpen(true)}
                   className="cursor-pointer"
                 >
-                  Visualizar Antes de Publicar
+                  {t('admin:studio_preview', 'Preview Before Publishing')}
                 </Button>
                 <Button variant="primary" size="sm" type="submit" className="bg-rose-600 hover:bg-rose-500 cursor-pointer">
-                  Publicar Poema Ativo
+                  {t('admin:studio_publish_poem', 'Publish Active Poem')}
                 </Button>
               </div>
             </form>
@@ -531,36 +540,36 @@ export const AdminDailyContentStudio: React.FC = () => {
             <form onSubmit={handlePublishConversation} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">Título do Diálogo *</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_dialogue_title', 'Dialogue Title *')}</label>
                   <input
                     type="text"
                     required
                     value={convoTitle}
                     onChange={e => setConvoTitle(e.target.value)}
-                    placeholder="Ex: No Mercado da Ribeira"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    placeholder={t('admin:studio_dialogue_title_example', 'e.g. At Ribeira Market')}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">Cenário / Situação *</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_scenario', 'Scenario / Situation *')}</label>
                   <input
                     type="text"
                     required
                     value={convoScenario}
                     onChange={e => setConvoScenario(e.target.value)}
-                    placeholder="Ex: Fazer pedidos e perguntar o preço de frutas típicas"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    placeholder={t('admin:studio_scenario_example', 'e.g. Ordering and asking the price of typical fruit')}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-slate-300 font-semibold block">Idioma *</label>
+                    <label className="text-stone-700 font-semibold block">{t('admin:studio_language', 'Language *')}</label>
                     <select
                       value={convoLanguage}
                       onChange={e => setConvoLanguage(e.target.value as Language)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                     >
-                      {SUPPORTED_LEARNING_LANGUAGES.map(lang => (
+                      {(['pt', 'es', 'en'] as const).map(lang => (
                         <option key={lang} value={lang}>
                           {lang.toUpperCase()} — {getLanguageName(lang)}
                         </option>
@@ -568,11 +577,11 @@ export const AdminDailyContentStudio: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-slate-300 font-semibold block">Nível CEFR *</label>
+                    <label className="text-stone-700 font-semibold block">{t('admin:studio_cefr', 'CEFR Level *')}</label>
                     <select
                       value={convoCefr}
                       onChange={e => setConvoCefr(e.target.value as CEFRLevel)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                     >
                       <option value="A1">A1</option>
                       <option value="A2">A2</option>
@@ -587,11 +596,11 @@ export const AdminDailyContentStudio: React.FC = () => {
               {/* Country Selection */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">País de Atribuição Cultural</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_country', 'Cultural Attribution Country')}</label>
                   <select
                     value={convoCountryCode}
                     onChange={e => handleCountrySelect(e.target.value, 'convo')}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   >
                     {FALLBACK_COUNTRIES.map(c => (
                       <option key={c.code} value={c.code}>
@@ -601,29 +610,29 @@ export const AdminDailyContentStudio: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold block">Contexto Pragmático</label>
+                  <label className="text-stone-700 font-semibold block">{t('admin:studio_pragmatic_context', 'Pragmatic Context')}</label>
                   <input
                     type="text"
                     value={convoCulturalContext}
                     onChange={e => setConvoCulturalContext(e.target.value)}
-                    placeholder="Normas de cortesia e registro coloquial..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    placeholder={t('admin:studio_pragmatic_context_placeholder', 'Politeness norms and colloquial register...')}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800"
                   />
                 </div>
               </div>
 
               {/* Dialogue Turns Builder with Reordering */}
-              <div className="space-y-2 border-t border-slate-800 pt-3">
+              <div className="space-y-2 border-t border-stone-200 pt-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-200 text-xs">
-                    Falas do Diálogo ({convoLines.length}) — Reordene ou adicione novas
+                  <span className="font-semibold text-stone-800 text-xs">
+                    {t('admin:studio_dialogue_lines', 'Dialogue Lines ({{count}}) — Reorder or add new', { count: convoLines.length })}
                   </span>
                   <button
                     type="button"
                     onClick={addConvoLine}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-emerald-700 hover:text-emerald-700 font-semibold flex items-center gap-1 cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Adicionar Fala
+                    <Plus className="w-3.5 h-3.5" /> {t('admin:studio_add_line', 'Add Line')}
                   </button>
                 </div>
 
@@ -631,14 +640,14 @@ export const AdminDailyContentStudio: React.FC = () => {
                   {convoLines.map((line, idx) => (
                     <div
                       key={idx}
-                      className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 flex items-start gap-2"
+                      className="p-3 bg-stone-50/60 rounded-xl border border-stone-200/80 flex items-start gap-2"
                     >
                       <div className="flex flex-col gap-1 pt-1">
                         <button
                           type="button"
                           onClick={() => moveConvoLine(idx, 'up')}
                           disabled={idx === 0}
-                          className="p-1 text-slate-500 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
+                          className="p-1 text-stone-500 hover:text-stone-800 disabled:opacity-20 cursor-pointer"
                         >
                           <ArrowUp className="w-3.5 h-3.5" />
                         </button>
@@ -646,7 +655,7 @@ export const AdminDailyContentStudio: React.FC = () => {
                           type="button"
                           onClick={() => moveConvoLine(idx, 'down')}
                           disabled={idx === convoLines.length - 1}
-                          className="p-1 text-slate-500 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
+                          className="p-1 text-stone-500 hover:text-stone-800 disabled:opacity-20 cursor-pointer"
                         >
                           <ArrowDown className="w-3.5 h-3.5" />
                         </button>
@@ -654,32 +663,32 @@ export const AdminDailyContentStudio: React.FC = () => {
 
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 flex-1">
                         <div className="sm:col-span-1">
-                          <label className="text-[10px] text-slate-400 block mb-0.5">Falante</label>
+                          <label className="text-[10px] text-stone-500 block mb-0.5">{t('admin:studio_speaker', 'Speaker')}</label>
                           <input
                             type="text"
                             value={line.speaker}
                             onChange={e => updateConvoLine(idx, 'speaker', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200"
+                            className="w-full bg-white border border-stone-300 rounded-lg px-2 py-1 text-stone-800"
                           />
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="text-[10px] text-slate-400 block mb-0.5">Fala no Idioma Alvo</label>
+                          <label className="text-[10px] text-stone-500 block mb-0.5">{t('admin:studio_target_line', 'Line in Target Language')}</label>
                           <input
                             type="text"
                             value={line.line}
                             onChange={e => updateConvoLine(idx, 'line', e.target.value)}
-                            placeholder="Frase..."
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200"
+                            placeholder={t('admin:studio_line_placeholder', 'Sentence...')}
+                            className="w-full bg-white border border-stone-300 rounded-lg px-2 py-1 text-stone-800"
                           />
                         </div>
                         <div className="sm:col-span-1">
-                          <label className="text-[10px] text-slate-400 block mb-0.5">Tradução</label>
+                          <label className="text-[10px] text-stone-500 block mb-0.5">{t('admin:studio_translation_short', 'Translation')}</label>
                           <input
                             type="text"
                             value={line.translation || ''}
                             onChange={e => updateConvoLine(idx, 'translation', e.target.value)}
-                            placeholder="Significado..."
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200"
+                            placeholder={t('admin:studio_translation_placeholder_short', 'Meaning...')}
+                            className="w-full bg-white border border-stone-300 rounded-lg px-2 py-1 text-stone-800"
                           />
                         </div>
                       </div>
@@ -688,7 +697,7 @@ export const AdminDailyContentStudio: React.FC = () => {
                         type="button"
                         onClick={() => removeConvoLine(idx)}
                         disabled={convoLines.length <= 1}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 disabled:opacity-20 cursor-pointer mt-3"
+                        className="p-1.5 text-stone-500 hover:text-rose-700 disabled:opacity-20 cursor-pointer mt-3"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -697,9 +706,9 @@ export const AdminDailyContentStudio: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex justify-end gap-2 pt-2 border-t border-stone-200">
                 <Button variant="outline" size="sm" type="button" onClick={() => setIsCreating(false)}>
-                  Cancelar
+                  {t('admin:studio_cancel', 'Cancel')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -709,10 +718,10 @@ export const AdminDailyContentStudio: React.FC = () => {
                   onClick={() => setIsPreviewOpen(true)}
                   className="cursor-pointer"
                 >
-                  Visualizar Antes de Publicar
+                  {t('admin:studio_preview', 'Preview Before Publishing')}
                 </Button>
                 <Button variant="primary" size="sm" type="submit" className="bg-emerald-600 hover:bg-emerald-500 cursor-pointer">
-                  Publicar Diálogo Ativo
+                  {t('admin:studio_publish_dialogue', 'Publish Active Dialogue')}
                 </Button>
               </div>
             </form>
@@ -721,16 +730,18 @@ export const AdminDailyContentStudio: React.FC = () => {
       )}
 
       {/* Filter Language Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+      <div className="bg-white border border-stone-200 rounded-2xl p-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-semibold">Filtrar Idioma:</span>
+          <span className="text-xs text-stone-500 font-semibold">
+            {t('admin:studio_language_filter', 'Language Filter:')}
+          </span>
           <select
             value={filterLang}
             onChange={e => setFilterLang(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-200"
+            className="bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1 text-xs text-stone-800"
           >
-            <option value="all">Todos os 13 Idiomas</option>
-            {SUPPORTED_LEARNING_LANGUAGES.map(lang => (
+            <option value="all">{t('admin:studio_all_languages', 'All Languages')}</option>
+            {(['pt', 'es', 'en'] as const).map(lang => (
               <option key={lang} value={lang}>
                 {lang.toUpperCase()} — {getLanguageName(lang)}
               </option>
@@ -738,13 +749,13 @@ export const AdminDailyContentStudio: React.FC = () => {
           </select>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span>Total Ativos:</span>
+        <div className="flex items-center gap-2 text-xs text-stone-500">
+          <span>{t('admin:studio_total_active', 'Total Active:')}</span>
           <Badge variant="rose" size="sm">
-            {filteredActivePoetry.length} Poemas
+            {filteredActivePoetry.length} {t('admin:studio_poems_active', 'Active Poems')}
           </Badge>
           <Badge variant="emerald" size="sm">
-            {filteredActiveConversations.length} Diálogos
+            {filteredActiveConversations.length} {t('admin:studio_dialogues_active', 'Active Dialogues')}
           </Badge>
         </div>
       </div>
@@ -753,37 +764,39 @@ export const AdminDailyContentStudio: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Active Poetry Column */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-              <Feather className="w-4 h-4 text-rose-400" />
-              Poemas Ativos ({filteredActivePoetry.length})
+          <div className="flex items-center justify-between border-b border-stone-200 pb-2">
+            <h3 className="text-sm font-bold text-stone-800 flex items-center gap-2">
+              <Feather className="w-4 h-4 text-rose-700" />
+              {t('admin:studio_poems_active', 'Active Poems')} ({filteredActivePoetry.length})
             </h3>
-            <span className="text-[10px] text-slate-500 uppercase">Visível no Dashboard</span>
+            <span className="text-[10px] text-stone-500 uppercase">
+              {t('admin:studio_visible_dashboard', 'Visible on Dashboard')}
+            </span>
           </div>
 
           {filteredActivePoetry.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-500">
-              Nenhum poema ativo para este idioma.
+            <div className="bg-white border border-stone-200 rounded-2xl p-6 text-center text-xs text-stone-500">
+              {t('admin:studio_empty_poems', 'No active poem for this language.')}
             </div>
           ) : (
             filteredActivePoetry.map(poem => (
               <div
                 key={poem.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2 hover:border-slate-700 transition"
+                className="bg-white border border-stone-200 rounded-2xl p-4 space-y-2 hover:border-stone-300 transition"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-100 text-sm">{poem.title}</span>
+                      <span className="font-bold text-stone-900 text-sm">{poem.title}</span>
                       <Badge variant="indigo" size="sm">{poem.learning_language.toUpperCase()}</Badge>
                       <Badge variant="emerald" size="sm">{poem.cefr_level}</Badge>
                       {poem.country_name && (
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-rose-400" /> {poem.country_name}
+                        <span className="text-[10px] text-stone-500 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-rose-700" /> {poem.country_name}
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-rose-400 font-serif italic mt-0.5">
+                    <div className="text-xs text-rose-700 font-serif italic mt-0.5">
                       por {poem.author}
                     </div>
                   </div>
@@ -793,18 +806,18 @@ export const AdminDailyContentStudio: React.FC = () => {
                     size="sm"
                     icon={<Archive className="w-3.5 h-3.5" />}
                     onClick={() => handleArchivePoem(poem.id, poem.title)}
-                    className="text-slate-400 hover:text-amber-400 cursor-pointer"
+                    className="text-stone-500 hover:text-amber-700 cursor-pointer"
                   >
-                    Arquivar
+                    {t('admin:studio_archive', 'Archive')}
                   </Button>
                 </div>
 
-                <div className="text-xs text-slate-300 font-serif line-clamp-3 italic bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60 leading-relaxed whitespace-pre-line">
+                <div className="text-xs text-stone-700 font-serif line-clamp-3 italic bg-stone-50/40 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed whitespace-pre-line">
                   {poem.full_text || poem.excerpt}
                 </div>
 
                 {poem.cultural_context && (
-                  <div className="text-[11px] text-slate-400 leading-normal">
+                  <div className="text-[11px] text-stone-500 leading-normal">
                     {poem.cultural_context}
                   </div>
                 )}
@@ -815,38 +828,40 @@ export const AdminDailyContentStudio: React.FC = () => {
 
         {/* Active Conversations Column */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-emerald-400" />
-              Diálogos Ativos ({filteredActiveConversations.length})
+          <div className="flex items-center justify-between border-b border-stone-200 pb-2">
+            <h3 className="text-sm font-bold text-stone-800 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-emerald-700" />
+              {t('admin:studio_dialogues_active', 'Active Dialogues')} ({filteredActiveConversations.length})
             </h3>
-            <span className="text-[10px] text-slate-500 uppercase">Visível no Dashboard</span>
+            <span className="text-[10px] text-stone-500 uppercase">
+              {t('admin:studio_visible_dashboard', 'Visible on Dashboard')}
+            </span>
           </div>
 
           {filteredActiveConversations.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-500">
-              Nenhum diálogo ativo para este idioma.
+            <div className="bg-white border border-stone-200 rounded-2xl p-6 text-center text-xs text-stone-500">
+              {t('admin:studio_empty_dialogues', 'No active dialogue for this language.')}
             </div>
           ) : (
             filteredActiveConversations.map(convo => (
               <div
                 key={convo.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2 hover:border-slate-700 transition"
+                className="bg-white border border-stone-200 rounded-2xl p-4 space-y-2 hover:border-stone-300 transition"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-100 text-sm">{convo.title}</span>
+                      <span className="font-bold text-stone-900 text-sm">{convo.title}</span>
                       <Badge variant="indigo" size="sm">{convo.learning_language.toUpperCase()}</Badge>
                       <Badge variant="emerald" size="sm">{convo.cefr_level}</Badge>
                       {convo.country_name && (
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-emerald-400" /> {convo.country_name}
+                        <span className="text-[10px] text-stone-500 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-emerald-700" /> {convo.country_name}
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-400 mt-0.5">
-                      Cenário: {convo.scenario}
+                    <div className="text-xs text-stone-500 mt-0.5">
+                      {t('admin:studio_scenario_label', 'Scenario:')} {convo.scenario}
                     </div>
                   </div>
 
@@ -855,21 +870,21 @@ export const AdminDailyContentStudio: React.FC = () => {
                     size="sm"
                     icon={<Archive className="w-3.5 h-3.5" />}
                     onClick={() => handleArchiveConversation(convo.id, convo.title)}
-                    className="text-slate-400 hover:text-amber-400 cursor-pointer"
+                    className="text-stone-500 hover:text-amber-700 cursor-pointer"
                   >
-                    Arquivar
+                    {t('admin:studio_archive', 'Archive')}
                   </Button>
                 </div>
 
-                <div className="space-y-1.5 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60 text-xs">
+                <div className="space-y-1.5 bg-stone-50/40 p-2.5 rounded-xl border border-stone-200/60 text-xs">
                   {convo.dialogue.slice(0, 3).map((line, idx) => (
                     <div key={idx} className="flex gap-2">
-                      <span className="font-bold text-emerald-400">{line.speaker}:</span>
-                      <span className="text-slate-200">{line.line}</span>
+                      <span className="font-bold text-emerald-700">{line.speaker}:</span>
+                      <span className="text-stone-800">{line.line}</span>
                     </div>
                   ))}
                   {convo.dialogue.length > 3 && (
-                    <div className="text-[10px] text-slate-500 font-semibold">
+                    <div className="text-[10px] text-stone-500 font-semibold">
                       + {convo.dialogue.length - 3} falas adicionais...
                     </div>
                   )}
@@ -882,20 +897,20 @@ export const AdminDailyContentStudio: React.FC = () => {
 
       {/* Live Preview Modal */}
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/30 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white border border-stone-200 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <span className="p-1.5 rounded-xl bg-rose-500/10 text-rose-700 border border-rose-500/20">
                   <Eye className="w-4 h-4" />
                 </span>
-                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                  Prévia para o Aluno (Visão do Dashboard)
+                <span className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                  {t('admin:studio_student_preview', 'Student Preview (Dashboard View)')}
                 </span>
               </div>
               <button
                 onClick={() => setIsPreviewOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                className="p-1 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -905,34 +920,34 @@ export const AdminDailyContentStudio: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-100">{poemTitle || 'Título do Poema'}</h3>
-                    <p className="text-xs text-rose-400 font-serif italic">{poemAuthor || 'Autor'}</p>
+                    <h3 className="text-lg font-bold text-stone-900">{poemTitle || t('admin:studio_poem_title_placeholder', 'Poem Title')}</h3>
+                    <p className="text-xs text-rose-700 font-serif italic">{poemAuthor || t('admin:studio_author_placeholder', 'Author')}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="indigo" size="sm">{poemLanguage.toUpperCase()}</Badge>
                     <Badge variant="emerald" size="sm">{poemCefr}</Badge>
                     {poemCountryName && (
                       <Badge variant="slate" size="sm">
-                        <MapPin className="w-3 h-3 text-rose-400 mr-1" /> {poemCountryName}
+                        <MapPin className="w-3 h-3 text-rose-700 mr-1" /> {poemCountryName}
                       </Badge>
                     )}
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs sm:text-sm font-serif text-slate-200 leading-relaxed whitespace-pre-line text-center">
-                  {poemFullText || 'Versos completos do poema...'}
+                <div className="p-4 bg-stone-50/80 rounded-2xl border border-stone-200 text-xs sm:text-sm font-serif text-stone-800 leading-relaxed whitespace-pre-line text-center">
+                  {poemFullText || t('admin:studio_poem_text_placeholder', 'Full poem verses...')}
                 </div>
 
                 {poemTranslation && (
-                  <div className="p-3 bg-slate-950/40 rounded-xl border border-slate-800/60 text-xs text-slate-400">
-                    <span className="font-semibold text-slate-300 block mb-1">Tradução:</span>
+                  <div className="p-3 bg-stone-50/40 rounded-xl border border-stone-200/60 text-xs text-stone-500">
+                    <span className="font-semibold text-stone-700 block mb-1">{t('admin:studio_translation_label', 'Translation:')}</span>
                     {poemTranslation}
                   </div>
                 )}
 
                 {poemCulturalContext && (
-                  <div className="p-3 bg-rose-950/20 rounded-xl border border-rose-900/40 text-xs text-slate-300">
-                    <span className="font-semibold text-rose-400 block mb-1">Contexto Cultural:</span>
+                  <div className="p-3 bg-rose-50/20 rounded-xl border border-rose-900/40 text-xs text-stone-700">
+                    <span className="font-semibold text-rose-700 block mb-1">{t('admin:studio_cultural_context_label', 'Cultural Context:')}</span>
                     {poemCulturalContext}
                   </div>
                 )}
@@ -941,29 +956,29 @@ export const AdminDailyContentStudio: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-100">{convoTitle || 'Título do Diálogo'}</h3>
-                    <p className="text-xs text-slate-400">{convoScenario || 'Cenário'}</p>
+                    <h3 className="text-lg font-bold text-stone-900">{convoTitle || t('admin:studio_dialogue_title_placeholder', 'Dialogue Title')}</h3>
+                    <p className="text-xs text-stone-500">{convoScenario || t('admin:studio_scenario_placeholder', 'Scenario')}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="indigo" size="sm">{convoLanguage.toUpperCase()}</Badge>
                     <Badge variant="emerald" size="sm">{convoCefr}</Badge>
                     {convoCountryName && (
                       <Badge variant="slate" size="sm">
-                        <MapPin className="w-3 h-3 text-emerald-400 mr-1" /> {convoCountryName}
+                        <MapPin className="w-3 h-3 text-emerald-700 mr-1" /> {convoCountryName}
                       </Badge>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2.5 p-4 bg-slate-950/80 rounded-2xl border border-slate-800">
+                <div className="space-y-2.5 p-4 bg-stone-50/80 rounded-2xl border border-stone-200">
                   {convoLines.map((line, idx) => (
                     <div key={idx} className="space-y-0.5 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-emerald-400">{line.speaker}:</span>
-                        <span className="text-slate-100">{line.line}</span>
+                        <span className="font-bold text-emerald-700">{line.speaker}:</span>
+                        <span className="text-stone-900">{line.line}</span>
                       </div>
                       {line.translation && (
-                        <div className="text-[11px] text-slate-500 pl-4 italic">
+                        <div className="text-[11px] text-stone-500 pl-4 italic">
                           {line.translation}
                         </div>
                       )}
@@ -972,15 +987,15 @@ export const AdminDailyContentStudio: React.FC = () => {
                 </div>
 
                 {convoCulturalContext && (
-                  <div className="p-3 bg-emerald-950/20 rounded-xl border border-emerald-900/40 text-xs text-slate-300">
-                    <span className="font-semibold text-emerald-400 block mb-1">Contexto Pragmático:</span>
+                  <div className="p-3 bg-emerald-50/20 rounded-xl border border-emerald-900/40 text-xs text-stone-700">
+                    <span className="font-semibold text-emerald-700 block mb-1">{t('admin:studio_pragmatic_context', 'Pragmatic Context')}:</span>
                     {convoCulturalContext}
                   </div>
                 )}
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+            <div className="flex justify-end gap-2 pt-3 border-t border-stone-200">
               <Button variant="outline" size="sm" onClick={() => setIsPreviewOpen(false)}>
                 Voltar à Edição
               </Button>
@@ -990,7 +1005,7 @@ export const AdminDailyContentStudio: React.FC = () => {
                 onClick={selectedSubTab === 'poetry' ? () => handlePublishPoem() : () => handlePublishConversation()}
                 className="bg-rose-600 hover:bg-rose-500 cursor-pointer"
               >
-                Confirmar & Publicar Agora
+                {t('admin:studio_confirm_publish', 'Confirm & Publish Now')}
               </Button>
             </div>
           </div>

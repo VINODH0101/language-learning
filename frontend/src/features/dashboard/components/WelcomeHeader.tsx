@@ -6,8 +6,6 @@ import { getLanguageName } from '../../../lib/languages/languageMatrix';
 
 interface WelcomeHeaderProps {
   fullName?: string;
-  streakDays?: number;
-  dueSRSCount?: number;
   activeCourse: Course;
 }
 

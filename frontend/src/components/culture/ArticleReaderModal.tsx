@@ -20,6 +20,7 @@ import { CulturalArticle } from '../../types/culture';
 import { CultureService } from '../../services/cultureService';
 import { AudioButton } from '../common/AudioButton';
 import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 import { savePhrasebookWord } from '../../services/localDb';
 import { toast } from 'sonner';
 
@@ -45,7 +46,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
   onClose,
   onBookmarkChanged,
 }) => {
-  const { t } = useI18n();
+  const { t, interfaceLanguage } = useI18n();
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [inspectedWord, setInspectedWord] = useState<WordInspection | null>(null);
@@ -151,11 +152,8 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
     }
   };
 
-  const getLanguageLabel = (lang: string) => {
-    if (lang === 'pt') return 'Português';
-    if (lang === 'es') return 'Español';
-    return 'English';
-  };
+  const getLanguageLabel = (lang: string) =>
+    getLanguageName(lang as any, interfaceLanguage as any);
 
   return (
     <div

@@ -31,14 +31,34 @@ describe('Navigation Component & UX', () => {
     );
   };
 
-  it('renders brand identity, title and subtitle accurately', () => {
+  it('renders brand identity with a dynamic target/explanation language context', () => {
     renderNav();
     expect(screen.getByText('Lexilume')).toBeDefined();
     expect(screen.getByText('AI')).toBeDefined();
-    expect(screen.getByText(/PT · ES · EN/)).toBeDefined();
+    // Default active course is Portuguese with English explanations.
+    expect(screen.getByText('Portuguese')).toBeDefined();
+    expect(screen.getByText(/Explanations in English/)).toBeDefined();
+    // The old hardcoded language strip must be gone.
+    expect(screen.queryByText(/PT · ES · EN/)).toBeNull();
   });
 
-  it('renders the accessible interface language selector with native readable names', () => {
+  it('localizes the header language context by interface language and active course', async () => {
+    localStorage.setItem('lexilume_interface_lang', 'pt-BR');
+    await i18n.changeLanguage('pt-BR');
+    const courses = courseService.getCourses('guest');
+    const spanishCourse = courses.find(c => c.target_language === 'es');
+    if (spanishCourse) {
+      courseService.setActiveCourse(spanishCourse.id, 'guest');
+    }
+
+    renderNav();
+
+    expect(screen.getByText('Espanhol')).toBeDefined();
+    expect(screen.getByText(/Inglês/)).toBeDefined();
+    expect(screen.queryByText(/Explanations in English/)).toBeNull();
+  });
+
+  it('renders exactly the three supported interface languages', () => {
     renderNav();
     const selectors = screen.getAllByTestId('interface-language-selector');
     expect(selectors.length).toBeGreaterThan(0);
@@ -47,10 +67,13 @@ describe('Navigation Component & UX', () => {
     expect(trigger).toBeDefined();
     fireEvent.click(trigger!);
 
-    // Should list native names
-    expect(screen.getAllByText('Português (Brasil)').length).toBeGreaterThan(0);
+    // Should list only native readable names for the three product languages.
+    expect(screen.getAllByText('Português').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Español').length).toBeGreaterThan(0);
     expect(screen.getAllByText('English').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Français')).toBeNull();
+    expect(screen.queryByText('Deutsch')).toBeNull();
+    expect(screen.queryByText('日本語')).toBeNull();
   });
 
   it('clicking language in interface selector changes active interface language', () => {
@@ -58,9 +81,9 @@ describe('Navigation Component & UX', () => {
     const trigger = screen.getAllByTestId('interface-language-selector')[0].querySelector('button');
     fireEvent.click(trigger!);
 
-    const ptOption = screen.getAllByText('Português (Brasil)')[0].closest('button');
+    const ptOption = screen.getAllByText('Português')[0].closest('button');
     fireEvent.click(ptOption!);
-    expect(localStorage.getItem('polyglot_interface_lang')).toBe('pt-BR');
+    expect(localStorage.getItem('polyglot_interface_lang')).toBe('pt');
   });
 
   it('toggles the Learn dropdown and displays both language tracks and study tools', () => {

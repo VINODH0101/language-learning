@@ -34,5 +34,14 @@
   "study_tools_header": "Study Tools",
   "mobile_nav_aria": "Mobile Navigation",
   "open_menu": "Open Navigation Menu",
-  "full_navigation": "Full Navigation"
+  "full_navigation": "Full Navigation",
+  "admin_desk": "Admin Desk",
+  "admin_learner_app": "Learner App",
+  "admin_return_learner": "Return to Learner View",
+  "admin_destination_overview": "Dashboard",
+  "admin_destination_content_studio": "Content Library",
+  "admin_destination_content_import": "Import Content",
+  "admin_destination_processing_studio": "Processing Studio",
+  "admin_destination_review": "Review & Publish",
+  "admin_destination_settings": "Settings"
 }

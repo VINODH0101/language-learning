@@ -85,9 +85,8 @@ export const GuidedOnboardingModal: React.FC<GuidedOnboardingModalProps> = ({
 
   const totalSteps = 8;
 
-  const supportedLanguagesList: SupportedLanguage[] = [
-    'en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'ko', 'ru', 'nl', 'zh', 'tr', 'ta'
-  ];
+  // Product invariant: only Portuguese, English and Spanish are learning languages.
+  const supportedLanguagesList: SupportedLanguage[] = ['en', 'pt', 'es'];
 
   const handleSelectTargetLang = (lang: Language) => {
     setTargetLang(lang);

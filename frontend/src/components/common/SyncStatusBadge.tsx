@@ -39,10 +39,10 @@ export const SyncStatusBadge: React.FC<{ className?: string }> = ({ className = 
   if (authState.isGuest) {
     return (
       <div
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/70 text-[11px] font-medium text-slate-300 select-none ${className}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-100 border border-stone-200 text-[11px] font-medium text-stone-600 select-none ${className}`}
         title={t('common:saved_locally_desc', 'Modo Visitante: Dados persistidos exclusivamente no navegador (IndexedDB)')}
       >
-        <HardDrive className="w-3.5 h-3.5 text-slate-400" />
+        <HardDrive className="w-3.5 h-3.5 text-stone-500" />
         <span className="hidden sm:inline">{t('common:saved_locally', 'Salvo localmente')}</span>
       </div>
     );
@@ -52,10 +52,10 @@ export const SyncStatusBadge: React.FC<{ className?: string }> = ({ className = 
   if (syncState.status === 'syncing') {
     return (
       <div
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-950/70 border border-indigo-700/60 text-[11px] font-semibold text-indigo-300 animate-pulse select-none ${className}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800 animate-pulse select-none ${className}`}
         title={t('common:syncing_desc', 'Sincronizando alterações locais com o banco de dados em nuvem')}
       >
-        <RefreshCw className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+        <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin" />
         <span className="hidden sm:inline">{t('common:syncing', 'A sincronizar...')}</span>
       </div>
     );
@@ -66,10 +66,10 @@ export const SyncStatusBadge: React.FC<{ className?: string }> = ({ className = 
     return (
       <button
         onClick={handleManualRetry}
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-950/70 hover:bg-rose-900/80 border border-rose-700/70 text-[11px] font-semibold text-rose-300 cursor-pointer transition select-none ${className}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-[11px] font-semibold text-rose-800 cursor-pointer transition select-none ${className}`}
         title={t('common:sync_error_desc', 'Falha ao sincronizar com o Supabase. Clique para tentar novamente.')}
       >
-        <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+        <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
         <span className="hidden sm:inline">
           {t('common:sync_failed', 'Falha na sincronização')}
           {syncState.pendingCount > 0 ? ` (${syncState.pendingCount})` : ''}
@@ -82,10 +82,10 @@ export const SyncStatusBadge: React.FC<{ className?: string }> = ({ className = 
   if (syncState.status === 'offline' || syncState.pendingCount > 0) {
     return (
       <div
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-950/70 border border-amber-700/70 text-[11px] font-semibold text-amber-300 select-none ${className}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800 select-none ${className}`}
         title={t('common:sync_pending_desc', 'Modo offline ou alterações aguardando sincronização com a nuvem')}
       >
-        <CloudOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <CloudOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
         <span className="hidden sm:inline">
           {t('common:sync_waiting', 'Aguardando sincronizar')}
           {syncState.pendingCount > 0 ? ` (${syncState.pendingCount})` : ''}
@@ -97,10 +97,10 @@ export const SyncStatusBadge: React.FC<{ className?: string }> = ({ className = 
   // 5. Synchronized with the cloud (Server confirmed, 0 pending actions)
   return (
     <div
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-emerald-950/60 border border-emerald-800/60 text-[11px] font-medium text-emerald-300 select-none ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 select-none ${className}`}
       title={t('common:synced_desc', 'Todos os dados de aprendizado estão sincronizados com a nuvem (Supabase)')}
     >
-      <CloudCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+      <CloudCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
       <span className="hidden md:inline">{t('common:synced', 'Sincronizado')}</span>
     </div>
   );

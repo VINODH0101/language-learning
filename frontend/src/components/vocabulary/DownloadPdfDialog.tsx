@@ -3,6 +3,8 @@ import { X, FileDown, Check, Settings, Sparkles, AlertCircle } from 'lucide-reac
 import { PdfExportConfig, VocabularyTopic } from '../../types/vocabulary';
 import { Language, CEFRLevel } from '../../types';
 import { PdfService } from '../../services/pdfService';
+import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 import { toast } from 'sonner';
 
 interface DownloadPdfDialogProps {
@@ -20,6 +22,7 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
   initialExplanationLang = 'en',
   initialCefr = 'A1',
 }) => {
+  const { interfaceLanguage } = useI18n();
   const [targetLang, setTargetLang] = useState<Language>(initialTargetLang);
   const [explanationLang, setExplanationLang] = useState<Language>(initialExplanationLang);
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel | 'all'>(initialCefr);
@@ -78,11 +81,8 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
     }
   };
 
-  const getLangName = (lang: string) => {
-    if (lang === 'pt') return 'Português';
-    if (lang === 'es') return 'Español';
-    return 'English';
-  };
+  const getLangName = (lang: string) =>
+    getLanguageName(lang as any, interfaceLanguage as any);
 
   return (
     <div

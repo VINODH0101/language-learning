@@ -2,6 +2,8 @@ import React from 'react';
 import { Breadcrumbs, BreadcrumbItem } from './Breadcrumbs';
 import { Language } from '../../types';
 import { Globe, BookOpen, Layers } from 'lucide-react';
+import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 
 interface ActionConfig {
   label: string;
@@ -37,11 +39,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   secondaryAction,
   className = '',
 }) => {
-  const getLangName = (lang: string) => {
-    if (lang === 'pt') return 'Português';
-    if (lang === 'es') return 'Español';
-    return 'English';
-  };
+  const { t, interfaceLanguage } = useI18n();
+  const getLangName = (lang: string) =>
+    getLanguageName(lang as any, interfaceLanguage as any);
 
   return (
     <div className={`space-y-4 border-b border-slate-800 pb-5 ${className}`}>
@@ -69,7 +69,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
             {explanationLanguage && (
               <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                <span>Explicações:</span>
+                <span>{t('dashboard:explanations_in', 'Explanations in')}:</span>
                 <strong className="text-slate-100 font-semibold">{getLangName(explanationLanguage)}</strong>
               </span>
             )}

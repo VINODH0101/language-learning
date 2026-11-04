@@ -2,7 +2,6 @@ import React from 'react';
 import { Globe2, Sparkles, BookOpen } from 'lucide-react';
 import { Language } from '../../../types';
 import {
-  SUPPORTED_LEARNING_LANGUAGES,
   getLanguageName,
   getRegionalVarietyLabel,
 } from '../../../lib/languages/languageMatrix';
@@ -85,7 +84,7 @@ export const PracticeHeader: React.FC<PracticeHeaderProps> = ({
           </button>
         </div>
 
-        {/* Full 13-Language Dropdown */}
+        {/* Supported learning languages: Portuguese, English, Spanish */}
         <div className="relative min-w-[170px]">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
             <Globe2 className="w-4 h-4" />
@@ -96,9 +95,9 @@ export const PracticeHeader: React.FC<PracticeHeaderProps> = ({
             aria-label={t('practice:select_track_aria', 'Selecionar trilha de idioma de prática')}
             className="w-full pl-9 pr-8 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer appearance-none"
           >
-            {SUPPORTED_LEARNING_LANGUAGES.map(lang => (
+            {(['pt', 'en', 'es'] as Language[]).map(lang => (
               <option key={lang} value={lang}>
-                {getLanguageName(lang, (interfaceLanguage as any) || 'en')} ({lang.toUpperCase()})
+                {getLanguageName(lang as any, (interfaceLanguage as any) || 'en')} ({lang.toUpperCase()})
               </option>
             ))}
           </select>

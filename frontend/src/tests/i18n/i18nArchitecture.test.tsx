@@ -183,7 +183,7 @@ describe('Centralized Internationalization (i18n) Architecture & Decoupling', ()
   });
 
   describe('4. Accessible InterfaceLanguageSelector Component', () => {
-    it('should render the active interface language and toggle all 15 native options on click', () => {
+    it('should render the active interface language and toggle the three supported native options on click', () => {
       const TestConsumer = () => {
         const { t, interfaceLanguage } = useI18n();
         return (
@@ -211,23 +211,24 @@ describe('Centralized Internationalization (i18n) Architecture & Decoupling', ()
       // Open dropdown
       fireEvent.click(button!);
 
-      // Verify all 15 languages are listed with native names
+      // Verify only the three product languages are listed with native names
       const options = screen.getAllByRole('option');
-      expect(options).toHaveLength(15);
+      expect(options).toHaveLength(3);
 
-      // Verify English, Portuguese (Brasil), Español, Japanese, etc. are listed
-      expect(screen.getByText('Português (Brasil)')).toBeDefined();
-      expect(screen.getByText('日本語')).toBeDefined();
-      expect(screen.getByText('Français')).toBeDefined();
-      expect(screen.getByText('தமிழ்')).toBeDefined();
+      expect(screen.getByText('Português')).toBeDefined();
+      expect(screen.getByText('Español')).toBeDefined();
+      expect(screen.getAllByText('English').length).toBeGreaterThan(0);
+      expect(screen.queryByText('日本語')).toBeNull();
+      expect(screen.queryByText('Français')).toBeNull();
+      expect(screen.queryByText('தமிழ்')).toBeNull();
 
-      // Click on Japanese ('ja')
-      const jaOption = screen.getByText('日本語').closest('button');
-      expect(jaOption).toBeDefined();
-      fireEvent.click(jaOption!);
+      // Click on Portuguese
+      const ptOption = screen.getByText('Português').closest('button');
+      expect(ptOption).toBeDefined();
+      fireEvent.click(ptOption!);
 
       // Immediate reactive update without page reload
-      expect(screen.getByTestId('current-lang').textContent).toBe('ja');
+      expect(screen.getByTestId('current-lang').textContent).toBe('pt');
     });
   });
 });

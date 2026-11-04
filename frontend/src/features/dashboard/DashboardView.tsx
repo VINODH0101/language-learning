@@ -268,7 +268,7 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     if (course.target_language === 'en') onNavigateTab('english');
     else if (course.target_language === 'pt') onNavigateTab('portuguese');
     else if (course.target_language === 'es') onNavigateTab('spanish');
-    else onNavigateTab('portuguese');
+    else onNavigateTab('learn');
   };
 
   const handleContinue = (item: ContinueItemData) => {
@@ -310,8 +310,6 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
         {/* 1. Personal Welcome Header */}
         <WelcomeHeader
           fullName={settings?.full_name}
-          streakDays={activeCourse.streak_days}
-          dueSRSCount={dueSRSCount}
           activeCourse={activeCourse}
         />
 
@@ -345,23 +343,24 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           onRetry={() => loadEdition(activeCourse, getContinueContentItemId(continueItem))}
         />
 
-        {/* 4. Vocabulary Summary & Spaced Repetition */}
-        <VocabularySummary
-          dueSRSCount={dueSRSCount}
-          savedThisWeekCount={savedThisWeekCount}
-          onReviewDue={() => onNavigateTab('practice')}
-          onOpenVocabulary={() => onNavigateTab('words')}
-          isLoading={isVocabLoading}
-          isError={Boolean(vocabError)}
-          errorMessage={vocabError || undefined}
-          onRetry={() => loadVocab(activeCourse, courseService.getUserId())}
-        />
+        {/* 4 & 5. Daily Practice & Goal — paired on desktop to shorten the page. */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <VocabularySummary
+            dueSRSCount={dueSRSCount}
+            savedThisWeekCount={savedThisWeekCount}
+            onReviewDue={() => onNavigateTab('practice')}
+            onOpenVocabulary={() => onNavigateTab('words')}
+            isLoading={isVocabLoading}
+            isError={Boolean(vocabError)}
+            errorMessage={vocabError || undefined}
+            onRetry={() => loadVocab(activeCourse, courseService.getUserId())}
+          />
 
-        {/* 5. Daily Learning Goal & Pace */}
-        <DailyLearningGoal
-          dailyGoalMinutes={activeCourse.daily_goal_minutes || 10}
-          elapsedMinutes={genuineStudyMinutes}
-        />
+          <DailyLearningGoal
+            dailyGoalMinutes={activeCourse.daily_goal_minutes || 10}
+            elapsedMinutes={genuineStudyMinutes}
+          />
+        </div>
 
         {/* 6. Recently Learned Activities */}
         <RecentLearning

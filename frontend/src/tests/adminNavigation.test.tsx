@@ -67,7 +67,7 @@ describe('Phase 8 Admin navigation destination mapping', () => {
     renderHarness();
 
     clickAdminDestination('Dashboard');
-    expect(screen.getByText(/Visão Geral da Plataforma Lexilume/i)).toBeDefined();
+    expect(screen.getByText(/(Visão Geral da Plataforma Lexilume|Lexilume Platform Overview)/i)).toBeDefined();
     expect(
       within(getDesktopAdminNav())
         .getByRole('button', { name: 'Dashboard' })
@@ -101,7 +101,7 @@ describe('Phase 8 Admin navigation destination mapping', () => {
     ).toBe('page');
 
     clickAdminDestination('Review & Publish');
-    expect(screen.getByText(/Fila de Moderação e Validação de Conteúdo/i)).toBeDefined();
+    expect(screen.getByText(/(Fila de Moderação e Validação de Conteúdo|Pedagogical Content Review Queue)/i)).toBeDefined();
     expect(
       within(getDesktopAdminNav())
         .getByRole('button', { name: 'Review & Publish' })
@@ -109,7 +109,7 @@ describe('Phase 8 Admin navigation destination mapping', () => {
     ).toBe('page');
 
     clickAdminDestination('Settings');
-    expect(screen.getByText(/Matriz de Idiomas Suportados \(13 Idiomas Oficiais\)/i)).toBeDefined();
+    expect(screen.getByText(/(Matriz de Idiomas Suportados|Supported Language Matrix) \(PT · EN · ES\)/i)).toBeDefined();
     expect(
       within(getDesktopAdminNav())
         .getByRole('button', { name: 'Settings' })
@@ -131,7 +131,7 @@ describe('Phase 8 Admin navigation destination mapping', () => {
 
   it('falls back to overview for an invalid admin destination', () => {
     renderHarness('#admin/not_a_real_destination');
-    expect(screen.getByText(/Visão Geral da Plataforma Lexilume/i)).toBeDefined();
+    expect(screen.getByText(/(Visão Geral da Plataforma Lexilume|Lexilume Platform Overview)/i)).toBeDefined();
     expect(
       within(getDesktopAdminNav())
         .getByRole('button', { name: 'Dashboard' })
@@ -142,7 +142,7 @@ describe('Phase 8 Admin navigation destination mapping', () => {
   it('admin logo returns to the default destination', () => {
     renderHarness('#admin/review');
     fireEvent.click(screen.getByLabelText('Lexilume Admin Desk'));
-    expect(screen.getByText(/Visão Geral da Plataforma Lexilume/i)).toBeDefined();
+    expect(screen.getByText(/(Visão Geral da Plataforma Lexilume|Lexilume Platform Overview)/i)).toBeDefined();
   });
 
   it('switches from admin back to the learner shell and can return to admin', () => {
@@ -153,7 +153,7 @@ describe('Phase 8 Admin navigation destination mapping', () => {
     fireEvent.click(screen.getByLabelText(/Menu do Perfil e Configurações|Profile and Settings Menu/i));
     fireEvent.click(screen.getByText(/Console Admin|Governance Panel|Painel Administrativo/i));
 
-    expect(screen.getByText(/Visão Geral da Plataforma Lexilume/i)).toBeDefined();
+    expect(screen.getByText(/(Visão Geral da Plataforma Lexilume|Lexilume Platform Overview)/i)).toBeDefined();
     expect(window.location.hash).toBe('#admin/overview');
   });
 
@@ -179,7 +179,7 @@ describe('Phase 8 Admin navigation destination mapping', () => {
     });
 
     fireEvent.click(within(mobileNav).getByRole('button', { name: 'Review & Publish' }));
-    expect(screen.getByText(/Fila de Moderação e Validação de Conteúdo/i)).toBeDefined();
+    expect(screen.getByText(/(Fila de Moderação e Validação de Conteúdo|Pedagogical Content Review Queue)/i)).toBeDefined();
     expect(window.location.hash).toBe('#admin/review');
   });
 
@@ -188,6 +188,6 @@ describe('Phase 8 Admin navigation destination mapping', () => {
     renderHarness('#admin/review');
 
     expect(screen.getByText(/Access Restricted|Acesso Restrito/i)).toBeDefined();
-    expect(screen.queryByText(/Fila de Moderação e Validação de Conteúdo/i)).toBeNull();
+    expect(screen.queryByText(/(Fila de Moderação e Validação de Conteúdo|Pedagogical Content Review Queue)/i)).toBeNull();
   });
 });

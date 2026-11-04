@@ -34,5 +34,14 @@
   "study_tools_header": "Ferramentas de Estudo",
   "mobile_nav_aria": "Navegação Principal Móvel",
   "open_menu": "Abrir Menu de Navegação",
-  "full_navigation": "Navegação Completa"
+  "full_navigation": "Navegação Completa",
+  "admin_desk": "Mesa Administrativa",
+  "admin_learner_app": "Área do Aluno",
+  "admin_return_learner": "Voltar para a Área do Aluno",
+  "admin_destination_overview": "Painel",
+  "admin_destination_content_studio": "Biblioteca de Conteúdo",
+  "admin_destination_content_import": "Importar Conteúdo",
+  "admin_destination_processing_studio": "Estúdio de Processamento",
+  "admin_destination_review": "Revisão e Publicação",
+  "admin_destination_settings": "Configurações"
 }

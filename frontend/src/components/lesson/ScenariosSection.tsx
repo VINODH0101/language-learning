@@ -18,6 +18,7 @@ import { AudioButton } from '../common/AudioButton';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 
 interface ScenariosSectionProps {
   language: Language;
@@ -28,7 +29,7 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
   language,
   variety,
 }) => {
-  const { t } = useI18n();
+  const { t, interfaceLanguage } = useI18n();
   const scenarios = dialogueScenarios.filter(s => s.language === language);
   const [selectedId, setSelectedId] = useState<string>(scenarios[0]?.id || '');
   const [showTranslations, setShowTranslations] = useState<Record<number, boolean>>({});
@@ -174,13 +175,13 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
                     <>
                       <div>
                         <span className="text-[10px] uppercase font-bold text-indigo-400 block">
-                          Tradução em Português (PT):
+                          {getLanguageName('pt', interfaceLanguage as any)} (PT):
                         </span>
                         <p className="text-slate-200">{turn.translation_pt || turn.translation}</p>
                       </div>
                       <div className="pt-1.5 border-t border-slate-800/60">
                         <span className="text-[10px] uppercase font-bold text-emerald-400 block">
-                          Traducción en Español (ES):
+                          {getLanguageName('es', interfaceLanguage as any)} (ES):
                         </span>
                         <p className="text-slate-200">{turn.translation_es || turn.translation}</p>
                       </div>
@@ -189,7 +190,7 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
                     <>
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                          English Translation (EN):
+                          {getLanguageName('en', interfaceLanguage as any)} (EN):
                         </span>
                         <p className="text-slate-200">{turn.natural_translation || turn.translation}</p>
                       </div>

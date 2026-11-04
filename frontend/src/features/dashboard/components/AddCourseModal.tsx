@@ -4,6 +4,7 @@ import { Course, Language, RegionalVariety, CEFRLevel, ExplanationLanguage } fro
 import { Button } from '../../../components/common/Button';
 import { useI18n } from '../../../i18n/i18nContext';
 import { courseService } from '../../../services/courseService';
+import { getLanguageName } from '../../../lib/languages/languageMatrix';
 import { toast } from 'sonner';
 
 interface AddCourseModalProps {
@@ -29,15 +30,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
 
   if (!isOpen) return null;
 
-  const getLanguageLabel = (lang: Language) => {
-    if (interfaceLanguage === 'en') {
-      return lang === 'en' ? 'English' : lang === 'pt' ? 'Portuguese' : lang === 'es' ? 'Spanish' : lang;
-    }
-    if (interfaceLanguage === 'es') {
-      return lang === 'en' ? 'Inglés' : lang === 'pt' ? 'Portugués' : lang === 'es' ? 'Español' : lang;
-    }
-    return lang === 'en' ? 'Inglês' : lang === 'pt' ? 'Português' : lang === 'es' ? 'Espanhol' : lang;
-  };
+  const getLanguageLabel = (lang: Language) =>
+    getLanguageName(lang, interfaceLanguage as any);
 
   const handleCreateCourseSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,17 +61,17 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/30 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#FDFBF7] border border-stone-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="flex items-center justify-between border-b border-stone-200 pb-3">
           <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-indigo-400" />
-            <h3 className="font-bold text-slate-100 text-base">{t('dash_add_modal_title')}</h3>
+            <Globe className="w-5 h-5 text-amber-700" />
+            <h3 className="font-serif font-bold text-stone-900 text-base">{t('dash_add_modal_title')}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+            className="text-stone-500 hover:text-stone-900 p-1 rounded-lg hover:bg-stone-100 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -85,7 +79,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
 
         <form onSubmit={handleCreateCourseSubmit} className="space-y-4 text-xs sm:text-sm">
           <div className="space-y-1.5">
-            <label className="text-slate-300 font-semibold block">{t('dash_target_lang_label')}</label>
+              <label className="text-stone-700 font-semibold block">{t('dash_target_lang_label')}</label>
             <select
               value={newTargetLang}
               onChange={e => {
@@ -94,41 +88,21 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 if (l === 'en') setNewRegionalVariant('en-US');
                 else if (l === 'pt') setNewRegionalVariant('pt-BR');
                 else if (l === 'es') setNewRegionalVariant('es-ES');
-                else if (l === 'fr') setNewRegionalVariant('fr-FR');
-                else if (l === 'de') setNewRegionalVariant('de-DE');
-                else if (l === 'it') setNewRegionalVariant('it-IT');
-                else if (l === 'ja') setNewRegionalVariant('ja-JP');
-                else if (l === 'ko') setNewRegionalVariant('ko-KR');
-                else if (l === 'ru') setNewRegionalVariant('ru-RU');
-                else if (l === 'nl') setNewRegionalVariant('nl-NL');
-                else if (l === 'zh') setNewRegionalVariant('zh-CN');
-                else if (l === 'tr') setNewRegionalVariant('tr-TR');
-                else if (l === 'ta') setNewRegionalVariant('ta-IN');
               }}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px]"
+              className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 min-h-[44px]"
             >
-              <option value="en">English (EN)</option>
-              <option value="pt">Português (PT)</option>
-              <option value="es">Español (ES)</option>
-              <option value="fr">Français (FR)</option>
-              <option value="de">Deutsch (DE)</option>
-              <option value="it">Italiano (IT)</option>
-              <option value="ja">日本語 (JA)</option>
-              <option value="ko">한국어 (KO)</option>
-              <option value="zh">中文 (ZH)</option>
-              <option value="ru">Русский (RU)</option>
-              <option value="nl">Nederlands (NL)</option>
-              <option value="tr">Türkçe (TR)</option>
-              <option value="ta">தமிழ் (TA)</option>
+              <option value="en">{getLanguageName('en', interfaceLanguage as any)} (EN)</option>
+              <option value="pt">{getLanguageName('pt', interfaceLanguage as any)} (PT)</option>
+              <option value="es">{getLanguageName('es', interfaceLanguage as any)} (ES)</option>
             </select>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-slate-300 font-semibold block">{t('dash_regional_variant_label')}</label>
+            <label className="text-stone-700 font-semibold block">{t('dash_regional_variant_label')}</label>
             <select
               value={newRegionalVariant}
               onChange={e => setNewRegionalVariant(e.target.value as RegionalVariety)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px]"
+              className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 min-h-[44px]"
             >
               {newTargetLang === 'en' && (
                 <>
@@ -150,21 +124,17 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   <option value="es-AR">Español Rioplatense (es-AR)</option>
                 </>
               )}
-              {newTargetLang !== 'en' && newTargetLang !== 'pt' && newTargetLang !== 'es' && (
-                <option value={`${newTargetLang}-${newTargetLang.toUpperCase()}`}>
-                  {newTargetLang.toUpperCase()} Standard
-                </option>
-              )}
+
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-slate-300 font-semibold block">{t('dash_cefr_label')}</label>
+              <label className="text-stone-700 font-semibold block">{t('dash_cefr_label')}</label>
               <select
                 value={newCefrLevel}
                 onChange={e => setNewCefrLevel(e.target.value as CEFRLevel)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px]"
+                className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 min-h-[44px]"
               >
                 <option value="A1">{t('common:cefr_a1', 'A1 - Beginner')}</option>
                 <option value="A2">{t('common:cefr_a2', 'A2 - Elementary')}</option>
@@ -175,20 +145,20 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-slate-300 font-semibold block">{t('dash_explanation_label')}</label>
+              <label className="text-stone-700 font-semibold block">{t('dash_explanation_label')}</label>
               <select
                 value={newExplanationLang}
                 onChange={e => setNewExplanationLang(e.target.value as ExplanationLanguage)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px]"
+                className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 min-h-[44px]"
               >
-                <option value="en">English (EN)</option>
-                <option value="pt">Português (PT)</option>
-                <option value="es">Español (ES)</option>
+                <option value="en">{getLanguageName('en', interfaceLanguage as any)} (EN)</option>
+                <option value="pt">{getLanguageName('pt', interfaceLanguage as any)} (PT)</option>
+                <option value="es">{getLanguageName('es', interfaceLanguage as any)} (ES)</option>
               </select>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200">
             <Button
               variant="outline"
               size="sm"
@@ -197,7 +167,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
             >
               {t('dash_cancel_btn')}
             </Button>
-            <Button variant="primary" size="sm" type="submit" className="bg-indigo-600 hover:bg-indigo-500">
+            <Button variant="primary" size="sm" type="submit">
               {t('dash_create_course_btn')}
             </Button>
           </div>

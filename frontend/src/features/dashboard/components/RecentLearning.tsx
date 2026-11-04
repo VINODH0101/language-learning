@@ -118,13 +118,13 @@ export const RecentLearning: React.FC<RecentLearningProps> = ({
           <div className="h-12 bg-stone-100 rounded-lg" />
         </div>
       ) : activities.length === 0 ? (
-        <div className="py-8 text-center text-stone-500 text-sm">
-          <BookOpen className="w-8 h-8 mx-auto text-stone-300 mb-2" />
+        <div className="py-5 text-center text-stone-500 text-sm">
+          <BookOpen className="w-6 h-6 mx-auto text-stone-300 mb-1.5" />
           <p className="font-medium text-stone-700">
             {t('dashboard:no_recent_activity', 'No learning history recorded yet.')}
           </p>
           <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
-            {t('dashboard:start_learning_prompt', 'Open today’s edition or continue your active reading to build your learning record.')}
+            {t('dashboard:start_learning_prompt', "Open today's edition or continue your active reading to build your learning record.")}
           </p>
         </div>
       ) : (

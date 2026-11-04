@@ -17,12 +17,15 @@ import {
 import { Badge } from '../../components/common/Badge';
 import { contentCentredService } from '../../services/contentCentredService';
 import { authService } from '../../services/auth';
+import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 
 interface LearnCatalogProps {
   onSelectContent: (item: ContentItem, version: ContentVersion, activities: LearningActivity[]) => void;
 }
 
 export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) => {
+  const { t, interfaceLanguage } = useI18n();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, LearnerContentProgress>>({});
   const [loading, setLoading] = useState(true);
@@ -118,10 +121,10 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
             onChange={e => setSelectedLanguage(e.target.value)}
             className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-stone-500 cursor-pointer"
           >
-            <option value="all">All Languages</option>
-            <option value="en">English</option>
-            <option value="pt">Portuguese</option>
-            <option value="es">Spanish</option>
+            <option value="all">{t('learning:all_languages', 'All Languages')}</option>
+            <option value="en">{getLanguageName('en', interfaceLanguage as any)}</option>
+            <option value="pt">{getLanguageName('pt', interfaceLanguage as any)}</option>
+            <option value="es">{getLanguageName('es', interfaceLanguage as any)}</option>
           </select>
 
           {/* Genre */}

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Award, ChevronDown, Compass, Globe } from 'lucide-react';
+import { Award, Compass, Globe } from 'lucide-react';
 import { Language, UserTrackState, Course } from '../../../types';
 import {
-  SUPPORTED_LEARNING_LANGUAGES,
   LANGUAGE_METADATA,
   getLanguageName,
   getRegionalVarietyLabel,
@@ -82,7 +81,9 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
             <span>•</span>
             <span>
               {t('progress:explanation_lang', 'Explanations')}:{' '}
-              <strong className="text-slate-200 uppercase">{activeCourse.explanation_language}</strong>
+              <strong className="text-slate-200">
+                {getLanguageName(activeCourse.explanation_language, interfaceLanguage)}
+              </strong>
             </span>
           </div>
         )}
@@ -100,7 +101,7 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            Português
+            {getLanguageName('pt', interfaceLanguage)}
           </button>
           <button
             type="button"
@@ -111,7 +112,7 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            Español
+            {getLanguageName('es', interfaceLanguage)}
           </button>
           <button
             type="button"
@@ -122,29 +123,9 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            English
+            {getLanguageName('en', interfaceLanguage)}
           </button>
 
-          {/* Complete 13 languages selector */}
-          <div className="relative pl-1 border-l border-slate-800">
-            <select
-              aria-label={t('progress:select_all_languages', 'All Supported Languages')}
-              value={selectedLang}
-              onChange={e => onSelectLang(e.target.value as Language)}
-              className="appearance-none bg-slate-800/80 hover:bg-slate-750 text-slate-200 text-xs font-bold py-1.5 pl-2.5 pr-7 rounded-xl border border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-            >
-              {SUPPORTED_LEARNING_LANGUAGES.map(lang => {
-                const meta = LANGUAGE_METADATA[lang];
-                const localizedName = getLanguageName(lang, interfaceLanguage);
-                return (
-                  <option key={lang} value={lang} className="bg-slate-900 text-slate-100">
-                    {meta?.flag || '🌐'} {localizedName} ({lang})
-                  </option>
-                );
-              })}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-          </div>
         </div>
 
         {/* Diagnostic assessment trigger */}

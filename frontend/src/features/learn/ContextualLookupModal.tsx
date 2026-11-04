@@ -42,11 +42,20 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
   onClose,
   onSavedWord,
 }) => {
-  if (!data) return null;
-
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  // Keyboard accessibility: Escape key dismisses popover
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  if (!data) return null;
 
   const {
     selectedText,
@@ -72,15 +81,6 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
     annotation?.context_translation?.[explanationLanguage] ||
     sentence.translations?.[explanationLanguage] ||
     `Tradução de "${term}"`;
-
-  // Keyboard accessibility: Escape key dismisses popover
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
 
   const handlePlayAudio = async () => {
     setIsPlayingAudio(true);

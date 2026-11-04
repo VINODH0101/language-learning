@@ -138,8 +138,32 @@ export const isCEFRCompatible = (contentCefr: CEFRLevel, learnerCefr: CEFRLevel)
  * Normalizes vocabulary text canonically using Unicode NFC, lowercase, and trimming.
  * Accents and diacritics are strictly preserved (e.g. 'está' !== 'esta').
  */
-export const normalizeCanonicalVocabKey = (text: string): string => {
+export const normalizeCanonicalVocabKey = (text?: string | null): string => {
   return (text || '').normalize('NFC').trim().toLowerCase();
+};
+
+/**
+ * Builds a composite canonical vocabulary identity:
+ * 1. Target language is always a mandatory prefix (e.g. 'pt:café' vs 'es:café').
+ * 2. Normalizes Unicode to canonical NFC.
+ * 3. Normalizes whitespace and lowercase.
+ * 4. Preserves meaningful accents and diacritics ('está' !== 'esta').
+ * 5. Uses controlled fallback order: canonicalId -> lemma -> term.
+ */
+export const buildCanonicalVocabIdentity = (
+  targetLanguage: string,
+  canonicalId?: string | null,
+  lemma?: string | null,
+  term?: string | null
+): string | null => {
+  const lang = (targetLanguage || '').trim().toLowerCase();
+  if (!lang) return null;
+
+  const rawToken = canonicalId || lemma || term;
+  const normalized = normalizeCanonicalVocabKey(rawToken);
+  if (!normalized) return null;
+
+  return `${lang}:${normalized}`;
 };
 
 /**
@@ -239,42 +263,40 @@ export const resolveContinueLearning = async (
   // - Exclude completed items
   // - Prefer exact CEFR match, then compatible CEFR match
   // - Deterministic rotation per user/course/date
-  try {
-    const published = await contentCentredService.getContentItems({
-      target_language: course.target_language,
-      status: 'published',
+  // Invariant: Do NOT swallow backend/network errors into fake empty states;
+  // let errors propagate so caller presents the error state with a retry action!
+  const published = await contentCentredService.getContentItems({
+    target_language: course.target_language,
+    status: 'published',
+  });
+
+  const completedIds = new Set(
+    allProgress.filter(p => p.status === 'completed').map(p => p.content_item_id)
+  );
+  const uncompleted = published.filter(item => !completedIds.has(item.id));
+  const candidates = uncompleted.length > 0 ? uncompleted : published;
+
+  const exactCefr = candidates.filter(item => item.primary_cefr === course.cefr_level);
+  const compatibleCefr = candidates.filter(item => isCEFRCompatible(item.primary_cefr, course.cefr_level));
+  const eligiblePool = exactCefr.length > 0 ? exactCefr : (compatibleCefr.length > 0 ? compatibleCefr : candidates);
+
+  if (eligiblePool.length > 0) {
+    const sortedPool = [...eligiblePool].sort((a, b) => {
+      const hashA = getDeterministicDateHash(`${today}_${course.id}_${a.id}`);
+      const hashB = getDeterministicDateHash(`${today}_${course.id}_${b.id}`);
+      return hashA - hashB;
     });
 
-    const completedIds = new Set(
-      allProgress.filter(p => p.status === 'completed').map(p => p.content_item_id)
-    );
-    const uncompleted = published.filter(item => !completedIds.has(item.id));
-    const candidates = uncompleted.length > 0 ? uncompleted : published;
-
-    const exactCefr = candidates.filter(item => item.primary_cefr === course.cefr_level);
-    const compatibleCefr = candidates.filter(item => isCEFRCompatible(item.primary_cefr, course.cefr_level));
-    const eligiblePool = exactCefr.length > 0 ? exactCefr : (compatibleCefr.length > 0 ? compatibleCefr : candidates);
-
-    if (eligiblePool.length > 0) {
-      const sortedPool = [...eligiblePool].sort((a, b) => {
-        const hashA = getDeterministicDateHash(`${today}_${course.id}_${a.id}`);
-        const hashB = getDeterministicDateHash(`${today}_${course.id}_${b.id}`);
-        return hashA - hashB;
-      });
-
-      const selected = sortedPool[0];
-      const full = await contentCentredService.getContentItemById(selected.id);
-      return {
-        type: 'recommended',
-        item: full || selected,
-        version: full?.version,
-      };
-    }
-  } catch (err) {
-    console.warn('Failed resolving recommended content:', err);
+    const selected = sortedPool[0];
+    const full = await contentCentredService.getContentItemById(selected.id);
+    return {
+      type: 'recommended',
+      item: full || selected,
+      version: full?.version,
+    };
   }
 
-  // 4. Empty state
+  // 4. Genuine empty state (catalog has zero matching published content)
   return { type: 'empty' };
 };
 
@@ -282,7 +304,10 @@ export const resolveContinueLearning = async (
  * Resolves Today's Edition:
  * - Deterministically selects stories based on the learner's local date string (YYYY-MM-DD).
  * - Excludes the active Continue Learning item to prevent duplicate cards.
- * - Filters for pedagogical CEFR compatibility (within 1 CEFR level of the active course).
+ * - Explicit CEFR policy:
+ *     1. Exact CEFR matches preferred.
+ *     2. If no exact match, falls back to compatible adjacent levels (|delta| <= 1).
+ *     3. If neither exact nor compatible levels exist, returns [] (never unrelated distant levels).
  * - Pairs with authentic daily poetry and daily dialogue.
  * - Does NOT swallow errors, allowing callers to handle editionError.
  */
@@ -305,15 +330,17 @@ export const resolveTodaysEdition = async (
     if (item.primary_cefr && course.cefr_level) {
       return isCEFRCompatible(item.primary_cefr, course.cefr_level);
     }
-    return true;
+    return false;
   });
 
-  const eligible = exactMatched.length > 0 ? exactMatched : (compatibleMatched.length > 0 ? compatibleMatched : nonExcluded);
+  // Strict CEFR Fallback Policy:
+  // Prefer exact match -> fallback to compatible adjacent level -> otherwise empty (no distant levels)
+  const eligible = exactMatched.length > 0 ? exactMatched : compatibleMatched;
 
-  // Deterministic shuffle using localDate as seed
+  // Deterministic shuffle using localDate + course.id as seed
   const sorted = [...eligible].sort((a, b) => {
-    const hashA = getDeterministicDateHash(`${localDate}_${a.id}`);
-    const hashB = getDeterministicDateHash(`${localDate}_${b.id}`);
+    const hashA = getDeterministicDateHash(`${localDate}_${course.id}_${a.id}`);
+    const hashB = getDeterministicDateHash(`${localDate}_${course.id}_${b.id}`);
     return hashA - hashB;
   });
 
@@ -341,8 +368,10 @@ export const resolveTodaysEdition = async (
 /**
  * Resolves Vocabulary Summary metrics:
  * - Deduplicates words across both StorageService SRS items and content-centred saved words
- *   using a canonical identity key (preferring legacy_srs_item_id or normalized lemma/term).
- * - Preserves diacritics and accents using Unicode NFC normalization.
+ *   using an authoritative canonical identity (target language + NFC normalized lemma/term).
+ * - Preserves diacritics and accents using Unicode NFC normalization ('está' !== 'esta').
+ * - Preserves language separation ('pt:sol' !== 'es:sol').
+ * - Aliases legacy SRS item IDs to canonical lemma keys when referenced by UserSavedWord.
  * - Accurately counts distinct words due for review today.
  * - Accurately counts distinct words saved in the past 7 days based on authoritative creation timestamp
  *   (never substituting last_reviewed_at as creation date).
@@ -353,44 +382,39 @@ export const resolveVocabularySummary = async (
   userId: string
 ): Promise<VocabularySummaryData> => {
   const today = getLocalTodayDateString();
+  const targetLang = course.target_language;
 
   const dueCanonicalKeys = new Set<string>();
   const savedThisWeekCanonicalKeys = new Set<string>();
 
-  // 1. Process course SRS items (strictly scoped to course.target_language)
-  const srsItems = StorageService.getSRSItems(course.target_language, userId);
-  for (const item of srsItems) {
-    if (item.language && item.language !== course.target_language) continue;
-    const termKey = normalizeCanonicalVocabKey(item.vocabulary_item_id);
-    if (!termKey) continue;
+  // Map to alias legacy SRS IDs to canonical lemma keys when known
+  // e.g. 'pt:srs_123' -> 'pt:café'
+  const legacyIdToCanonicalMap = new Map<string, string>();
 
-    if (item.next_review_date && item.next_review_date <= today) {
-      dueCanonicalKeys.add(termKey);
-    }
-
-    // Invariant: DO NOT use last_reviewed_at as creation date substitute.
-    // Only count if an explicit created_at exists on the SRS item.
-    const createdAt = (item as any).created_at;
-    if (createdAt && isWithinLast7Days(createdAt)) {
-      savedThisWeekCanonicalKeys.add(termKey);
-    }
-  }
-
-  // 2. Process content-centred saved words (strictly scoped to course.target_language)
+  // 1. Process content-centred saved words (strictly scoped to course.target_language)
   // Let errors propagate to caller so caller can present error state to the user instead of fake zeros!
   const savedWords: UserSavedWord[] = await contentCentredService.getUserSavedWords(
     userId,
-    course.target_language
+    targetLang
   );
 
   for (const w of savedWords) {
-    const targetLang = w.target_language || (w as any).language;
-    if (targetLang && targetLang !== course.target_language) continue;
+    const wordLang = w.target_language || (w as any).language;
+    if (wordLang && wordLang !== targetLang) continue;
 
-    // Canonical mapping: prefer legacy_srs_item_id if set, else lemma or term
-    const rawKey = w.legacy_srs_item_id || w.lemma || w.term;
-    const canonicalKey = normalizeCanonicalVocabKey(rawKey);
+    const canonicalKey = buildCanonicalVocabIdentity(
+      targetLang,
+      w.lemma || w.term,
+      w.lemma,
+      w.term
+    );
     if (!canonicalKey) continue;
+
+    // If word references a legacy SRS ID, map that legacy ID to this canonical key
+    if (w.legacy_srs_item_id) {
+      const legacyKey = `${targetLang.toLowerCase()}:${normalizeCanonicalVocabKey(w.legacy_srs_item_id)}`;
+      legacyIdToCanonicalMap.set(legacyKey, canonicalKey);
+    }
 
     const nextDue = w.next_review || (w as any).next_review_date;
     if (nextDue && nextDue <= today) {
@@ -399,6 +423,28 @@ export const resolveVocabularySummary = async (
 
     // Authoritative creation date: w.created_at
     if (w.created_at && isWithinLast7Days(w.created_at)) {
+      savedThisWeekCanonicalKeys.add(canonicalKey);
+    }
+  }
+
+  // 2. Process course SRS items (strictly scoped to course.target_language)
+  const srsItems = StorageService.getSRSItems(targetLang, userId);
+  for (const item of srsItems) {
+    if (item.language && item.language !== targetLang) continue;
+    if (!item.vocabulary_item_id) continue;
+
+    const itemNormalizedId = `${targetLang.toLowerCase()}:${normalizeCanonicalVocabKey(item.vocabulary_item_id)}`;
+    // Resolve alias if mapped from a UserSavedWord legacy_srs_item_id; otherwise use normalized item ID
+    const canonicalKey = legacyIdToCanonicalMap.get(itemNormalizedId) || itemNormalizedId;
+
+    if (item.next_review_date && item.next_review_date <= today) {
+      dueCanonicalKeys.add(canonicalKey);
+    }
+
+    // Invariant: DO NOT use last_reviewed_at as creation date substitute.
+    // Only count if an explicit created_at exists on the SRS item.
+    const createdAt = (item as any).created_at;
+    if (createdAt && isWithinLast7Days(createdAt)) {
       savedThisWeekCanonicalKeys.add(canonicalKey);
     }
   }

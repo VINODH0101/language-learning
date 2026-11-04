@@ -5,6 +5,7 @@ import { DashboardView } from '../features/dashboard/DashboardView';
 import { LearnPage } from '../pages/LearnPage';
 import { ReaderView } from '../features/learn/ReaderView';
 import { I18nProvider } from '../i18n/i18nContext';
+import { authService } from '../services/auth';
 import { courseService } from '../services/courseService';
 import { StorageService } from '../services/storage';
 import { contentCentredService, SEED_CONTENT_ITEMS } from '../services/contentCentredService';
@@ -18,6 +19,7 @@ import {
   resolveRecentActivities,
   getLocalTodayDateString,
   isWithinLast7Days,
+  buildCanonicalVocabIdentity,
 } from '../features/dashboard/services/homeOrchestrator';
 import { Course } from '../types';
 
@@ -26,6 +28,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     localStorage.clear();
   });
 
@@ -206,7 +209,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
 
   it('8. Section 5 (Daily Learning Goal) computes genuine cognitive study minutes against configured goal', () => {
     const userId = 'user_goal_test';
-    vi.spyOn(StorageService, 'getTodayStudyMinutes').mockReturnValue(6);
+    vi.spyOn(StorageService, 'getTodayStudyMinutes').mockReturnValueOnce(6);
 
     const goalData = resolveDailyGoal({ ...sampleCourse, daily_goal_minutes: 10 }, userId);
 
@@ -703,5 +706,343 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     );
 
     vi.useRealTimers();
+  });
+
+  it('25. Multiple Reader sessions accumulate active seconds into daily minutes without reset or duplication', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
+    const mockItem = SEED_CONTENT_ITEMS[0];
+    const userId = 'user_multi_session_test';
+    const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
+      user: { id: userId, email: 'test@example.com' } as any,
+      role: 'user',
+      isGuest: false,
+      isLoading: false,
+    });
+
+    // Initial state: 0 seconds, 0 minutes
+    expect(StorageService.getTodayStudySeconds(userId)).toBe(0);
+    expect(StorageService.getTodayStudyMinutes(userId)).toBe(0);
+
+    // Session 1: 40 active seconds
+    const session1 = render(
+      <ReaderView
+        item={mockItem}
+        version={mockItem.version}
+        activities={mockItem.activities}
+        onBack={vi.fn()}
+      />
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(40000);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      session1.unmount();
+      await Promise.resolve();
+    });
+
+    // 40 seconds accumulated; 0 full minutes earned yet
+    expect(StorageService.getTodayStudySeconds(userId)).toBe(40);
+    expect(StorageService.getTodayStudyMinutes(userId)).toBe(0);
+
+    // Session 2: 40 active seconds
+    const session2 = render(
+      <ReaderView
+        item={mockItem}
+        version={mockItem.version}
+        activities={mockItem.activities}
+        onBack={vi.fn()}
+      />
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(40000);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      session2.unmount();
+      await Promise.resolve();
+    });
+
+    // Total: 80 seconds accumulated -> awards exactly 1 daily study minute!
+    expect(StorageService.getTodayStudySeconds(userId)).toBe(80);
+    expect(StorageService.getTodayStudyMinutes(userId)).toBe(1);
+
+    authStateSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('26. Active reading timer pauses on 60s idle timeout and flushes on tab hidden', async () => {
+    vi.useFakeTimers();
+    const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
+    const mockItem = SEED_CONTENT_ITEMS[0];
+    const userId = 'user_idle_tab_test';
+    const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
+      user: { id: userId, email: 'test@example.com' } as any,
+      role: 'user',
+      isGuest: false,
+      isLoading: false,
+    });
+
+    const { unmount } = render(
+      <ReaderView
+        item={mockItem}
+        version={mockItem.version}
+        activities={mockItem.activities}
+        onBack={vi.fn()}
+      />
+    );
+
+    // 10 active seconds
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+
+    // User stops interacting for 65 seconds (exceeding 60s INACTIVITY_THRESHOLD_MS)
+    act(() => {
+      vi.advanceTimersByTime(65000);
+    });
+
+    // Trigger tab hidden
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', writable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Tab hidden flushes accumulated time immediately
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content_item_id: mockItem.id,
+        content_version_id: mockItem.version.id,
+      })
+    );
+
+    act(() => {
+      unmount();
+    });
+
+    authStateSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('27. Canonical vocabulary identity handles alias deduplication, language scoping, accents, and fallbacks', async () => {
+    const userId = sampleCourse.user_id;
+    const today = getLocalTodayDateString();
+
+    // 1. Same canonical word in both sources:
+    // SRS item with legacy ID 'srs_cafe_123', UserSavedWord with lemma 'café' and legacy_srs_item_id 'srs_cafe_123'
+    // Must be counted as 1 distinct term, not 2.
+    vi.spyOn(StorageService, 'getSRSItems').mockReturnValueOnce([
+      {
+        vocabulary_item_id: 'srs_cafe_123',
+        language: 'pt',
+        repetition_count: 2,
+        ease_factor: 2.5,
+        interval_days: 1,
+        next_review_date: today,
+        lapse_count: 0,
+        mastery_status: 'learning',
+        history: [],
+      },
+      // Distinct accented variant: 'esta' (unaccented) vs 'está' (accented)
+      {
+        vocabulary_item_id: 'esta',
+        language: 'pt',
+        repetition_count: 1,
+        ease_factor: 2.5,
+        interval_days: 1,
+        next_review_date: today,
+        lapse_count: 0,
+        mastery_status: 'learning',
+        history: [],
+      },
+      {
+        vocabulary_item_id: 'está',
+        language: 'pt',
+        repetition_count: 1,
+        ease_factor: 2.5,
+        interval_days: 1,
+        next_review_date: today,
+        lapse_count: 0,
+        mastery_status: 'learning',
+        history: [],
+      },
+      // Different language track (Spanish) — must be excluded from Portuguese course
+      {
+        vocabulary_item_id: 'sol',
+        language: 'es',
+        repetition_count: 1,
+        ease_factor: 2.5,
+        interval_days: 1,
+        next_review_date: today,
+        lapse_count: 0,
+        mastery_status: 'learning',
+        history: [],
+      },
+    ]);
+
+    vi.spyOn(contentCentredService, 'getUserSavedWords').mockResolvedValueOnce([
+      {
+        id: 'usw_cafe',
+        user_id: userId,
+        target_language: 'pt',
+        explanation_language: 'en',
+        term: '  Café  ', // Case and whitespace differences
+        lemma: 'café',
+        pos: 'noun',
+        definition: 'Coffee',
+        next_review: today,
+        legacy_srs_item_id: 'srs_cafe_123', // Matches SRS item
+        state: 'learning',
+        ease_factor: 2.5,
+        interval_days: 1,
+        repetitions: 1,
+        lapses: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      // Missing lemma fallback (falls back to term)
+      {
+        id: 'usw_no_lemma',
+        user_id: userId,
+        target_language: 'pt',
+        explanation_language: 'en',
+        term: 'obrigado',
+        lemma: '',
+        pos: 'interjection',
+        definition: 'Thank you',
+        next_review: today,
+        state: 'learning',
+        ease_factor: 2.5,
+        interval_days: 1,
+        repetitions: 1,
+        lapses: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+
+    const summary = await resolveVocabularySummary(sampleCourse, userId);
+
+    // Expected distinct terms in 'pt':
+    // 1. 'pt:café' (deduplicated across SRS item 'srs_cafe_123' and UserSavedWord 'café')
+    // 2. 'pt:esta' (unaccented)
+    // 3. 'pt:está' (accented, distinct from 'esta')
+    // 4. 'pt:obrigado' (lemma fallback from term)
+    // Note: 'es:sol' is excluded because target_language is 'pt'.
+    expect(summary.dueSRSCount).toBe(4);
+  });
+
+  it('28. Recommendation error handling propagates backend failures and does not masquerade as empty', async () => {
+    const userId = sampleCourse.user_id;
+
+    // No in-progress stories
+    vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValueOnce([]);
+    // Invalidate curriculum generator so it falls to recommendations
+    vi.spyOn(ClientLessonGenerator, 'generateOrGetLesson').mockReturnValue(null as any);
+
+    // Backend failure on getContentItems
+    vi.spyOn(contentCentredService, 'getContentItems').mockRejectedValueOnce(
+      new Error('Supabase database connection timeout')
+    );
+
+    await expect(resolveContinueLearning(sampleCourse, userId)).rejects.toThrow(
+      'Supabase database connection timeout'
+    );
+
+    // Case 2: Genuine empty catalog returns { type: 'empty' }
+    vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValueOnce([]);
+    vi.spyOn(ClientLessonGenerator, 'generateOrGetLesson').mockReturnValue(null as any);
+    vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValueOnce([]);
+
+    const emptyResult = await resolveContinueLearning(sampleCourse, userId);
+    expect(emptyResult.type).toBe('empty');
+  });
+
+  it('29. Today Edition explicit CEFR policy prefers exact match, falls back to adjacent level, and excludes distant levels', async () => {
+    const courseB1 = { ...sampleCourse, cefr_level: 'B1' as const };
+
+    // Case A: Exact match available (B1)
+    vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValueOnce([
+      { id: 'item_b1', title: 'B1 Story', primary_cefr: 'B1', target_language: 'pt', status: 'published' } as any,
+      { id: 'item_a2', title: 'A2 Story', primary_cefr: 'A2', target_language: 'pt', status: 'published' } as any,
+    ]);
+
+    const editionA = await resolveTodaysEdition(courseB1);
+    expect(editionA.stories.length).toBe(1);
+    expect(editionA.stories[0].id).toBe('item_b1');
+
+    // Case B: No exact match, but compatible adjacent level available (A2 is distance 1 from B1)
+    vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValueOnce([
+      { id: 'item_a2', title: 'A2 Story', primary_cefr: 'A2', target_language: 'pt', status: 'published' } as any,
+    ]);
+
+    const editionB = await resolveTodaysEdition(courseB1);
+    expect(editionB.stories.length).toBe(1);
+    expect(editionB.stories[0].id).toBe('item_a2');
+
+    // Case C: Distant level only (C1 for A1 learner, distance 4 > 1) -> must NOT return distant level
+    const courseA1 = { ...sampleCourse, cefr_level: 'A1' as const };
+    vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValueOnce([
+      { id: 'item_c1', title: 'C1 Story', primary_cefr: 'C1', target_language: 'pt', status: 'published' } as any,
+    ]);
+
+    const editionC = await resolveTodaysEdition(courseA1);
+    expect(editionC.stories.length).toBe(0); // Distant level excluded according to policy!
+  });
+
+  it('30. Sentence clicks update reading position without completing content when required activities exist', async () => {
+    const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
+    const mockItem = SEED_CONTENT_ITEMS[0]; // has activities
+
+    render(
+      <ReaderView
+        item={mockItem}
+        version={mockItem.version}
+        activities={mockItem.activities}
+        onBack={vi.fn()}
+      />
+    );
+
+    // 1. Click first sentence
+    const firstSentence = await screen.findByTestId('sentence-s1');
+    fireEvent.click(firstSentence);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content_item_id: mockItem.id,
+          content_version_id: mockItem.version.id,
+          status: 'in_progress',
+          time_spent_seconds: 0,
+        })
+      );
+    });
+
+    // 2. Click final sentence (s4)
+    const finalSentence = await screen.findByTestId('sentence-s4');
+    fireEvent.click(finalSentence);
+
+    await waitFor(() => {
+      // Because required activities exist, reaching 100% of reading MUST NOT set status to 'completed'!
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content_item_id: mockItem.id,
+          content_version_id: mockItem.version.id,
+          status: 'in_progress', // Kept in_progress until activities completed
+          percent_complete: 100,
+          time_spent_seconds: 0,
+        })
+      );
+    });
+
+    // Reading position restored in localStorage
+    expect(localStorage.getItem(`lexilume_reading_pos_${mockItem.id}_${mockItem.version.id}`)).toBe('s4');
+
+    // 3. Navigate backward to sentence s2
+    const secondSentence = await screen.findByTestId('sentence-s2');
+    fireEvent.click(secondSentence);
+
+    expect(localStorage.getItem(`lexilume_reading_pos_${mockItem.id}_${mockItem.version.id}`)).toBe('s2');
   });
 });

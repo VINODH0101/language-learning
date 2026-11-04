@@ -1055,7 +1055,7 @@ export class ContentCentredService {
       client_mutation_id: `mut_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       first_opened_at: existing?.first_opened_at || new Date().toISOString(),
       last_studied_at: new Date().toISOString(),
-      completed_at: progress.percent_complete === 100 ? (existing?.completed_at || new Date().toISOString()) : existing?.completed_at,
+      completed_at: (progress.status === 'completed' || existing?.status === 'completed') ? (existing?.completed_at || new Date().toISOString()) : undefined,
       created_at: existing?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

@@ -509,6 +509,56 @@ export class StorageService {
   }
 
   /**
+   * Retrieves genuine tracked active learning seconds for today.
+   */
+  static getTodayStudySeconds(userId?: string): number {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const key = this.getKey(`polyglot_study_seconds_${today}`, userId);
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored !== null) {
+        return Math.max(0, parseInt(stored, 10) || 0);
+      }
+    } catch {}
+    return 0;
+  }
+
+  /**
+   * Records genuine active learning duration in seconds for today across multiple Reader/learning sessions.
+   * Converts accumulated seconds into whole minutes once 60s increments are reached.
+   * Returns { addedMinutes, totalTodaySeconds }.
+   */
+  static addTodayActiveSeconds(seconds: number, userId?: string): { addedMinutes: number; totalTodaySeconds: number } {
+    if (seconds <= 0) {
+      return { addedMinutes: 0, totalTodaySeconds: this.getTodayStudySeconds(userId) };
+    }
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const secKey = this.getKey(`polyglot_study_seconds_${today}`, userId);
+    const minKey = this.getKey(`polyglot_study_minutes_${today}`, userId);
+
+    const prevSeconds = this.getTodayStudySeconds(userId);
+    const totalSeconds = prevSeconds + seconds;
+
+    const prevFullMinutes = Math.floor(prevSeconds / 60);
+    const newFullMinutes = Math.floor(totalSeconds / 60);
+    const deltaMinutes = newFullMinutes - prevFullMinutes;
+
+    try {
+      localStorage.setItem(secKey, String(totalSeconds));
+      if (deltaMinutes > 0) {
+        const currentMins = this.getTodayStudyMinutes(userId);
+        localStorage.setItem(minKey, String(currentMins + deltaMinutes));
+      }
+    } catch (e) {
+      console.warn('Error recording active study seconds', e);
+    }
+
+    return { addedMinutes: deltaMinutes, totalTodaySeconds: totalSeconds };
+  }
+
+  /**
    * Records genuine learning duration in minutes for today.
    * Strictly uses learner local calendar date (YYYY-MM-DD).
    */

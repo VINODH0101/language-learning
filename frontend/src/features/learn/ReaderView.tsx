@@ -70,6 +70,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     const unflushed = unflushedSecondsRef.current;
     if (unflushed <= 0) return;
 
+    // Immediately claim the unflushed seconds to prevent duplicate flushes
     unflushedSecondsRef.current = 0;
     const auth = authService.getState();
     const userId = auth.user?.id || 'guest_user';
@@ -82,13 +83,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         time_spent_seconds: unflushed,
       });
 
-      // Synchronize genuine cognitive minutes to StorageService when a full minute is earned
-      const totalMinutesEarned = Math.floor(totalActiveSecondsRef.current / 60);
-      const deltaMinutes = totalMinutesEarned - accumulatedStudyMinutesRef.current;
-      if (deltaMinutes > 0) {
-        StorageService.addTodayStudyMinutes(deltaMinutes, userId);
-        accumulatedStudyMinutesRef.current = totalMinutesEarned;
-      }
+      // Synchronize genuine cognitive seconds to StorageService across multiple sessions
+      StorageService.addTodayActiveSeconds(unflushed, userId);
     } catch (err) {
       // Re-add to unflushed so next flush retries without losing active seconds
       unflushedSecondsRef.current += unflushed;
@@ -111,11 +107,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       }
     };
 
+    const onPageHide = () => {
+      flushActiveTime();
+    };
+
     const interactionEvents: Array<keyof WindowEventMap> = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
     const handleEvent = () => recordUserInteraction();
 
     interactionEvents.forEach(evt => window.addEventListener(evt, handleEvent, { passive: true }));
     document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', onPageHide);
 
     // Heartbeat ticker: runs every 1 second
     const intervalId = window.setInterval(() => {
@@ -142,6 +143,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       window.clearInterval(intervalId);
       interactionEvents.forEach(evt => window.removeEventListener(evt, handleEvent));
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', onPageHide);
       // Flush any remaining active reading duration on unmount
       flushActiveTime();
     };
@@ -218,12 +220,25 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       const auth = authService.getState();
       const userId = auth.user?.id || 'guest_user';
 
-      // Updates reading position and completion percentage ONLY; time_spent_seconds is 0
+      const hasRequiredActivities = Boolean(activities && activities.length > 0);
+
+      // Explicit Completion Semantics:
+      // - Reading position: sentenceId
+      // - Reading completion: pct === 100
+      // - Activity completion: managed via ContentActivities
+      // - Overall completion: if required activities exist, sentence clicking MUST NOT complete the item;
+      //   status remains 'in_progress'. If no activities exist (pure reading), reaching 100% can complete it.
+      let derivedStatus: 'completed' | 'in_progress' = 'in_progress';
+      if (!hasRequiredActivities && pct >= 100) {
+        derivedStatus = 'completed';
+      }
+
+      // Updates reading position and reading completion percentage ONLY; time_spent_seconds is 0
       contentCentredService.updateLearnerProgress({
         user_id: userId,
         content_item_id: item.id,
         content_version_id: version.id,
-        status: pct >= 100 ? 'completed' : 'in_progress',
+        status: derivedStatus,
         percent_complete: pct,
         time_spent_seconds: 0,
       }).catch(console.warn);

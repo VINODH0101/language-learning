@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
   Volume2,
@@ -19,6 +19,7 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { SpeechService } from '../../services/speech';
 import { contentCentredService } from '../../services/contentCentredService';
+import { StorageService } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { ContextualLookupModal, ContextualLookupData } from './ContextualLookupModal';
 import { ContentActivities } from './ContentActivities';
@@ -47,7 +48,106 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const allSentences = (payload.paragraphs || []).flatMap(p => p.sentences || []);
   const totalSentences = allSentences.length;
 
-  // Restore reading position and track session initiation
+  // Active reading-session tracking refs
+  const unflushedSecondsRef = useRef<number>(0);
+  const totalActiveSecondsRef = useRef<number>(0);
+  const lastInteractionTimeRef = useRef<number>(Date.now());
+  const isIdleRef = useRef<boolean>(false);
+  const isTabVisibleRef = useRef<boolean>(typeof document !== 'undefined' ? document.visibilityState === 'visible' : true);
+  const accumulatedStudyMinutesRef = useRef<number>(0);
+
+  const INACTIVITY_THRESHOLD_MS = 60_000; // 60 seconds of inactivity pauses tracking
+  const FLUSH_INTERVAL_SECONDS = 15; // flush to persistent storage every 15s of active reading
+
+  // Activity detection: resets idle timer on genuine user interaction
+  const recordUserInteraction = useCallback(() => {
+    lastInteractionTimeRef.current = Date.now();
+    isIdleRef.current = false;
+  }, []);
+
+  // Flush genuine active reading time to progress and storage
+  const flushActiveTime = useCallback(async () => {
+    const unflushed = unflushedSecondsRef.current;
+    if (unflushed <= 0) return;
+
+    unflushedSecondsRef.current = 0;
+    const auth = authService.getState();
+    const userId = auth.user?.id || 'guest_user';
+
+    try {
+      await contentCentredService.updateLearnerProgress({
+        user_id: userId,
+        content_item_id: item.id,
+        content_version_id: version.id,
+        time_spent_seconds: unflushed,
+      });
+
+      // Synchronize genuine cognitive minutes to StorageService when a full minute is earned
+      const totalMinutesEarned = Math.floor(totalActiveSecondsRef.current / 60);
+      const deltaMinutes = totalMinutesEarned - accumulatedStudyMinutesRef.current;
+      if (deltaMinutes > 0) {
+        StorageService.addTodayStudyMinutes(deltaMinutes, userId);
+        accumulatedStudyMinutesRef.current = totalMinutesEarned;
+      }
+    } catch (err) {
+      // Re-add to unflushed so next flush retries without losing active seconds
+      unflushedSecondsRef.current += unflushed;
+      console.warn('Error flushing active reading time:', err);
+    }
+  }, [item.id, version.id]);
+
+  // Set up active reading heartbeat timer, idle detection, and tab visibility handling
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      const isVisible = document.visibilityState === 'visible';
+      isTabVisibleRef.current = isVisible;
+      if (!isVisible) {
+        // Tab hidden: flush accumulated active seconds immediately and pause
+        flushActiveTime();
+      } else {
+        // Tab restored: resume active tracking
+        lastInteractionTimeRef.current = Date.now();
+        isIdleRef.current = false;
+      }
+    };
+
+    const interactionEvents: Array<keyof WindowEventMap> = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    const handleEvent = () => recordUserInteraction();
+
+    interactionEvents.forEach(evt => window.addEventListener(evt, handleEvent, { passive: true }));
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Heartbeat ticker: runs every 1 second
+    const intervalId = window.setInterval(() => {
+      // Pause if tab is hidden
+      if (!isTabVisibleRef.current) return;
+
+      // Pause if idle for longer than the inactivity threshold
+      if (Date.now() - lastInteractionTimeRef.current > INACTIVITY_THRESHOLD_MS) {
+        isIdleRef.current = true;
+        return;
+      }
+
+      // Active second accumulated
+      unflushedSecondsRef.current += 1;
+      totalActiveSecondsRef.current += 1;
+
+      // Flush to persistent storage at regular intervals
+      if (unflushedSecondsRef.current >= FLUSH_INTERVAL_SECONDS) {
+        flushActiveTime();
+      }
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+      interactionEvents.forEach(evt => window.removeEventListener(evt, handleEvent));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      // Flush any remaining active reading duration on unmount
+      flushActiveTime();
+    };
+  }, [flushActiveTime, recordUserInteraction]);
+
+  // Restore version-specific reading position and track session initiation
   useEffect(() => {
     let isCancelled = false;
     const auth = authService.getState();
@@ -55,7 +155,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
     const restorePosition = async () => {
       try {
-        const existing = await contentCentredService.getLearnerProgress(userId, item.id);
+        // Version-specific query: ensures progress from another edition is never reused
+        const existing = await contentCentredService.getLearnerProgress(userId, item.id, version.id);
         if (isCancelled) return;
 
         const storedPosId = localStorage.getItem(`lexilume_reading_pos_${item.id}_${version.id}`);
@@ -81,18 +182,18 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           }, 150);
         }
 
-        // Maintain existing reading progress percentage or initialize to 10%
-        const initialPct = existing?.percent_complete ?? 10;
+        // Initialize progress independently for this specific version without inventing study time
+        const initialPct = existing?.percent_complete ?? 0;
         await contentCentredService.updateLearnerProgress({
           user_id: userId,
           content_item_id: item.id,
           content_version_id: version.id,
           status: 'in_progress',
           percent_complete: initialPct,
-          time_spent_seconds: (existing?.time_spent_seconds || 0) + 10,
+          time_spent_seconds: 0, // Invariant: opening reader does not fabricate elapsed study seconds
         });
       } catch (err) {
-        console.warn('Error restoring reading position:', err);
+        console.warn('Error restoring version-specific reading position:', err);
       }
     };
 
@@ -104,6 +205,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   }, [item.id, version.id, totalSentences]);
 
   const handleSentenceClick = (sentenceId: string) => {
+    recordUserInteraction();
     setSelectedSentenceId(prev => (prev === sentenceId ? null : sentenceId));
 
     const sentenceIdx = allSentences.findIndex(s => s.id === sentenceId);
@@ -116,13 +218,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       const auth = authService.getState();
       const userId = auth.user?.id || 'guest_user';
 
+      // Updates reading position and completion percentage ONLY; time_spent_seconds is 0
       contentCentredService.updateLearnerProgress({
         user_id: userId,
         content_item_id: item.id,
         content_version_id: version.id,
         status: pct >= 100 ? 'completed' : 'in_progress',
         percent_complete: pct,
-        time_spent_seconds: Math.max(10, Math.round((sentenceIdx + 1) * 15)),
+        time_spent_seconds: 0,
       }).catch(console.warn);
     }
   };
@@ -133,6 +236,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     sentence: ContentSentence,
     paragraph: ContentParagraph
   ) => {
+    recordUserInteraction();
     e.stopPropagation();
     if (token.pos === 'PUNCT') return;
 
@@ -157,6 +261,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     sentence: ContentSentence,
     paragraph: ContentParagraph
   ) => {
+    recordUserInteraction();
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleTokenClick(e as any, token, sentence, paragraph);
@@ -164,6 +269,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   };
 
   const handlePlaySentenceAudio = async (e: React.MouseEvent, sentence: ContentSentence) => {
+    recordUserInteraction();
     e.stopPropagation();
     setPlayingSentenceId(sentence.id);
     try {
@@ -186,7 +292,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         <div className="flex items-center gap-2">
           <div className="bg-stone-100 border border-stone-200 rounded-lg p-0.5 flex items-center">
             <button
-              onClick={() => setActiveTab('read')}
+              onClick={() => {
+                recordUserInteraction();
+                setActiveTab('read');
+              }}
               className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'read' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
               }`}
@@ -195,7 +304,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               <span>Read</span>
             </button>
             <button
-              onClick={() => setActiveTab('activities')}
+              onClick={() => {
+                recordUserInteraction();
+                setActiveTab('activities');
+              }}
               className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'activities' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
               }`}
@@ -209,7 +321,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             variant="outline"
             size="sm"
             icon={<Languages className="w-3.5 h-3.5" />}
-            onClick={() => setShowAllTranslations(prev => !prev)}
+            onClick={() => {
+              recordUserInteraction();
+              setShowAllTranslations(prev => !prev);
+            }}
             title="Toggle translations for all sentences"
           >
             {showAllTranslations ? 'Hide Translations' : 'Translations'}
@@ -329,7 +444,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                 variant="primary"
                 size="md"
                 icon={<Sparkles className="w-4 h-4" />}
-                onClick={() => setActiveTab('activities')}
+                onClick={() => {
+                  recordUserInteraction();
+                  setActiveTab('activities');
+                }}
               >
                 Comprehension Activities
               </Button>
@@ -343,6 +461,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           version={version}
           activities={activities}
           onComplete={score => {
+            recordUserInteraction();
             toast.success(`Completed reading session with ${score}%!`);
           }}
         />
@@ -353,7 +472,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         data={lookupData}
         onClose={() => setLookupData(null)}
         onSavedWord={() => {
-          // Callback after word saved
+          recordUserInteraction();
         }}
       />
     </div>

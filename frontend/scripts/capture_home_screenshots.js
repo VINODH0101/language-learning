@@ -53,6 +53,7 @@ async function run() {
     { name: 'desktop', width: 1440, height: 1000, isMobile: false },
     { name: 'tablet', width: 768, height: 1024, isMobile: false },
     { name: 'mobile', width: 390, height: 844, isMobile: true },
+    { name: 'narrow-mobile', width: 360, height: 740, isMobile: true },
   ];
 
   for (const vp of viewports) {

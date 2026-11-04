@@ -1,1194 +1,1217 @@
-import Dexie, { type EntityTable } from 'dexie';
-import {
-  DailyLessonPayload,
-  Language,
-  ActiveLessonProgress,
-  MistakeNotebookItem,
-  SavedVocabularyRecord,
-  SRSItemState,
-} from '../types';
-
-import {
-  ContentItem,
-  ContentVersion,
-  LearnerContentProgress,
-  UserSavedWord,
-  UserMistake,
-  ContentProcessingJob,
-} from '../types/contentCentred';
-
-export type { SavedVocabularyRecord };
-export type CachedContentItemRecord = ContentItem & { version?: ContentVersion };
-
-export interface CachedLessonRecord {
-  id: string; // `${language}_${lesson_date}`
-  language: Language;
-  lesson_date: string;
-  cefr_level: string;
-  lesson: DailyLessonPayload;
-  cached_at: string;
-  expires_at: string;
-}
-
-export interface SyncQueueRecord {
-  id: string;
-  user_id?: string;
-  action: string;
-  payload: unknown;
-  status: 'pending' | 'failed' | 'dead_letter';
-  retry_count: number;
-  error_message?: string;
-  last_attempted_at?: string;
-  created_at: string;
-}
-
-export interface CulturalBookmarkRecord {
-  id: string; // `${user_id}_${article_id}`
-  user_id: string;
-  article_id: string;
-  article_title: string;
-  content_language: Language;
-  origin_country: string;
-  topic: string;
-  cefr_level: string;
-  created_at: string;
-}
-
-export interface ApiCacheRecord {
-  id: string; // `${provider}:${cacheKey}`
-  provider: string;
-  cacheKey: string;
-  data: unknown;
-  cachedAt: string;
-  expiresAt: number; // timestamp in ms
-}
-
-export class PolyglotLocalDatabase extends Dexie {
-  cachedLessons!: EntityTable<CachedLessonRecord, 'id'>;
-  activeLessonProgress!: EntityTable<ActiveLessonProgress, 'id'>;
-  savedVocabulary!: EntityTable<SavedVocabularyRecord, 'id'>;
-  srsReviews!: EntityTable<SRSItemState & { id: string }, 'id'>;
-  mistakeNotebook!: EntityTable<MistakeNotebookItem, 'id'>;
-  syncQueue!: EntityTable<SyncQueueRecord, 'id'>;
-  culturalBookmarks!: EntityTable<CulturalBookmarkRecord, 'id'>;
-  apiCache!: EntityTable<ApiCacheRecord, 'id'>;
-  cachedContentItems!: EntityTable<CachedContentItemRecord, 'id'>;
-  learnerContentProgress!: EntityTable<LearnerContentProgress, 'id'>;
-  userSavedWords!: EntityTable<UserSavedWord, 'id'>;
-  userMistakes!: EntityTable<UserMistake, 'id'>;
-  contentProcessingJobs!: EntityTable<ContentProcessingJob, 'id'>;
-
-  constructor() {
-    super('PolyglotLocalDatabase');
-    this.version(1).stores({
-      cachedLessons: 'id, language, lesson_date, cefr_level, expires_at',
-      activeLessonProgress: 'id, language, curriculum_node_id, updated_at',
-      savedVocabulary: 'id, user_id, source_text, target_lang, created_at',
-      srsReviews: 'id, user_id, language, vocabulary_item_id, next_review_date',
-      mistakeNotebook: 'id, user_id, language, error_category, timestamp, is_resolved',
-      syncQueue: 'id, action, status, created_at',
-    });
-    this.version(2).stores({
-      culturalBookmarks: 'id, user_id, article_id, content_language, origin_country, topic, cefr_level, created_at',
-    });
-    this.version(3).stores({
-      apiCache: 'id, provider, cacheKey, expiresAt',
-    });
-    this.version(4).stores({
-      syncQueue: 'id, user_id, action, status, created_at',
-    });
-    this.version(5).stores({
-      cachedLessons: 'id, language, lesson_date, cefr_level, expires_at',
-      activeLessonProgress: 'id, language, curriculum_node_id, updated_at',
-      savedVocabulary: 'id, user_id, source_text, target_lang, created_at',
-      srsReviews: 'id, user_id, language, vocabulary_item_id, next_review_date',
-      mistakeNotebook: 'id, user_id, language, error_category, timestamp, is_resolved',
-      culturalBookmarks: 'id, user_id, article_id, content_language, origin_country, topic, cefr_level, created_at',
-      apiCache: 'id, provider, cacheKey, expiresAt',
-      syncQueue: 'id, user_id, action, status, created_at',
-
-      // Version 5 Content-Centred Stores
-      cachedContentItems: 'id, slug, status, primary_cefr, genre, target_language, updated_at',
-      learnerContentProgress: 'id, user_id, content_item_id, status, percent_complete, last_studied_at, client_mutation_id',
-      userSavedWords: 'id, user_id, target_language, lemma, explanation_language, next_review, state, updated_at, client_mutation_id',
-      userMistakes: 'id, user_id, content_item_id, error_category, status, last_occurred_at, client_mutation_id',
-      contentProcessingJobs: 'id, content_item_id, status, current_stage, updated_at',
-    });
-  }
-}
-
-export const localDb = new PolyglotLocalDatabase();
-
-// In-memory fallback if IndexedDB is unavailable
-const memoryFallback = {
-  cachedLessons: new Map<string, CachedLessonRecord>(),
-  activeProgress: new Map<string, ActiveLessonProgress>(),
-  mistakes: new Map<string, MistakeNotebookItem>(),
-  savedVocabulary: new Map<string, SavedVocabularyRecord>(),
-  culturalBookmarks: new Map<string, CulturalBookmarkRecord>(),
-  syncQueue: new Map<string, SyncQueueRecord>(),
-  apiCache: new Map<string, ApiCacheRecord>(),
-  cachedContentItems: new Map<string, CachedContentItemRecord>(),
-  learnerContentProgress: new Map<string, LearnerContentProgress>(),
-  userSavedWords: new Map<string, UserSavedWord>(),
-  userMistakes: new Map<string, UserMistake>(),
-  contentProcessingJobs: new Map<string, ContentProcessingJob>(),
-};
-
-function isIndexedDBAvailable(): boolean {
-  try {
-    return typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined';
-  } catch {
-    return false;
-  }
-}
-
-// ============================================================================
-// 1. ACTIVE LESSON RESUME & PROGRESS
-// ============================================================================
-
-export async function getActiveProgress(language: Language): Promise<ActiveLessonProgress | null> {
-  if (!isIndexedDBAvailable()) {
-    return memoryFallback.activeProgress.get(language) || null;
-  }
-  try {
-    const item = await localDb.activeLessonProgress.get(language);
-    return item || null;
-  } catch (err) {
-    console.warn('Error reading active lesson progress from localDb', err);
-    return memoryFallback.activeProgress.get(language) || null;
-  }
-}
-
-export async function saveActiveProgress(progress: ActiveLessonProgress): Promise<void> {
-  memoryFallback.activeProgress.set(progress.language, progress);
-  if (!isIndexedDBAvailable()) return;
-
-  try {
-    await localDb.activeLessonProgress.put({
-      ...progress,
-      id: progress.language,
-      updated_at: new Date().toISOString(),
-    });
-  } catch (err) {
-    console.warn('Error saving active lesson progress to localDb', err);
-  }
-}
-
-export async function clearActiveProgress(language: Language): Promise<void> {
-  memoryFallback.activeProgress.delete(language);
-  if (!isIndexedDBAvailable()) return;
-
-  try {
-    await localDb.activeLessonProgress.delete(language);
-  } catch (err) {
-    console.warn('Error clearing active progress from localDb', err);
-  }
-}
-
-// ============================================================================
-// 2. CACHED DAILY LESSONS (14-DAY RETENTION TTL)
-// ============================================================================
-
-export async function getCachedLesson(language: Language, dateStr: string): Promise<DailyLessonPayload | null> {
-  const key = `${language}_${dateStr}`;
-  if (!isIndexedDBAvailable()) {
-    const item = memoryFallback.cachedLessons.get(key);
-    return item ? item.lesson : null;
-  }
-  try {
-    const record = await localDb.cachedLessons.get(key);
-    if (!record) return null;
-
-    // Check expiration
-    if (new Date(record.expires_at).getTime() < Date.now()) {
-      await localDb.cachedLessons.delete(key);
-      return null;
-    }
-    return record.lesson;
-  } catch (err) {
-    console.warn('Error reading cached lesson from localDb', err);
-    const item = memoryFallback.cachedLessons.get(key);
-    return item ? item.lesson : null;
-  }
-}
-
-export async function cacheDailyLesson(lesson: DailyLessonPayload, ttlDays: number = 14): Promise<void> {
-  const key = `${lesson.language}_${lesson.lesson_date}`;
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
-
-  const record: CachedLessonRecord = {
-    id: key,
-    language: lesson.language,
-    lesson_date: lesson.lesson_date,
-    cefr_level: lesson.cefr_level,
-    lesson,
-    cached_at: now.toISOString(),
-    expires_at: expiresAt,
-  };
-
-  memoryFallback.cachedLessons.set(key, record);
-  if (!isIndexedDBAvailable()) return;
-
-  try {
-    await localDb.cachedLessons.put(record);
-  } catch (err) {
-    console.warn('Error caching lesson in localDb', err);
-  }
-}
-
-export async function cleanExpiredLessons(): Promise<number> {
-  if (!isIndexedDBAvailable()) {
-    let purged = 0;
-    const now = Date.now();
-    for (const [key, val] of memoryFallback.cachedLessons.entries()) {
-      if (new Date(val.expires_at).getTime() < now) {
-        memoryFallback.cachedLessons.delete(key);
-        purged++;
-      }
-    }
-    return purged;
-  }
-
-  try {
-    const nowIso = new Date().toISOString();
-    const expired = await localDb.cachedLessons.where('expires_at').below(nowIso).toArray();
-    if (expired.length > 0) {
-      const keys = expired.map(e => e.id);
-      await localDb.cachedLessons.bulkDelete(keys);
-    }
-    return expired.length;
-  } catch (err) {
-    console.warn('Error cleaning expired lessons', err);
-    return 0;
-  }
-}
-
-// ============================================================================
-// 3. MISTAKE NOTEBOOK (ERROR RECOVERY & CATEGORIZATION)
-// ============================================================================
-
-export async function logMistake(
-  item: Omit<MistakeNotebookItem, 'id' | 'timestamp' | 'reviewed_count' | 'is_resolved'>
-): Promise<string> {
-  const id = `mistake_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const record: MistakeNotebookItem = {
-    ...item,
-    id,
-    timestamp: new Date().toISOString(),
-    reviewed_count: 0,
-    is_resolved: false,
-  };
-
-  memoryFallback.mistakes.set(id, record);
-
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.mistakeNotebook.put(record);
-
-      // Enforce max 100 items limit to maintain low local storage footprint
-      const count = await localDb.mistakeNotebook.count();
-      if (count > 100) {
-        const oldest = await localDb.mistakeNotebook
-          .filter(m => m.is_resolved)
-          .limit(count - 100)
-          .primaryKeys();
-        if (oldest.length > 0) {
-          await localDb.mistakeNotebook.bulkDelete(oldest);
-        }
-      }
-    } catch (err) {
-      console.warn('Error writing mistake to localDb', err);
-    }
-  }
-
-  return id;
-}
-
-export async function getMistakes(
-  language?: Language,
-  category?: string
-): Promise<MistakeNotebookItem[]> {
-  if (!isIndexedDBAvailable()) {
-    let list = Array.from(memoryFallback.mistakes.values());
-    if (language) list = list.filter(m => m.language === language);
-    if (category) list = list.filter(m => m.error_category === category);
-    return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }
-
-  try {
-    let collection = localDb.mistakeNotebook.toCollection();
-    if (language) {
-      collection = localDb.mistakeNotebook.where('language').equals(language);
-    }
-    let list = await collection.toArray();
-    if (category) {
-      list = list.filter(m => m.error_category === category);
-    }
-    return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  } catch (err) {
-    console.warn('Error fetching mistakes from localDb', err);
-    return Array.from(memoryFallback.mistakes.values());
-  }
-}
-
-export async function resolveMistake(id: string): Promise<void> {
-  const mem = memoryFallback.mistakes.get(id);
-  if (mem) {
-    mem.is_resolved = true;
-    mem.reviewed_count += 1;
-  }
-
-  if (isIndexedDBAvailable()) {
-    try {
-      const record = await localDb.mistakeNotebook.get(id);
-      if (record) {
-        record.is_resolved = true;
-        record.reviewed_count += 1;
-        await localDb.mistakeNotebook.put(record);
-      }
-    } catch (err) {
-      console.warn('Error resolving mistake', err);
-    }
-  }
-}
-
-export async function deleteMistake(id: string): Promise<void> {
-  memoryFallback.mistakes.delete(id);
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.mistakeNotebook.delete(id);
-    } catch (err) {
-      console.warn('Error deleting mistake', err);
-    }
-  }
-}
-
-// ============================================================================
-// 4. OFFLINE PHRASEBOOK / SAVED VOCABULARY
-// ============================================================================
-
-export async function savePhrasebookWord(
-  item: Omit<SavedVocabularyRecord, 'id' | 'created_at'>
-): Promise<string> {
-  const id = `vocab_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const record: SavedVocabularyRecord = {
-    ...item,
-    id,
-    created_at: new Date().toISOString(),
-  };
-
-  memoryFallback.savedVocabulary.set(id, record);
-
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.savedVocabulary.put(record);
-      const total = await localDb.savedVocabulary.count();
-      if (total > 500) {
-        // Keep strictly up to 500 words to ensure minimal browser footprint
-        const oldest = await localDb.savedVocabulary.orderBy('created_at').limit(total - 500).primaryKeys();
-        if (oldest.length > 0) {
-          await localDb.savedVocabulary.bulkDelete(oldest);
-        }
-      }
-    } catch (err) {
-      console.warn('Error saving phrasebook word to localDb', err);
-    }
-  }
-
-  if (record.user_id && record.user_id !== 'guest') {
-    try {
-      await enqueueSyncAction('SYNC_SAVED_VOCABULARY', {
-        id: record.id,
-        user_id: record.user_id,
-        source_text: record.source_text,
-        translated_text: record.translated_text,
-        source_lang: record.source_lang,
-        target_lang: record.target_lang,
-        part_of_speech: record.part_of_speech,
-        context_sentence: record.context_sentence,
-        created_at: record.created_at,
-      }, record.user_id);
-    } catch (syncErr) {
-      console.warn('Failed to enqueue saved vocabulary sync', syncErr);
-    }
-  }
-
-  return id;
-}
-
-export async function getPhrasebookWords(targetOrSourceLang?: string): Promise<SavedVocabularyRecord[]> {
-  if (!isIndexedDBAvailable()) {
-    let list = Array.from(memoryFallback.savedVocabulary.values());
-    if (targetOrSourceLang) {
-      list = list.filter(v => v.target_lang === targetOrSourceLang || v.source_lang === targetOrSourceLang);
-    }
-    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }
-
-  try {
-    let list = await localDb.savedVocabulary.toArray();
-    if (targetOrSourceLang) {
-      list = list.filter(v => v.target_lang === targetOrSourceLang || v.source_lang === targetOrSourceLang);
-    }
-    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  } catch (err) {
-    console.warn('Error fetching phrasebook words', err);
-    return Array.from(memoryFallback.savedVocabulary.values());
-  }
-}
-
-export async function deletePhrasebookWord(id: string): Promise<void> {
-  let existing = memoryFallback.savedVocabulary.get(id);
-  if (!existing && isIndexedDBAvailable()) {
-    try {
-      existing = await localDb.savedVocabulary.get(id);
-    } catch {}
-  }
-
-  memoryFallback.savedVocabulary.delete(id);
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.savedVocabulary.delete(id);
-    } catch (err) {
-      console.warn('Error deleting phrasebook word', err);
-    }
-  }
-
-  if (existing?.user_id && existing.user_id !== 'guest') {
-    try {
-      await enqueueSyncAction('DELETE_SAVED_VOCABULARY', {
-        id: existing.id,
-        user_id: existing.user_id,
-        source_text: existing.source_text,
-        target_lang: existing.target_lang,
-      }, existing.user_id);
-    } catch (syncErr) {
-      console.warn('Failed to enqueue delete vocabulary sync', syncErr);
-    }
-  }
-}
-
-// ============================================================================
-// 5. CULTURAL BOOKMARKS (OFFLINE-FIRST)
-// ============================================================================
-
-export async function saveCulturalBookmark(bookmark: CulturalBookmarkRecord): Promise<void> {
-  const key = `${bookmark.user_id}_${bookmark.article_id}`;
-  const record = { ...bookmark, id: key };
-  memoryFallback.culturalBookmarks.set(key, record);
-
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.culturalBookmarks.put(record);
-    } catch (err) {
-      console.warn('Error saving cultural bookmark to IndexedDB', err);
-    }
-  }
-}
-
-export async function deleteCulturalBookmark(userId: string, articleId: string): Promise<void> {
-  const key = `${userId}_${articleId}`;
-  memoryFallback.culturalBookmarks.delete(key);
-
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.culturalBookmarks.delete(key);
-    } catch (err) {
-      console.warn('Error deleting cultural bookmark from IndexedDB', err);
-    }
-  }
-}
-
-export async function getCulturalBookmarks(userId: string): Promise<CulturalBookmarkRecord[]> {
-  if (!isIndexedDBAvailable()) {
-    return Array.from(memoryFallback.culturalBookmarks.values()).filter(b => b.user_id === userId);
-  }
-
-  try {
-    const list = await localDb.culturalBookmarks.where('user_id').equals(userId).toArray();
-    return list;
-  } catch (err) {
-    console.warn('Error fetching cultural bookmarks from IndexedDB', err);
-    return Array.from(memoryFallback.culturalBookmarks.values()).filter(b => b.user_id === userId);
-  }
-}
-
-export async function isCulturalBookmarked(userId: string, articleId: string): Promise<boolean> {
-  const key = `${userId}_${articleId}`;
-  if (!isIndexedDBAvailable()) {
-    return memoryFallback.culturalBookmarks.has(key);
-  }
-
-  try {
-    const item = await localDb.culturalBookmarks.get(key);
-    return !!item;
-  } catch (err) {
-    console.warn('Error checking cultural bookmark in IndexedDB', err);
-    return memoryFallback.culturalBookmarks.has(key);
-  }
-}
-
-// ============================================================================
-// 6. SYNC QUEUE OPERATIONS
-// ============================================================================
-
-export async function enqueueSyncAction(action: string, payload: unknown, userId?: string): Promise<string> {
-  const id = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-  const record: SyncQueueRecord = {
-    id,
-    user_id: userId || 'guest',
-    action,
-    payload,
-    status: 'pending',
-    retry_count: 0,
-    created_at: new Date().toISOString(),
-  };
-
-  memoryFallback.syncQueue.set(id, record);
-
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.syncQueue.put(record);
-    } catch (err) {
-      console.warn('Error enqueuing sync action in IndexedDB', err);
-    }
-  }
-
-  return id;
-}
-
-export async function getPendingSyncActions(userId?: string): Promise<SyncQueueRecord[]> {
-  const MAX_RETRIES = 5;
-  if (!isIndexedDBAvailable()) {
-    const list = Array.from(memoryFallback.syncQueue.values()).filter(
-      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
-    );
-    return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
-  }
-
-  try {
-    const all = await localDb.syncQueue.toArray();
-    const eligible = all.filter(
-      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
-    );
-    return userId ? eligible.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : eligible;
-  } catch (err) {
-    console.warn('Error reading pending sync actions from IndexedDB', err);
-    const list = Array.from(memoryFallback.syncQueue.values()).filter(
-      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
-    );
-    return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
-  }
-}
-
-export async function getDeadLetterSyncActions(userId?: string): Promise<SyncQueueRecord[]> {
-  if (!isIndexedDBAvailable()) {
-    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'dead_letter');
-    return userId ? list.filter(r => !r.user_id || r.user_id === userId) : list;
-  }
-  try {
-    const all = await localDb.syncQueue.toArray();
-    const dead = all.filter(r => r.status === 'dead_letter');
-    return userId ? dead.filter(r => !r.user_id || r.user_id === userId) : dead;
-  } catch (err) {
-    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'dead_letter');
-    return userId ? list.filter(r => !r.user_id || r.user_id === userId) : list;
-  }
-}
-
-export async function removeSyncAction(id: string): Promise<void> {
-  memoryFallback.syncQueue.delete(id);
-
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.syncQueue.delete(id);
-    } catch (err) {
-      console.warn('Error deleting sync action from IndexedDB', err);
-    }
-  }
-}
-
-export async function markSyncActionFailed(id: string, errorMessage?: string): Promise<void> {
-  const inMem = memoryFallback.syncQueue.get(id);
-  if (inMem) {
-    inMem.last_attempted_at = new Date().toISOString();
-    inMem.retry_count = (inMem.retry_count || 0) + 1;
-    inMem.status = inMem.retry_count >= 5 ? 'dead_letter' : 'failed';
-    if (errorMessage) {
-      inMem.error_message = errorMessage;
-    }
-  }
-
-  if (isIndexedDBAvailable()) {
-    try {
-      const item = await localDb.syncQueue.get(id);
-      if (item) {
-        item.last_attempted_at = new Date().toISOString();
-        item.retry_count = (item.retry_count || 0) + 1;
-        item.status = item.retry_count >= 5 ? 'dead_letter' : 'failed';
-        if (errorMessage) {
-          item.error_message = errorMessage;
-        }
-        await localDb.syncQueue.put(item);
-      }
-    } catch (err) {
-      console.warn('Error updating sync action failure in IndexedDB', err);
-    }
-  }
-}
-
-export async function updateSyncActionStatus(
-  id: string,
-  statusOrError?: string,
-  maybeErrorMessage?: string
-): Promise<void> {
-  const errorMsg = maybeErrorMessage || (statusOrError !== 'failed' && statusOrError !== 'pending' ? statusOrError : undefined);
-  await markSyncActionFailed(id, errorMsg);
-}
-
-export async function migrateGuestVocabulary(userId: string): Promise<number> {
-  let count = 0;
-  for (const [id, word] of memoryFallback.savedVocabulary.entries()) {
-    if (!word.user_id || word.user_id === 'guest') {
-      word.user_id = userId;
-      memoryFallback.savedVocabulary.set(id, word);
-      count++;
-    }
-  }
-
-  if (isIndexedDBAvailable()) {
-    try {
-      const guestWords = await localDb.savedVocabulary.filter(w => !w.user_id || w.user_id === 'guest').toArray();
-      for (const w of guestWords) {
-        w.user_id = userId;
-        await localDb.savedVocabulary.put(w);
-      }
-      count = Math.max(count, guestWords.length);
-    } catch (err) {
-      console.warn('Error migrating guest vocabulary in IndexedDB', err);
-    }
-  }
-
-  return count;
-}
-
-
-export async function migrateGuestContentData(userId: string): Promise<{
-  progressMigrated: number;
-  wordsMigrated: number;
-  mistakesMigrated: number;
-}> {
-  let progressMigrated = 0;
-  let wordsMigrated = 0;
-  let mistakesMigrated = 0;
-
-  // 1. In-memory fallback migration
-  for (const [id, rec] of memoryFallback.learnerContentProgress.entries()) {
-    if (!rec.user_id || rec.user_id === 'guest' || rec.user_id === 'guest_user') {
-      rec.user_id = userId;
-      memoryFallback.learnerContentProgress.set(id, rec);
-      progressMigrated++;
-    }
-  }
-
-  for (const [id, word] of memoryFallback.userSavedWords.entries()) {
-    if (!word.user_id || word.user_id === 'guest' || word.user_id === 'guest_user') {
-      word.user_id = userId;
-      memoryFallback.userSavedWords.set(id, word);
-      wordsMigrated++;
-    }
-  }
-
-  for (const [id, m] of memoryFallback.userMistakes.entries()) {
-    if (!m.user_id || m.user_id === 'guest' || m.user_id === 'guest_user') {
-      m.user_id = userId;
-      memoryFallback.userMistakes.set(id, m);
-      mistakesMigrated++;
-    }
-  }
-
-  // 2. Dexie IndexedDB migration
-  if (isIndexedDBAvailable()) {
-    try {
-      await localDb.transaction('rw', [localDb.learnerContentProgress, localDb.userSavedWords, localDb.userMistakes, localDb.syncQueue], async () => {
-        // Progress
-        const guestProgress = await localDb.learnerContentProgress
-          .filter(p => !p.user_id || p.user_id === 'guest' || p.user_id === 'guest_user')
-          .toArray();
-        for (const p of guestProgress) {
-          p.user_id = userId;
-          await localDb.learnerContentProgress.put(p);
-        }
-        progressMigrated = Math.max(progressMigrated, guestProgress.length);
-
-        // Saved Words
-        const guestWords = await localDb.userSavedWords
-          .filter(w => !w.user_id || w.user_id === 'guest' || w.user_id === 'guest_user')
-          .toArray();
-        for (const w of guestWords) {
-          w.user_id = userId;
-          await localDb.userSavedWords.put(w);
-        }
-        wordsMigrated = Math.max(wordsMigrated, guestWords.length);
-
-        // Mistakes
-        const guestMistakes = await localDb.userMistakes
-          .filter(m => !m.user_id || m.user_id === 'guest' || m.user_id === 'guest_user')
-          .toArray();
-        for (const m of guestMistakes) {
-          m.user_id = userId;
-          await localDb.userMistakes.put(m);
-        }
-        mistakesMigrated = Math.max(mistakesMigrated, guestMistakes.length);
-
-        // Reassign pending guest sync actions
-        const guestSyncActions = await localDb.syncQueue
-          .filter(a => !a.user_id || a.user_id === 'guest' || a.user_id === 'guest_user')
-          .toArray();
-        for (const a of guestSyncActions) {
-          a.user_id = userId;
-          await localDb.syncQueue.put(a);
-        }
-      });
-    } catch (err) {
-      console.warn('[localDb] Error migrating guest content data in IndexedDB:', err);
-    }
-  }
-
-  return { progressMigrated, wordsMigrated, mistakesMigrated };
-}
-// ============================================================================
-// 7. STORAGE QUOTA, PURGE & EXPORT
-// ============================================================================
-
-export async function estimateStorageUsage(): Promise<{
-  usedBytes: number;
-  quotaBytes: number;
-  percentUsed: number;
-}> {
-  if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
-    try {
-      const estimate = await navigator.storage.estimate();
-      const used = estimate.usage || 0;
-      const quota = estimate.quota || 1;
-      return {
-        usedBytes: used,
-        quotaBytes: quota,
-        percentUsed: Math.min(100, Math.round((used / quota) * 100 * 10) / 10),
-      };
-    } catch (err) {
-      console.warn('Storage estimate failed', err);
-    }
-  }
-  return { usedBytes: 0, quotaBytes: 0, percentUsed: 0 };
-}
-
-export async function clearAllLocalLearningData(): Promise<void> {
-  memoryFallback.cachedLessons.clear();
-  memoryFallback.activeProgress.clear();
-  memoryFallback.mistakes.clear();
-  memoryFallback.savedVocabulary.clear();
-  memoryFallback.culturalBookmarks.clear();
-  memoryFallback.syncQueue.clear();
-
-  if (isIndexedDBAvailable()) {
-    try {
-      await Promise.all([
-        localDb.cachedLessons.clear(),
-        localDb.activeLessonProgress.clear(),
-        localDb.mistakeNotebook.clear(),
-        localDb.savedVocabulary.clear(),
-        localDb.srsReviews.clear(),
-        localDb.syncQueue.clear(),
-        localDb.culturalBookmarks.clear(),
-      ]);
-    } catch (err) {
-      console.warn('Error clearing IndexedDB data', err);
-    }
-  }
-}
-
-export async function exportAllIndexedDBData(): Promise<Record<string, unknown>> {
-  if (!isIndexedDBAvailable()) {
-    return {
-      cachedLessons: Array.from(memoryFallback.cachedLessons.values()),
-      activeProgress: Array.from(memoryFallback.activeProgress.values()),
-      mistakes: Array.from(memoryFallback.mistakes.values()),
-      savedVocabulary: Array.from(memoryFallback.savedVocabulary.values()),
-      culturalBookmarks: Array.from(memoryFallback.culturalBookmarks.values()),
-    };
-  }
-
-  try {
-    const [cachedLessons, activeProgress, mistakes, savedVocabulary, srsReviews, culturalBookmarks] = await Promise.all([
-      localDb.cachedLessons.toArray(),
-      localDb.activeLessonProgress.toArray(),
-      localDb.mistakeNotebook.toArray(),
-      localDb.savedVocabulary.toArray(),
-      localDb.srsReviews.toArray(),
-      localDb.culturalBookmarks.toArray(),
-    ]);
-
-    return {
-      cachedLessons,
-      activeProgress,
-      mistakes,
-      savedVocabulary,
-      srsReviews,
-      culturalBookmarks,
-      exported_at: new Date().toISOString(),
-    };
-  } catch (err) {
-    console.warn('Error exporting IndexedDB data', err);
-    return {};
-  }
-}
-
-// ============================================================================
-// 8. EXTERNAL API CACHE PERSISTENCE
-// ============================================================================
-
-export async function getCachedApiResponse(provider: string, cacheKey: string): Promise<unknown | null> {
-  const id = `${provider}:${cacheKey}`;
-  const now = Date.now();
-
-  if (!isIndexedDBAvailable()) {
-    const record = memoryFallback.apiCache.get(id);
-    if (!record) return null;
-    if (record.expiresAt < now) {
-      memoryFallback.apiCache.delete(id);
-      return null;
-    }
-    return record.data;
-  }
-
-  try {
-    const record = await localDb.apiCache.get(id);
-    if (!record) return null;
-    if (record.expiresAt < now) {
-      await localDb.apiCache.delete(id);
-      return null;
-    }
-    return record.data;
-  } catch (err) {
-    console.warn(`Error reading API cache for ${id}`, err);
-    const fallback = memoryFallback.apiCache.get(id);
-    return fallback && fallback.expiresAt >= now ? fallback.data : null;
-  }
-}
-
-export async function setCachedApiResponse(
-  provider: string,
-  cacheKey: string,
-  data: unknown,
-  ttlMs: number
-): Promise<void> {
-  const id = `${provider}:${cacheKey}`;
-  const now = Date.now();
-  const record: ApiCacheRecord = {
-    id,
-    provider,
-    cacheKey,
-    data,
-    cachedAt: new Date(now).toISOString(),
-    expiresAt: now + ttlMs,
-  };
-
-  // Always keep in memory fallback
-  memoryFallback.apiCache.set(id, record);
-
-  if (!isIndexedDBAvailable()) return;
-
-  try {
-    await localDb.apiCache.put(record);
-  } catch (err) {
-    console.warn(`Error writing API cache for ${id}`, err);
-  }
-}
-
-export async function clearExpiredApiCache(): Promise<void> {
-  const now = Date.now();
-  for (const [key, val] of memoryFallback.apiCache.entries()) {
-    if (val.expiresAt < now) {
-      memoryFallback.apiCache.delete(key);
-    }
-  }
-
-  if (!isIndexedDBAvailable()) return;
-
-  try {
-    await localDb.apiCache.where('expiresAt').below(now).delete();
-  } catch (err) {
-    console.warn('Error clearing expired API cache', err);
-  }
-}
-
-export async function clearAllApiCache(): Promise<void> {
-  memoryFallback.apiCache.clear();
-  if (!isIndexedDBAvailable()) return;
-  try {
-    await localDb.apiCache.clear();
-  } catch (err) {
-    console.warn('Error clearing all API cache', err);
-  }
-}
-
-export async function getApiCacheCount(): Promise<number> {
-  if (!isIndexedDBAvailable()) {
-    return memoryFallback.apiCache.size;
-  }
-  try {
-    return await localDb.apiCache.count();
-  } catch {
-    return memoryFallback.apiCache.size;
-  }
-}
-
-// ============================================================================
-// 9. READING HISTORY TRACKING
-// ============================================================================
-
-export interface ReadingHistoryRecord {
-  id: string;
-  user_id: string;
-  article_id: string;
-  title: string;
-  language: Language;
-  cefr_level: string;
-  source: 'wikipedia' | 'gutendex' | 'curated';
-  completed_at: string;
-}
-
-const readingHistoryMemory: ReadingHistoryRecord[] = [];
-
-export async function logReadingSession(record: Omit<ReadingHistoryRecord, 'id' | 'completed_at'>): Promise<ReadingHistoryRecord> {
-  const fullRecord: ReadingHistoryRecord = {
-    ...record,
-    id: `read_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    completed_at: new Date().toISOString(),
-  };
-
-  readingHistoryMemory.unshift(fullRecord);
-  if (readingHistoryMemory.length > 50) {
-    readingHistoryMemory.pop();
-  }
-
-  // Also persist in localStorage for persistence across reloads
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const key = `lexilume_reading_history_${record.user_id || 'guest'}`;
-      const existingStr = localStorage.getItem(key);
-      const existing: ReadingHistoryRecord[] = existingStr ? JSON.parse(existingStr) : [];
-      existing.unshift(fullRecord);
-      localStorage.setItem(key, JSON.stringify(existing.slice(0, 50)));
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  return fullRecord;
-}
-
-export async function getReadingHistory(userId: string = 'guest'): Promise<ReadingHistoryRecord[]> {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const key = `lexilume_reading_history_${userId}`;
-      const existingStr = localStorage.getItem(key);
-      if (existingStr) {
-        return JSON.parse(existingStr);
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-  return readingHistoryMemory.filter(r => r.user_id === userId || userId === 'guest');
-}
-
-
-
-
-// ============================================================================
-// 10. CONTENT-CENTRED LOCAL STORAGE HELPERS (Phase 7)
-// ============================================================================
-
-export async function cacheContentItemLocal(item: CachedContentItemRecord): Promise<void> {
-  memoryFallback.cachedContentItems.set(item.id, item);
-  if (!isIndexedDBAvailable()) return;
-  try {
-    await localDb.cachedContentItems.put(item);
-  } catch (err) {
-    console.warn('Error caching content item in localDb', err);
-  }
-}
-
-export async function getCachedContentItemsLocal(): Promise<CachedContentItemRecord[]> {
-  if (!isIndexedDBAvailable()) {
-    return Array.from(memoryFallback.cachedContentItems.values());
-  }
-  try {
-    return await localDb.cachedContentItems.toArray();
-  } catch (err) {
-    console.warn('Error reading content items from localDb', err);
-    return Array.from(memoryFallback.cachedContentItems.values());
-  }
-}
-
-export async function getCachedContentItemLocal(id: string): Promise<CachedContentItemRecord | null> {
-  if (!isIndexedDBAvailable()) {
-    return memoryFallback.cachedContentItems.get(id) || null;
-  }
-  try {
-    const item = await localDb.cachedContentItems.get(id);
-    return item || memoryFallback.cachedContentItems.get(id) || null;
-  } catch (err) {
-    console.warn('Error reading content item by id from localDb', err);
-    return memoryFallback.cachedContentItems.get(id) || null;
-  }
-}
-
-export async function saveLearnerProgressLocal(progress: LearnerContentProgress): Promise<void> {
-  memoryFallback.learnerContentProgress.set(progress.id, progress);
-  if (!isIndexedDBAvailable()) return;
-  try {
-    await localDb.learnerContentProgress.put(progress);
-  } catch (err) {
-    console.warn('Error saving learner progress to localDb', err);
-  }
-}
-
-export async function getLearnerProgressLocal(userId: string, contentItemId: string): Promise<LearnerContentProgress | null> {
-  if (!isIndexedDBAvailable()) {
-    for (const p of memoryFallback.learnerContentProgress.values()) {
-      if (p.user_id === userId && p.content_item_id === contentItemId) return p;
-    }
-    return null;
-  }
-  try {
-    const item = await localDb.learnerContentProgress
-      .where({ user_id: userId, content_item_id: contentItemId })
-      .first();
-    return item || null;
-  } catch (err) {
-    console.warn('Error querying learner progress in localDb', err);
-    for (const p of memoryFallback.learnerContentProgress.values()) {
-      if (p.user_id === userId && p.content_item_id === contentItemId) return p;
-    }
-    return null;
-  }
-}
-
-export async function getAllLearnerProgressLocal(userId: string): Promise<LearnerContentProgress[]> {
-  if (!isIndexedDBAvailable()) {
-    return Array.from(memoryFallback.learnerContentProgress.values()).filter(p => p.user_id === userId);
-  }
-  try {
-    return await localDb.learnerContentProgress.where('user_id').equals(userId).toArray();
-  } catch (err) {
-    console.warn('Error reading all learner progress from localDb', err);
-    return Array.from(memoryFallback.learnerContentProgress.values()).filter(p => p.user_id === userId);
-  }
-}
-
-export async function saveUserWordLocal(word: UserSavedWord): Promise<void> {
-  memoryFallback.userSavedWords.set(word.id, word);
-  if (!isIndexedDBAvailable()) return;
-  try {
-    await localDb.userSavedWords.put(word);
-  } catch (err) {
-    console.warn('Error saving user word to localDb', err);
-  }
-}
-
-export async function getUserSavedWordsLocal(userId: string, targetLanguage?: Language): Promise<UserSavedWord[]> {
-  if (!isIndexedDBAvailable()) {
-    return Array.from(memoryFallback.userSavedWords.values()).filter(
-      w => w.user_id === userId && (!targetLanguage || w.target_language === targetLanguage)
-    );
-  }
-  try {
-    let collection = localDb.userSavedWords.where('user_id').equals(userId);
-    const words = await collection.toArray();
-    if (targetLanguage) {
-      return words.filter(w => w.target_language === targetLanguage);
-    }
-    return words;
-  } catch (err) {
-    console.warn('Error fetching saved words from localDb', err);
-    return Array.from(memoryFallback.userSavedWords.values()).filter(
-      w => w.user_id === userId && (!targetLanguage || w.target_language === targetLanguage)
-    );
-  }
-}
-
-export async function saveUserMistakeLocal(mistake: UserMistake): Promise<void> {
-  memoryFallback.userMistakes.set(mistake.id, mistake);
-  if (!isIndexedDBAvailable()) return;
-  try {
-    await localDb.userMistakes.put(mistake);
-  } catch (err) {
-    console.warn('Error saving user mistake to localDb', err);
-  }
-}
-
-export async function getUserMistakesLocal(userId: string): Promise<UserMistake[]> {
-  if (!isIndexedDBAvailable()) {
-    return Array.from(memoryFallback.userMistakes.values()).filter(m => m.user_id === userId);
-  }
-  try {
-    return await localDb.userMistakes.where('user_id').equals(userId).toArray();
-  } catch (err) {
-    console.warn('Error fetching user mistakes from localDb', err);
-    return Array.from(memoryFallback.userMistakes.values()).filter(m => m.user_id === userId);
-  }
-}
-
-export async function getUserMistakeByIdLocal(id: string): Promise<UserMistake | null> {
-  if (!isIndexedDBAvailable()) {
-    return memoryFallback.userMistakes.get(id) || null;
-  }
-  try {
-    const item = await localDb.userMistakes.get(id);
-    return item || memoryFallback.userMistakes.get(id) || null;
-  } catch (err) {
-    console.warn('Error fetching user mistake by id from localDb', err);
-    return memoryFallback.userMistakes.get(id) || null;
-  }
-}
-
-
-export async function saveProcessingJobLocal(job: ContentProcessingJob): Promise<void> {
-  memoryFallback.contentProcessingJobs.set(job.id, job);
-  if (!isIndexedDBAvailable()) return;
-  try {
-    await localDb.contentProcessingJobs.put(job);
-  } catch (err) {
-    console.warn('Error saving processing job to localDb', err);
-  }
-}
-
-export async function getProcessingJobLocal(id: string): Promise<ContentProcessingJob | null> {
-  if (!isIndexedDBAvailable()) {
-    return memoryFallback.contentProcessingJobs.get(id) || null;
-  }
-  try {
-    const job = await localDb.contentProcessingJobs.get(id);
-    return job || memoryFallback.contentProcessingJobs.get(id) || null;
-  } catch (err) {
-    console.warn('Error reading processing job from localDb', err);
-    return memoryFallback.contentProcessingJobs.get(id) || null;
-  }
-}
-
-export async function getAllProcessingJobsLocal(): Promise<ContentProcessingJob[]> {
-  if (!isIndexedDBAvailable()) {
-    return Array.from(memoryFallback.contentProcessingJobs.values());
-  }
-  try {
-    const jobs = await localDb.contentProcessingJobs.toArray();
-    return jobs.length > 0 ? jobs : Array.from(memoryFallback.contentProcessingJobs.values());
-  } catch (err) {
-    return Array.from(memoryFallback.contentProcessingJobs.values());
-  }
-}
+import Dexie, { type EntityTable } from 'dexie';
+import {
+  DailyLessonPayload,
+  Language,
+  ActiveLessonProgress,
+  MistakeNotebookItem,
+  SavedVocabularyRecord,
+  SRSItemState,
+} from '../types';
+
+import {
+  ContentItem,
+  ContentVersion,
+  LearnerContentProgress,
+  UserSavedWord,
+  UserMistake,
+  ContentProcessingJob,
+} from '../types/contentCentred';
+
+export type { SavedVocabularyRecord };
+export type CachedContentItemRecord = ContentItem & { version?: ContentVersion };
+
+export interface CachedLessonRecord {
+  id: string; // `${language}_${lesson_date}`
+  language: Language;
+  lesson_date: string;
+  cefr_level: string;
+  lesson: DailyLessonPayload;
+  cached_at: string;
+  expires_at: string;
+}
+
+export interface SyncQueueRecord {
+  id: string;
+  user_id?: string;
+  action: string;
+  payload: unknown;
+  status: 'pending' | 'failed' | 'dead_letter';
+  retry_count: number;
+  error_message?: string;
+  last_attempted_at?: string;
+  created_at: string;
+}
+
+export interface CulturalBookmarkRecord {
+  id: string; // `${user_id}_${article_id}`
+  user_id: string;
+  article_id: string;
+  article_title: string;
+  content_language: Language;
+  origin_country: string;
+  topic: string;
+  cefr_level: string;
+  created_at: string;
+}
+
+export interface ApiCacheRecord {
+  id: string; // `${provider}:${cacheKey}`
+  provider: string;
+  cacheKey: string;
+  data: unknown;
+  cachedAt: string;
+  expiresAt: number; // timestamp in ms
+}
+
+export class PolyglotLocalDatabase extends Dexie {
+  cachedLessons!: EntityTable<CachedLessonRecord, 'id'>;
+  activeLessonProgress!: EntityTable<ActiveLessonProgress, 'id'>;
+  savedVocabulary!: EntityTable<SavedVocabularyRecord, 'id'>;
+  srsReviews!: EntityTable<SRSItemState & { id: string }, 'id'>;
+  mistakeNotebook!: EntityTable<MistakeNotebookItem, 'id'>;
+  syncQueue!: EntityTable<SyncQueueRecord, 'id'>;
+  culturalBookmarks!: EntityTable<CulturalBookmarkRecord, 'id'>;
+  apiCache!: EntityTable<ApiCacheRecord, 'id'>;
+  cachedContentItems!: EntityTable<CachedContentItemRecord, 'id'>;
+  learnerContentProgress!: EntityTable<LearnerContentProgress, 'id'>;
+  userSavedWords!: EntityTable<UserSavedWord, 'id'>;
+  userMistakes!: EntityTable<UserMistake, 'id'>;
+  contentProcessingJobs!: EntityTable<ContentProcessingJob, 'id'>;
+
+  constructor() {
+    super('PolyglotLocalDatabase');
+    this.version(1).stores({
+      cachedLessons: 'id, language, lesson_date, cefr_level, expires_at',
+      activeLessonProgress: 'id, language, curriculum_node_id, updated_at',
+      savedVocabulary: 'id, user_id, source_text, target_lang, created_at',
+      srsReviews: 'id, user_id, language, vocabulary_item_id, next_review_date',
+      mistakeNotebook: 'id, user_id, language, error_category, timestamp, is_resolved',
+      syncQueue: 'id, action, status, created_at',
+    });
+    this.version(2).stores({
+      culturalBookmarks: 'id, user_id, article_id, content_language, origin_country, topic, cefr_level, created_at',
+    });
+    this.version(3).stores({
+      apiCache: 'id, provider, cacheKey, expiresAt',
+    });
+    this.version(4).stores({
+      syncQueue: 'id, user_id, action, status, created_at',
+    });
+    this.version(5).stores({
+      cachedLessons: 'id, language, lesson_date, cefr_level, expires_at',
+      activeLessonProgress: 'id, language, curriculum_node_id, updated_at',
+      savedVocabulary: 'id, user_id, source_text, target_lang, created_at',
+      srsReviews: 'id, user_id, language, vocabulary_item_id, next_review_date',
+      mistakeNotebook: 'id, user_id, language, error_category, timestamp, is_resolved',
+      culturalBookmarks: 'id, user_id, article_id, content_language, origin_country, topic, cefr_level, created_at',
+      apiCache: 'id, provider, cacheKey, expiresAt',
+      syncQueue: 'id, user_id, action, status, created_at',
+
+      // Version 5 Content-Centred Stores
+      cachedContentItems: 'id, slug, status, primary_cefr, genre, target_language, updated_at',
+      learnerContentProgress: 'id, user_id, content_item_id, status, percent_complete, last_studied_at, client_mutation_id',
+      userSavedWords: 'id, user_id, target_language, lemma, explanation_language, next_review, state, updated_at, client_mutation_id',
+      userMistakes: 'id, user_id, content_item_id, error_category, status, last_occurred_at, client_mutation_id',
+      contentProcessingJobs: 'id, content_item_id, status, current_stage, updated_at',
+    });
+  }
+}
+
+export const localDb = new PolyglotLocalDatabase();
+
+// In-memory fallback if IndexedDB is unavailable
+const memoryFallback = {
+  cachedLessons: new Map<string, CachedLessonRecord>(),
+  activeProgress: new Map<string, ActiveLessonProgress>(),
+  mistakes: new Map<string, MistakeNotebookItem>(),
+  savedVocabulary: new Map<string, SavedVocabularyRecord>(),
+  culturalBookmarks: new Map<string, CulturalBookmarkRecord>(),
+  syncQueue: new Map<string, SyncQueueRecord>(),
+  apiCache: new Map<string, ApiCacheRecord>(),
+  cachedContentItems: new Map<string, CachedContentItemRecord>(),
+  learnerContentProgress: new Map<string, LearnerContentProgress>(),
+  userSavedWords: new Map<string, UserSavedWord>(),
+  userMistakes: new Map<string, UserMistake>(),
+  contentProcessingJobs: new Map<string, ContentProcessingJob>(),
+};
+
+function isIndexedDBAvailable(): boolean {
+  try {
+    return typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined';
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
+// 1. ACTIVE LESSON RESUME & PROGRESS
+// ============================================================================
+
+export async function getActiveProgress(language: Language): Promise<ActiveLessonProgress | null> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.activeProgress.get(language) || null;
+  }
+  try {
+    const item = await localDb.activeLessonProgress.get(language);
+    return item || null;
+  } catch (err) {
+    console.warn('Error reading active lesson progress from localDb', err);
+    return memoryFallback.activeProgress.get(language) || null;
+  }
+}
+
+export async function saveActiveProgress(progress: ActiveLessonProgress): Promise<void> {
+  memoryFallback.activeProgress.set(progress.language, progress);
+  if (!isIndexedDBAvailable()) return;
+
+  try {
+    await localDb.activeLessonProgress.put({
+      ...progress,
+      id: progress.language,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Error saving active lesson progress to localDb', err);
+  }
+}
+
+export async function clearActiveProgress(language: Language): Promise<void> {
+  memoryFallback.activeProgress.delete(language);
+  if (!isIndexedDBAvailable()) return;
+
+  try {
+    await localDb.activeLessonProgress.delete(language);
+  } catch (err) {
+    console.warn('Error clearing active progress from localDb', err);
+  }
+}
+
+// ============================================================================
+// 2. CACHED DAILY LESSONS (14-DAY RETENTION TTL)
+// ============================================================================
+
+export async function getCachedLesson(language: Language, dateStr: string): Promise<DailyLessonPayload | null> {
+  const key = `${language}_${dateStr}`;
+  if (!isIndexedDBAvailable()) {
+    const item = memoryFallback.cachedLessons.get(key);
+    return item ? item.lesson : null;
+  }
+  try {
+    const record = await localDb.cachedLessons.get(key);
+    if (!record) return null;
+
+    // Check expiration
+    if (new Date(record.expires_at).getTime() < Date.now()) {
+      await localDb.cachedLessons.delete(key);
+      return null;
+    }
+    return record.lesson;
+  } catch (err) {
+    console.warn('Error reading cached lesson from localDb', err);
+    const item = memoryFallback.cachedLessons.get(key);
+    return item ? item.lesson : null;
+  }
+}
+
+export async function cacheDailyLesson(lesson: DailyLessonPayload, ttlDays: number = 14): Promise<void> {
+  const key = `${lesson.language}_${lesson.lesson_date}`;
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
+
+  const record: CachedLessonRecord = {
+    id: key,
+    language: lesson.language,
+    lesson_date: lesson.lesson_date,
+    cefr_level: lesson.cefr_level,
+    lesson,
+    cached_at: now.toISOString(),
+    expires_at: expiresAt,
+  };
+
+  memoryFallback.cachedLessons.set(key, record);
+  if (!isIndexedDBAvailable()) return;
+
+  try {
+    await localDb.cachedLessons.put(record);
+  } catch (err) {
+    console.warn('Error caching lesson in localDb', err);
+  }
+}
+
+export async function cleanExpiredLessons(): Promise<number> {
+  if (!isIndexedDBAvailable()) {
+    let purged = 0;
+    const now = Date.now();
+    for (const [key, val] of memoryFallback.cachedLessons.entries()) {
+      if (new Date(val.expires_at).getTime() < now) {
+        memoryFallback.cachedLessons.delete(key);
+        purged++;
+      }
+    }
+    return purged;
+  }
+
+  try {
+    const nowIso = new Date().toISOString();
+    const expired = await localDb.cachedLessons.where('expires_at').below(nowIso).toArray();
+    if (expired.length > 0) {
+      const keys = expired.map(e => e.id);
+      await localDb.cachedLessons.bulkDelete(keys);
+    }
+    return expired.length;
+  } catch (err) {
+    console.warn('Error cleaning expired lessons', err);
+    return 0;
+  }
+}
+
+// ============================================================================
+// 3. MISTAKE NOTEBOOK (ERROR RECOVERY & CATEGORIZATION)
+// ============================================================================
+
+export async function logMistake(
+  item: Omit<MistakeNotebookItem, 'id' | 'timestamp' | 'reviewed_count' | 'is_resolved'>
+): Promise<string> {
+  const id = `mistake_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const record: MistakeNotebookItem = {
+    ...item,
+    id,
+    timestamp: new Date().toISOString(),
+    reviewed_count: 0,
+    is_resolved: false,
+  };
+
+  memoryFallback.mistakes.set(id, record);
+
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.mistakeNotebook.put(record);
+
+      // Enforce max 100 items limit to maintain low local storage footprint
+      const count = await localDb.mistakeNotebook.count();
+      if (count > 100) {
+        const oldest = await localDb.mistakeNotebook
+          .filter(m => m.is_resolved)
+          .limit(count - 100)
+          .primaryKeys();
+        if (oldest.length > 0) {
+          await localDb.mistakeNotebook.bulkDelete(oldest);
+        }
+      }
+    } catch (err) {
+      console.warn('Error writing mistake to localDb', err);
+    }
+  }
+
+  return id;
+}
+
+export async function getMistakes(
+  language?: Language,
+  category?: string
+): Promise<MistakeNotebookItem[]> {
+  if (!isIndexedDBAvailable()) {
+    let list = Array.from(memoryFallback.mistakes.values());
+    if (language) list = list.filter(m => m.language === language);
+    if (category) list = list.filter(m => m.error_category === category);
+    return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  try {
+    let collection = localDb.mistakeNotebook.toCollection();
+    if (language) {
+      collection = localDb.mistakeNotebook.where('language').equals(language);
+    }
+    let list = await collection.toArray();
+    if (category) {
+      list = list.filter(m => m.error_category === category);
+    }
+    return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  } catch (err) {
+    console.warn('Error fetching mistakes from localDb', err);
+    return Array.from(memoryFallback.mistakes.values());
+  }
+}
+
+export async function resolveMistake(id: string): Promise<void> {
+  const mem = memoryFallback.mistakes.get(id);
+  if (mem) {
+    mem.is_resolved = true;
+    mem.reviewed_count += 1;
+  }
+
+  if (isIndexedDBAvailable()) {
+    try {
+      const record = await localDb.mistakeNotebook.get(id);
+      if (record) {
+        record.is_resolved = true;
+        record.reviewed_count += 1;
+        await localDb.mistakeNotebook.put(record);
+      }
+    } catch (err) {
+      console.warn('Error resolving mistake', err);
+    }
+  }
+}
+
+export async function deleteMistake(id: string): Promise<void> {
+  memoryFallback.mistakes.delete(id);
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.mistakeNotebook.delete(id);
+    } catch (err) {
+      console.warn('Error deleting mistake', err);
+    }
+  }
+}
+
+// ============================================================================
+// 4. OFFLINE PHRASEBOOK / SAVED VOCABULARY
+// ============================================================================
+
+export async function savePhrasebookWord(
+  item: Omit<SavedVocabularyRecord, 'id' | 'created_at'>
+): Promise<string> {
+  const id = `vocab_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const record: SavedVocabularyRecord = {
+    ...item,
+    id,
+    created_at: new Date().toISOString(),
+  };
+
+  memoryFallback.savedVocabulary.set(id, record);
+
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.savedVocabulary.put(record);
+      const total = await localDb.savedVocabulary.count();
+      if (total > 500) {
+        // Keep strictly up to 500 words to ensure minimal browser footprint
+        const oldest = await localDb.savedVocabulary.orderBy('created_at').limit(total - 500).primaryKeys();
+        if (oldest.length > 0) {
+          await localDb.savedVocabulary.bulkDelete(oldest);
+        }
+      }
+    } catch (err) {
+      console.warn('Error saving phrasebook word to localDb', err);
+    }
+  }
+
+  if (record.user_id && record.user_id !== 'guest') {
+    try {
+      await enqueueSyncAction('SYNC_SAVED_VOCABULARY', {
+        id: record.id,
+        user_id: record.user_id,
+        source_text: record.source_text,
+        translated_text: record.translated_text,
+        source_lang: record.source_lang,
+        target_lang: record.target_lang,
+        part_of_speech: record.part_of_speech,
+        context_sentence: record.context_sentence,
+        created_at: record.created_at,
+      }, record.user_id);
+    } catch (syncErr) {
+      console.warn('Failed to enqueue saved vocabulary sync', syncErr);
+    }
+  }
+
+  return id;
+}
+
+export async function getPhrasebookWords(targetOrSourceLang?: string): Promise<SavedVocabularyRecord[]> {
+  if (!isIndexedDBAvailable()) {
+    let list = Array.from(memoryFallback.savedVocabulary.values());
+    if (targetOrSourceLang) {
+      list = list.filter(v => v.target_lang === targetOrSourceLang || v.source_lang === targetOrSourceLang);
+    }
+    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+
+  try {
+    let list = await localDb.savedVocabulary.toArray();
+    if (targetOrSourceLang) {
+      list = list.filter(v => v.target_lang === targetOrSourceLang || v.source_lang === targetOrSourceLang);
+    }
+    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  } catch (err) {
+    console.warn('Error fetching phrasebook words', err);
+    return Array.from(memoryFallback.savedVocabulary.values());
+  }
+}
+
+export async function deletePhrasebookWord(id: string): Promise<void> {
+  let existing = memoryFallback.savedVocabulary.get(id);
+  if (!existing && isIndexedDBAvailable()) {
+    try {
+      existing = await localDb.savedVocabulary.get(id);
+    } catch {}
+  }
+
+  memoryFallback.savedVocabulary.delete(id);
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.savedVocabulary.delete(id);
+    } catch (err) {
+      console.warn('Error deleting phrasebook word', err);
+    }
+  }
+
+  if (existing?.user_id && existing.user_id !== 'guest') {
+    try {
+      await enqueueSyncAction('DELETE_SAVED_VOCABULARY', {
+        id: existing.id,
+        user_id: existing.user_id,
+        source_text: existing.source_text,
+        target_lang: existing.target_lang,
+      }, existing.user_id);
+    } catch (syncErr) {
+      console.warn('Failed to enqueue delete vocabulary sync', syncErr);
+    }
+  }
+}
+
+// ============================================================================
+// 5. CULTURAL BOOKMARKS (OFFLINE-FIRST)
+// ============================================================================
+
+export async function saveCulturalBookmark(bookmark: CulturalBookmarkRecord): Promise<void> {
+  const key = `${bookmark.user_id}_${bookmark.article_id}`;
+  const record = { ...bookmark, id: key };
+  memoryFallback.culturalBookmarks.set(key, record);
+
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.culturalBookmarks.put(record);
+    } catch (err) {
+      console.warn('Error saving cultural bookmark to IndexedDB', err);
+    }
+  }
+}
+
+export async function deleteCulturalBookmark(userId: string, articleId: string): Promise<void> {
+  const key = `${userId}_${articleId}`;
+  memoryFallback.culturalBookmarks.delete(key);
+
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.culturalBookmarks.delete(key);
+    } catch (err) {
+      console.warn('Error deleting cultural bookmark from IndexedDB', err);
+    }
+  }
+}
+
+export async function getCulturalBookmarks(userId: string): Promise<CulturalBookmarkRecord[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.culturalBookmarks.values()).filter(b => b.user_id === userId);
+  }
+
+  try {
+    const list = await localDb.culturalBookmarks.where('user_id').equals(userId).toArray();
+    return list;
+  } catch (err) {
+    console.warn('Error fetching cultural bookmarks from IndexedDB', err);
+    return Array.from(memoryFallback.culturalBookmarks.values()).filter(b => b.user_id === userId);
+  }
+}
+
+export async function isCulturalBookmarked(userId: string, articleId: string): Promise<boolean> {
+  const key = `${userId}_${articleId}`;
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.culturalBookmarks.has(key);
+  }
+
+  try {
+    const item = await localDb.culturalBookmarks.get(key);
+    return !!item;
+  } catch (err) {
+    console.warn('Error checking cultural bookmark in IndexedDB', err);
+    return memoryFallback.culturalBookmarks.has(key);
+  }
+}
+
+// ============================================================================
+// 6. SYNC QUEUE OPERATIONS
+// ============================================================================
+
+export async function enqueueSyncAction(action: string, payload: unknown, userId?: string): Promise<string> {
+  const id = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const record: SyncQueueRecord = {
+    id,
+    user_id: userId || 'guest',
+    action,
+    payload,
+    status: 'pending',
+    retry_count: 0,
+    created_at: new Date().toISOString(),
+  };
+
+  memoryFallback.syncQueue.set(id, record);
+
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.syncQueue.put(record);
+    } catch (err) {
+      console.warn('Error enqueuing sync action in IndexedDB', err);
+    }
+  }
+
+  return id;
+}
+
+export async function getPendingSyncActions(userId?: string): Promise<SyncQueueRecord[]> {
+  const MAX_RETRIES = 5;
+  if (!isIndexedDBAvailable()) {
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(
+      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
+    );
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
+  }
+
+  try {
+    const all = await localDb.syncQueue.toArray();
+    const eligible = all.filter(
+      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
+    );
+    return userId ? eligible.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : eligible;
+  } catch (err) {
+    console.warn('Error reading pending sync actions from IndexedDB', err);
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(
+      r => (r.status === 'pending' || r.status === 'failed') && (r.retry_count || 0) < MAX_RETRIES
+    );
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId || r.user_id === 'guest') : list;
+  }
+}
+
+export async function getDeadLetterSyncActions(userId?: string): Promise<SyncQueueRecord[]> {
+  if (!isIndexedDBAvailable()) {
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'dead_letter');
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId) : list;
+  }
+  try {
+    const all = await localDb.syncQueue.toArray();
+    const dead = all.filter(r => r.status === 'dead_letter');
+    return userId ? dead.filter(r => !r.user_id || r.user_id === userId) : dead;
+  } catch (err) {
+    const list = Array.from(memoryFallback.syncQueue.values()).filter(r => r.status === 'dead_letter');
+    return userId ? list.filter(r => !r.user_id || r.user_id === userId) : list;
+  }
+}
+
+export async function removeSyncAction(id: string): Promise<void> {
+  memoryFallback.syncQueue.delete(id);
+
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.syncQueue.delete(id);
+    } catch (err) {
+      console.warn('Error deleting sync action from IndexedDB', err);
+    }
+  }
+}
+
+export async function markSyncActionFailed(id: string, errorMessage?: string): Promise<void> {
+  const inMem = memoryFallback.syncQueue.get(id);
+  if (inMem) {
+    inMem.last_attempted_at = new Date().toISOString();
+    inMem.retry_count = (inMem.retry_count || 0) + 1;
+    inMem.status = inMem.retry_count >= 5 ? 'dead_letter' : 'failed';
+    if (errorMessage) {
+      inMem.error_message = errorMessage;
+    }
+  }
+
+  if (isIndexedDBAvailable()) {
+    try {
+      const item = await localDb.syncQueue.get(id);
+      if (item) {
+        item.last_attempted_at = new Date().toISOString();
+        item.retry_count = (item.retry_count || 0) + 1;
+        item.status = item.retry_count >= 5 ? 'dead_letter' : 'failed';
+        if (errorMessage) {
+          item.error_message = errorMessage;
+        }
+        await localDb.syncQueue.put(item);
+      }
+    } catch (err) {
+      console.warn('Error updating sync action failure in IndexedDB', err);
+    }
+  }
+}
+
+export async function updateSyncActionStatus(
+  id: string,
+  statusOrError?: string,
+  maybeErrorMessage?: string
+): Promise<void> {
+  const errorMsg = maybeErrorMessage || (statusOrError !== 'failed' && statusOrError !== 'pending' ? statusOrError : undefined);
+  await markSyncActionFailed(id, errorMsg);
+}
+
+export async function migrateGuestVocabulary(userId: string): Promise<number> {
+  let count = 0;
+  for (const [id, word] of memoryFallback.savedVocabulary.entries()) {
+    if (!word.user_id || word.user_id === 'guest') {
+      word.user_id = userId;
+      memoryFallback.savedVocabulary.set(id, word);
+      count++;
+    }
+  }
+
+  if (isIndexedDBAvailable()) {
+    try {
+      const guestWords = await localDb.savedVocabulary.filter(w => !w.user_id || w.user_id === 'guest').toArray();
+      for (const w of guestWords) {
+        w.user_id = userId;
+        await localDb.savedVocabulary.put(w);
+      }
+      count = Math.max(count, guestWords.length);
+    } catch (err) {
+      console.warn('Error migrating guest vocabulary in IndexedDB', err);
+    }
+  }
+
+  return count;
+}
+
+
+export async function migrateGuestContentData(userId: string): Promise<{
+  progressMigrated: number;
+  wordsMigrated: number;
+  mistakesMigrated: number;
+}> {
+  let progressMigrated = 0;
+  let wordsMigrated = 0;
+  let mistakesMigrated = 0;
+
+  // 1. In-memory fallback migration
+  for (const [id, rec] of memoryFallback.learnerContentProgress.entries()) {
+    if (!rec.user_id || rec.user_id === 'guest' || rec.user_id === 'guest_user') {
+      rec.user_id = userId;
+      memoryFallback.learnerContentProgress.set(id, rec);
+      progressMigrated++;
+    }
+  }
+
+  for (const [id, word] of memoryFallback.userSavedWords.entries()) {
+    if (!word.user_id || word.user_id === 'guest' || word.user_id === 'guest_user') {
+      word.user_id = userId;
+      memoryFallback.userSavedWords.set(id, word);
+      wordsMigrated++;
+    }
+  }
+
+  for (const [id, m] of memoryFallback.userMistakes.entries()) {
+    if (!m.user_id || m.user_id === 'guest' || m.user_id === 'guest_user') {
+      m.user_id = userId;
+      memoryFallback.userMistakes.set(id, m);
+      mistakesMigrated++;
+    }
+  }
+
+  // 2. Dexie IndexedDB migration
+  if (isIndexedDBAvailable()) {
+    try {
+      await localDb.transaction('rw', [localDb.learnerContentProgress, localDb.userSavedWords, localDb.userMistakes, localDb.syncQueue], async () => {
+        // Progress
+        const guestProgress = await localDb.learnerContentProgress
+          .filter(p => !p.user_id || p.user_id === 'guest' || p.user_id === 'guest_user')
+          .toArray();
+        for (const p of guestProgress) {
+          p.user_id = userId;
+          await localDb.learnerContentProgress.put(p);
+        }
+        progressMigrated = Math.max(progressMigrated, guestProgress.length);
+
+        // Saved Words
+        const guestWords = await localDb.userSavedWords
+          .filter(w => !w.user_id || w.user_id === 'guest' || w.user_id === 'guest_user')
+          .toArray();
+        for (const w of guestWords) {
+          w.user_id = userId;
+          await localDb.userSavedWords.put(w);
+        }
+        wordsMigrated = Math.max(wordsMigrated, guestWords.length);
+
+        // Mistakes
+        const guestMistakes = await localDb.userMistakes
+          .filter(m => !m.user_id || m.user_id === 'guest' || m.user_id === 'guest_user')
+          .toArray();
+        for (const m of guestMistakes) {
+          m.user_id = userId;
+          await localDb.userMistakes.put(m);
+        }
+        mistakesMigrated = Math.max(mistakesMigrated, guestMistakes.length);
+
+        // Reassign pending guest sync actions
+        const guestSyncActions = await localDb.syncQueue
+          .filter(a => !a.user_id || a.user_id === 'guest' || a.user_id === 'guest_user')
+          .toArray();
+        for (const a of guestSyncActions) {
+          a.user_id = userId;
+          await localDb.syncQueue.put(a);
+        }
+      });
+    } catch (err) {
+      console.warn('[localDb] Error migrating guest content data in IndexedDB:', err);
+    }
+  }
+
+  return { progressMigrated, wordsMigrated, mistakesMigrated };
+}
+// ============================================================================
+// 7. STORAGE QUOTA, PURGE & EXPORT
+// ============================================================================
+
+export async function estimateStorageUsage(): Promise<{
+  usedBytes: number;
+  quotaBytes: number;
+  percentUsed: number;
+}> {
+  if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
+    try {
+      const estimate = await navigator.storage.estimate();
+      const used = estimate.usage || 0;
+      const quota = estimate.quota || 1;
+      return {
+        usedBytes: used,
+        quotaBytes: quota,
+        percentUsed: Math.min(100, Math.round((used / quota) * 100 * 10) / 10),
+      };
+    } catch (err) {
+      console.warn('Storage estimate failed', err);
+    }
+  }
+  return { usedBytes: 0, quotaBytes: 0, percentUsed: 0 };
+}
+
+export async function clearAllLocalLearningData(): Promise<void> {
+  memoryFallback.cachedLessons.clear();
+  memoryFallback.activeProgress.clear();
+  memoryFallback.mistakes.clear();
+  memoryFallback.savedVocabulary.clear();
+  memoryFallback.culturalBookmarks.clear();
+  memoryFallback.syncQueue.clear();
+
+  if (isIndexedDBAvailable()) {
+    try {
+      await Promise.all([
+        localDb.cachedLessons.clear(),
+        localDb.activeLessonProgress.clear(),
+        localDb.mistakeNotebook.clear(),
+        localDb.savedVocabulary.clear(),
+        localDb.srsReviews.clear(),
+        localDb.syncQueue.clear(),
+        localDb.culturalBookmarks.clear(),
+      ]);
+    } catch (err) {
+      console.warn('Error clearing IndexedDB data', err);
+    }
+  }
+}
+
+export async function exportAllIndexedDBData(): Promise<Record<string, unknown>> {
+  if (!isIndexedDBAvailable()) {
+    return {
+      cachedLessons: Array.from(memoryFallback.cachedLessons.values()),
+      activeProgress: Array.from(memoryFallback.activeProgress.values()),
+      mistakes: Array.from(memoryFallback.mistakes.values()),
+      savedVocabulary: Array.from(memoryFallback.savedVocabulary.values()),
+      culturalBookmarks: Array.from(memoryFallback.culturalBookmarks.values()),
+    };
+  }
+
+  try {
+    const [cachedLessons, activeProgress, mistakes, savedVocabulary, srsReviews, culturalBookmarks] = await Promise.all([
+      localDb.cachedLessons.toArray(),
+      localDb.activeLessonProgress.toArray(),
+      localDb.mistakeNotebook.toArray(),
+      localDb.savedVocabulary.toArray(),
+      localDb.srsReviews.toArray(),
+      localDb.culturalBookmarks.toArray(),
+    ]);
+
+    return {
+      cachedLessons,
+      activeProgress,
+      mistakes,
+      savedVocabulary,
+      srsReviews,
+      culturalBookmarks,
+      exported_at: new Date().toISOString(),
+    };
+  } catch (err) {
+    console.warn('Error exporting IndexedDB data', err);
+    return {};
+  }
+}
+
+// ============================================================================
+// 8. EXTERNAL API CACHE PERSISTENCE
+// ============================================================================
+
+export async function getCachedApiResponse(provider: string, cacheKey: string): Promise<unknown | null> {
+  const id = `${provider}:${cacheKey}`;
+  const now = Date.now();
+
+  if (!isIndexedDBAvailable()) {
+    const record = memoryFallback.apiCache.get(id);
+    if (!record) return null;
+    if (record.expiresAt < now) {
+      memoryFallback.apiCache.delete(id);
+      return null;
+    }
+    return record.data;
+  }
+
+  try {
+    const record = await localDb.apiCache.get(id);
+    if (!record) return null;
+    if (record.expiresAt < now) {
+      await localDb.apiCache.delete(id);
+      return null;
+    }
+    return record.data;
+  } catch (err) {
+    console.warn(`Error reading API cache for ${id}`, err);
+    const fallback = memoryFallback.apiCache.get(id);
+    return fallback && fallback.expiresAt >= now ? fallback.data : null;
+  }
+}
+
+export async function setCachedApiResponse(
+  provider: string,
+  cacheKey: string,
+  data: unknown,
+  ttlMs: number
+): Promise<void> {
+  const id = `${provider}:${cacheKey}`;
+  const now = Date.now();
+  const record: ApiCacheRecord = {
+    id,
+    provider,
+    cacheKey,
+    data,
+    cachedAt: new Date(now).toISOString(),
+    expiresAt: now + ttlMs,
+  };
+
+  // Always keep in memory fallback
+  memoryFallback.apiCache.set(id, record);
+
+  if (!isIndexedDBAvailable()) return;
+
+  try {
+    await localDb.apiCache.put(record);
+  } catch (err) {
+    console.warn(`Error writing API cache for ${id}`, err);
+  }
+}
+
+export async function clearExpiredApiCache(): Promise<void> {
+  const now = Date.now();
+  for (const [key, val] of memoryFallback.apiCache.entries()) {
+    if (val.expiresAt < now) {
+      memoryFallback.apiCache.delete(key);
+    }
+  }
+
+  if (!isIndexedDBAvailable()) return;
+
+  try {
+    await localDb.apiCache.where('expiresAt').below(now).delete();
+  } catch (err) {
+    console.warn('Error clearing expired API cache', err);
+  }
+}
+
+export async function clearAllApiCache(): Promise<void> {
+  memoryFallback.apiCache.clear();
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.apiCache.clear();
+  } catch (err) {
+    console.warn('Error clearing all API cache', err);
+  }
+}
+
+export async function getApiCacheCount(): Promise<number> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.apiCache.size;
+  }
+  try {
+    return await localDb.apiCache.count();
+  } catch {
+    return memoryFallback.apiCache.size;
+  }
+}
+
+// ============================================================================
+// 9. READING HISTORY TRACKING
+// ============================================================================
+
+export interface ReadingHistoryRecord {
+  id: string;
+  user_id: string;
+  article_id: string;
+  title: string;
+  language: Language;
+  cefr_level: string;
+  source: 'wikipedia' | 'gutendex' | 'curated';
+  completed_at: string;
+}
+
+const readingHistoryMemory: ReadingHistoryRecord[] = [];
+
+export async function logReadingSession(record: Omit<ReadingHistoryRecord, 'id' | 'completed_at'>): Promise<ReadingHistoryRecord> {
+  const fullRecord: ReadingHistoryRecord = {
+    ...record,
+    id: `read_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    completed_at: new Date().toISOString(),
+  };
+
+  readingHistoryMemory.unshift(fullRecord);
+  if (readingHistoryMemory.length > 50) {
+    readingHistoryMemory.pop();
+  }
+
+  // Also persist in localStorage for persistence across reloads
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const key = `lexilume_reading_history_${record.user_id || 'guest'}`;
+      const existingStr = localStorage.getItem(key);
+      const existing: ReadingHistoryRecord[] = existingStr ? JSON.parse(existingStr) : [];
+      existing.unshift(fullRecord);
+      localStorage.setItem(key, JSON.stringify(existing.slice(0, 50)));
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return fullRecord;
+}
+
+export async function getReadingHistory(userId: string = 'guest'): Promise<ReadingHistoryRecord[]> {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const key = `lexilume_reading_history_${userId}`;
+      const existingStr = localStorage.getItem(key);
+      if (existingStr) {
+        return JSON.parse(existingStr);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  return readingHistoryMemory.filter(r => r.user_id === userId || userId === 'guest');
+}
+
+
+
+
+// ============================================================================
+// 10. CONTENT-CENTRED LOCAL STORAGE HELPERS (Phase 7)
+// ============================================================================
+
+export async function cacheContentItemLocal(item: CachedContentItemRecord): Promise<void> {
+  memoryFallback.cachedContentItems.set(item.id, item);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.cachedContentItems.put(item);
+  } catch (err) {
+    console.warn('Error caching content item in localDb', err);
+  }
+}
+
+export async function getCachedContentItemsLocal(): Promise<CachedContentItemRecord[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.cachedContentItems.values());
+  }
+  try {
+    return await localDb.cachedContentItems.toArray();
+  } catch (err) {
+    console.warn('Error reading content items from localDb', err);
+    return Array.from(memoryFallback.cachedContentItems.values());
+  }
+}
+
+export async function getCachedContentItemLocal(id: string): Promise<CachedContentItemRecord | null> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.cachedContentItems.get(id) || null;
+  }
+  try {
+    const item = await localDb.cachedContentItems.get(id);
+    return item || memoryFallback.cachedContentItems.get(id) || null;
+  } catch (err) {
+    console.warn('Error reading content item by id from localDb', err);
+    return memoryFallback.cachedContentItems.get(id) || null;
+  }
+}
+
+export async function saveLearnerProgressLocal(progress: LearnerContentProgress): Promise<void> {
+  memoryFallback.learnerContentProgress.set(progress.id, progress);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.learnerContentProgress.put(progress);
+  } catch (err) {
+    console.warn('Error saving learner progress to localDb', err);
+  }
+}
+
+export async function getLearnerProgressLocal(
+  userId: string,
+  contentItemId: string,
+  versionId?: string
+): Promise<LearnerContentProgress | null> {
+  if (!isIndexedDBAvailable()) {
+    let fallback: LearnerContentProgress | null = null;
+    for (const p of memoryFallback.learnerContentProgress.values()) {
+      if (p.user_id === userId && p.content_item_id === contentItemId) {
+        if (versionId) {
+          if (p.content_version_id === versionId) return p;
+        } else {
+          return p;
+        }
+        fallback = p;
+      }
+    }
+    return versionId ? null : fallback;
+  }
+  try {
+    const query = localDb.learnerContentProgress.where({ user_id: userId, content_item_id: contentItemId });
+    if (versionId) {
+      const items = await query.toArray();
+      return items.find(p => p.content_version_id === versionId) || null;
+    }
+    const item = await query.first();
+    return item || null;
+  } catch (err) {
+    console.warn('Error querying learner progress in localDb', err);
+    let fallback: LearnerContentProgress | null = null;
+    for (const p of memoryFallback.learnerContentProgress.values()) {
+      if (p.user_id === userId && p.content_item_id === contentItemId) {
+        if (versionId) {
+          if (p.content_version_id === versionId) return p;
+        } else {
+          return p;
+        }
+        fallback = p;
+      }
+    }
+    return versionId ? null : fallback;
+  }
+}
+
+export async function getAllLearnerProgressLocal(userId: string): Promise<LearnerContentProgress[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.learnerContentProgress.values()).filter(p => p.user_id === userId);
+  }
+  try {
+    return await localDb.learnerContentProgress.where('user_id').equals(userId).toArray();
+  } catch (err) {
+    console.warn('Error reading all learner progress from localDb', err);
+    return Array.from(memoryFallback.learnerContentProgress.values()).filter(p => p.user_id === userId);
+  }
+}
+
+export async function saveUserWordLocal(word: UserSavedWord): Promise<void> {
+  memoryFallback.userSavedWords.set(word.id, word);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.userSavedWords.put(word);
+  } catch (err) {
+    console.warn('Error saving user word to localDb', err);
+  }
+}
+
+export async function getUserSavedWordsLocal(userId: string, targetLanguage?: Language): Promise<UserSavedWord[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.userSavedWords.values()).filter(
+      w => w.user_id === userId && (!targetLanguage || w.target_language === targetLanguage)
+    );
+  }
+  try {
+    let collection = localDb.userSavedWords.where('user_id').equals(userId);
+    const words = await collection.toArray();
+    if (targetLanguage) {
+      return words.filter(w => w.target_language === targetLanguage);
+    }
+    return words;
+  } catch (err) {
+    console.warn('Error fetching saved words from localDb', err);
+    return Array.from(memoryFallback.userSavedWords.values()).filter(
+      w => w.user_id === userId && (!targetLanguage || w.target_language === targetLanguage)
+    );
+  }
+}
+
+export async function saveUserMistakeLocal(mistake: UserMistake): Promise<void> {
+  memoryFallback.userMistakes.set(mistake.id, mistake);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.userMistakes.put(mistake);
+  } catch (err) {
+    console.warn('Error saving user mistake to localDb', err);
+  }
+}
+
+export async function getUserMistakesLocal(userId: string): Promise<UserMistake[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.userMistakes.values()).filter(m => m.user_id === userId);
+  }
+  try {
+    return await localDb.userMistakes.where('user_id').equals(userId).toArray();
+  } catch (err) {
+    console.warn('Error fetching user mistakes from localDb', err);
+    return Array.from(memoryFallback.userMistakes.values()).filter(m => m.user_id === userId);
+  }
+}
+
+export async function getUserMistakeByIdLocal(id: string): Promise<UserMistake | null> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.userMistakes.get(id) || null;
+  }
+  try {
+    const item = await localDb.userMistakes.get(id);
+    return item || memoryFallback.userMistakes.get(id) || null;
+  } catch (err) {
+    console.warn('Error fetching user mistake by id from localDb', err);
+    return memoryFallback.userMistakes.get(id) || null;
+  }
+}
+
+
+export async function saveProcessingJobLocal(job: ContentProcessingJob): Promise<void> {
+  memoryFallback.contentProcessingJobs.set(job.id, job);
+  if (!isIndexedDBAvailable()) return;
+  try {
+    await localDb.contentProcessingJobs.put(job);
+  } catch (err) {
+    console.warn('Error saving processing job to localDb', err);
+  }
+}
+
+export async function getProcessingJobLocal(id: string): Promise<ContentProcessingJob | null> {
+  if (!isIndexedDBAvailable()) {
+    return memoryFallback.contentProcessingJobs.get(id) || null;
+  }
+  try {
+    const job = await localDb.contentProcessingJobs.get(id);
+    return job || memoryFallback.contentProcessingJobs.get(id) || null;
+  } catch (err) {
+    console.warn('Error reading processing job from localDb', err);
+    return memoryFallback.contentProcessingJobs.get(id) || null;
+  }
+}
+
+export async function getAllProcessingJobsLocal(): Promise<ContentProcessingJob[]> {
+  if (!isIndexedDBAvailable()) {
+    return Array.from(memoryFallback.contentProcessingJobs.values());
+  }
+  try {
+    const jobs = await localDb.contentProcessingJobs.toArray();
+    return jobs.length > 0 ? jobs : Array.from(memoryFallback.contentProcessingJobs.values());
+  } catch (err) {
+    return Array.from(memoryFallback.contentProcessingJobs.values());
+  }
+}

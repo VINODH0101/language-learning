@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { DashboardView } from '../features/dashboard/DashboardView';
 import { LearnPage } from '../pages/LearnPage';
+import { ReaderView } from '../features/learn/ReaderView';
 import { I18nProvider } from '../i18n/i18nContext';
 import { courseService } from '../services/courseService';
 import { StorageService } from '../services/storage';
-import { contentCentredService } from '../services/contentCentredService';
+import { contentCentredService, SEED_CONTENT_ITEMS } from '../services/contentCentredService';
 import { dailyContentService } from '../services/dailyContentService';
+import { ClientLessonGenerator } from '../services/lessonGenerator';
 import {
   resolveContinueLearning,
   resolveTodaysEdition,
@@ -411,5 +413,295 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     expect(vocab.dueSRSCount).toBe(1);
     // But since it has no created_at, review date is NOT fabricated as creation date
     expect(vocab.savedThisWeekCount).toBe(0);
+  });
+
+  it('17. Strict version integrity: missing requested version does NOT open latest version and displays recoverable error with session preserved', async () => {
+    sessionStorage.setItem('lexilume_open_content_id', 'ci_coffee_dublin_001');
+    sessionStorage.setItem('lexilume_open_version_id', 'non_existent_version_999');
+
+    vi.spyOn(contentCentredService, 'getContentVersion').mockResolvedValueOnce(null);
+
+    render(
+      <I18nProvider>
+        <LearnPage />
+      </I18nProvider>
+    );
+
+    // Error alert should be displayed rather than opening latest version
+    await waitFor(() => {
+      expect(screen.getByRole('alert', { name: /Resume Error/i })).toBeDefined();
+      expect(screen.getByText(/Exact Edition Unavailable/i)).toBeDefined();
+    });
+
+    // Invariant: Session keys are PRESERVED on recoverable failure so user can retry
+    expect(sessionStorage.getItem('lexilume_open_content_id')).toBe('ci_coffee_dublin_001');
+    expect(sessionStorage.getItem('lexilume_open_version_id')).toBe('non_existent_version_999');
+
+    // Clicking Return to Catalog dismisses and clears session keys
+    const returnBtn = screen.getByRole('button', { name: /Return to Catalog/i });
+    fireEvent.click(returnBtn);
+    expect(sessionStorage.getItem('lexilume_open_content_id')).toBeNull();
+  });
+
+  it('18. Edition mismatch: version belonging to another content item is rejected', async () => {
+    sessionStorage.setItem('lexilume_open_content_id', 'ci_coffee_dublin_001');
+    sessionStorage.setItem('lexilume_open_version_id', 'cv_foreign_story_v1');
+
+    vi.spyOn(contentCentredService, 'getContentVersion').mockResolvedValueOnce({
+      id: 'cv_foreign_story_v1',
+      content_item_id: 'ci_different_story_999', // Mismatch!
+      version_number: 1,
+      cefr_level: 'B1',
+      word_count: 50,
+      sentence_count: 4,
+      lexical_density: 0.5,
+      is_published: true,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      audio_metadata: {},
+      structured_payload: { title: 'Foreign', paragraphs: [] },
+    } as any);
+
+    render(
+      <I18nProvider>
+        <LearnPage />
+      </I18nProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert', { name: /Resume Error/i })).toBeDefined();
+      expect(screen.getByText(/Edition Mismatch/i)).toBeDefined();
+    });
+  });
+
+  it('19. Version-specific progress isolation: opening version v2 does not inherit progress from version v1', async () => {
+    const userId = 'user_version_iso';
+    const itemId = 'ci_coffee_dublin_001';
+
+    // Seed progress on version v1 (80% complete)
+    await contentCentredService.updateLearnerProgress({
+      user_id: userId,
+      content_item_id: itemId,
+      content_version_id: 'cv_coffee_dublin_v1',
+      status: 'in_progress',
+      percent_complete: 80,
+      time_spent_seconds: 300,
+    });
+
+    // Query progress for v1
+    const progV1 = await contentCentredService.getLearnerProgress(userId, itemId, 'cv_coffee_dublin_v1');
+    expect(progV1?.percent_complete).toBe(80);
+
+    // Query progress for v2 (never opened)
+    const progV2 = await contentCentredService.getLearnerProgress(userId, itemId, 'cv_coffee_dublin_v2');
+    expect(progV2).toBeNull(); // Does not reuse v1's 80%!
+  });
+
+  it('20. Vocabulary identity and NFC normalization preserves distinct accented words', async () => {
+    const userId = 'user_accent_test';
+    const today = getLocalTodayDateString();
+
+    // Word 'esta' (demonstrative) and 'está' (verb) in Portuguese are distinct words
+    vi.spyOn(StorageService, 'getSRSItems').mockReturnValueOnce([
+      {
+        vocabulary_item_id: 'esta',
+        language: 'pt' as const,
+        repetition_count: 1,
+        ease_factor: 2.5,
+        interval_days: 1,
+        next_review_date: today,
+        created_at: new Date().toISOString(),
+        last_reviewed_at: new Date().toISOString(),
+        lapse_count: 0,
+        mastery_status: 'learning' as const,
+      },
+      {
+        vocabulary_item_id: 'está',
+        language: 'pt' as const,
+        repetition_count: 1,
+        ease_factor: 2.5,
+        interval_days: 1,
+        next_review_date: today,
+        created_at: new Date().toISOString(),
+        last_reviewed_at: new Date().toISOString(),
+        lapse_count: 0,
+        mastery_status: 'learning' as const,
+      },
+    ] as any);
+
+    vi.spyOn(contentCentredService, 'getUserSavedWords').mockResolvedValueOnce([]);
+
+    const summary = await resolveVocabularySummary(sampleCourse, userId);
+    // Both must be recognized as distinct items (count = 2, not 1)
+    expect(summary.dueSRSCount).toBe(2);
+    expect(summary.savedThisWeekCount).toBe(2);
+  });
+
+  it('21. Recommendation fallback excludes completed stories and prioritizes CEFR level', async () => {
+    const userId = sampleCourse.user_id;
+
+    // Invalidate curriculum generation so it falls through to recommendation
+    vi.spyOn(ClientLessonGenerator, 'generateOrGetLesson').mockReturnValue(null as any);
+
+    // Mock progress where coffee dublin is completed
+    vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValueOnce([
+      {
+        id: 'prog_c1',
+        user_id: userId,
+        content_item_id: 'ci_coffee_dublin_001',
+        content_version_id: 'cv_coffee_dublin_v1',
+        status: 'completed',
+        percent_complete: 100,
+        completed_activity_ids: [],
+        time_spent_seconds: 400,
+        first_opened_at: new Date().toISOString(),
+        last_studied_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+
+    // Mock two candidate published items: one completed B1, one uncompleted B1
+    vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValueOnce([
+      {
+        id: 'ci_coffee_dublin_001', // completed
+        title: 'Completed Coffee Story',
+        target_language: 'pt',
+        primary_cefr: 'B1',
+        status: 'published',
+      } as any,
+      {
+        id: 'ci_uncompleted_002', // uncompleted
+        title: 'Fresh Story',
+        target_language: 'pt',
+        primary_cefr: 'B1',
+        status: 'published',
+      } as any,
+    ]);
+
+    vi.spyOn(contentCentredService, 'getContentItemById').mockResolvedValueOnce({
+      id: 'ci_uncompleted_002',
+      title: 'Fresh Story',
+      target_language: 'pt',
+      primary_cefr: 'B1',
+      status: 'published',
+    } as any);
+
+    const result = await resolveContinueLearning(sampleCourse, userId);
+    expect(result.type).toBe('recommended');
+    if (result.type === 'recommended') {
+      expect(result.item.id).toBe('ci_uncompleted_002');
+    }
+  });
+
+  it('22. Section 6 (Recently Learned) excludes activities older than 7 local calendar days', async () => {
+    const userId = sampleCourse.user_id;
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValueOnce([
+      { id: 'ci_story_old', title: 'Old Story', target_language: 'pt', status: 'published' } as any,
+      { id: 'ci_story_new', title: 'Recent Story', target_language: 'pt', status: 'published' } as any,
+    ]);
+
+    vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValueOnce([
+      {
+        id: 'p_old',
+        user_id: userId,
+        content_item_id: 'ci_story_old',
+        content_version_id: 'v1',
+        status: 'completed',
+        percent_complete: 100,
+        completed_activity_ids: [],
+        time_spent_seconds: 200,
+        first_opened_at: tenDaysAgo,
+        last_studied_at: tenDaysAgo, // 10 days ago (outside window)
+        created_at: tenDaysAgo,
+        updated_at: tenDaysAgo,
+      },
+      {
+        id: 'p_new',
+        user_id: userId,
+        content_item_id: 'ci_story_new',
+        content_version_id: 'v1',
+        status: 'in_progress',
+        percent_complete: 50,
+        completed_activity_ids: [],
+        time_spent_seconds: 120,
+        first_opened_at: twoDaysAgo,
+        last_studied_at: twoDaysAgo, // 2 days ago (inside window)
+        created_at: twoDaysAgo,
+        updated_at: twoDaysAgo,
+      },
+    ]);
+
+    vi.spyOn(StorageService, 'getActivityEvents').mockReturnValueOnce([]);
+
+    const recent = await resolveRecentActivities(sampleCourse, userId);
+    expect(recent.length).toBe(1);
+    expect(recent[0].id).toBe('prog_p_new');
+    expect(recent[0].title).toBe('Recent Story');
+  });
+
+  it('23. Sentence click updates reading position without fabricating study time (sends time_spent_seconds: 0)', async () => {
+    const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
+    const mockItem = SEED_CONTENT_ITEMS[0];
+
+    render(
+      <ReaderView
+        item={mockItem}
+        version={mockItem.version}
+        activities={mockItem.activities}
+        onBack={vi.fn()}
+      />
+    );
+
+    const sentenceSpan = await screen.findByTestId('sentence-s1');
+    fireEvent.click(sentenceSpan);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content_item_id: mockItem.id,
+          content_version_id: mockItem.version.id,
+          time_spent_seconds: 0,
+        })
+      );
+    });
+  });
+
+  it('24. Active reading session tracks active duration and flushes accumulated seconds on unmount', async () => {
+    vi.useFakeTimers();
+    const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
+    const mockItem = SEED_CONTENT_ITEMS[0];
+
+    const { unmount } = render(
+      <ReaderView
+        item={mockItem}
+        version={mockItem.version}
+        activities={mockItem.activities}
+        onBack={vi.fn()}
+      />
+    );
+
+    // Simulate active reading for 10 seconds
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+
+    // Unmount triggers flushActiveTime
+    act(() => {
+      unmount();
+    });
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content_item_id: mockItem.id,
+        content_version_id: mockItem.version.id,
+        time_spent_seconds: 10,
+      })
+    );
+
+    vi.useRealTimers();
   });
 });

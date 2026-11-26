@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Compass, Globe } from 'lucide-react';
+import { Award, Globe2 } from 'lucide-react';
 import { Language, UserTrackState, Course } from '../../../types';
 import {
   LANGUAGE_METADATA,
@@ -18,6 +18,8 @@ interface ProgressHeaderProps {
   onOpenDiagnostic: () => void;
   hasDiagnosticAvailable: boolean;
 }
+
+const TRACKS: Language[] = ['pt', 'es', 'en'];
 
 export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   selectedLang,
@@ -39,108 +41,123 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   const varietyLabel = getRegionalVarietyLabel(varietyCode, interfaceLanguage);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-      <div>
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5" />
-            {t('navigation:nav_progress', 'Progress & Learning Analytics')}
+    <header className="bg-white border border-stone-200 rounded-2xl p-5 sm:p-8 shadow-xs">
+      <div className="flex flex-col gap-5">
+        {/* Eyebrow kicker & context badges */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200/80">
+            {t('navigation:nav_progress', 'Progress')}
           </span>
-          <Badge variant="emerald" size="sm">
+          <Badge variant="slate" size="sm">
             {t('dashboard:cefr_level', 'CEFR')}: {track.current_cefr_level}
           </Badge>
-          <Badge variant="indigo" size="sm">
+          <Badge variant="slate" size="sm">
             {varietyLabel}
           </Badge>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 flex items-center gap-3">
-          <span>{currentMeta.flag}</span>
-          <span>{getLanguageName(selectedLang, interfaceLanguage)}</span>
-          <span className="text-xs font-normal text-slate-400 font-mono">({selectedLang})</span>
-        </h1>
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+          <div className="min-w-0">
+            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-stone-900 tracking-tight leading-tight flex items-center gap-2.5">
+              <span aria-hidden="true">{currentMeta.flag}</span>
+              <span className="truncate">{getLanguageName(selectedLang, interfaceLanguage)}</span>
+            </h1>
 
-        <p className="text-xs text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
-          {t(
-            'progress:header_description',
-            'Language-specific progress analytics, SuperMemo SM-2 retention stages, and evidence-based curriculum progression.'
-          )}
-        </p>
+            <p className="text-sm text-stone-600 mt-2 max-w-2xl leading-relaxed">
+              {t(
+                'progress:header_description',
+                'A calm, language-specific view of what you have learned, what is fading, and what to do next.'
+              )}
+            </p>
 
-        {activeCourse && (
-          <div className="flex items-center gap-4 mt-3 text-xs text-slate-400 flex-wrap">
-            <span>
-              {t('dashboard:goal_title', 'Daily Goal')}:{' '}
-              <strong className="text-slate-200">{activeCourse.daily_goal_minutes} min</strong>
-            </span>
-            <span>•</span>
-            <span>
-              {t('dashboard:streak', 'Streak')}:{' '}
-              <strong className="text-amber-400">{activeCourse.streak_days} {t('common:days', 'days')}</strong>
-            </span>
-            <span>•</span>
-            <span>
-              {t('progress:explanation_lang', 'Explanations')}:{' '}
-              <strong className="text-slate-200">
-                {getLanguageName(activeCourse.explanation_language, interfaceLanguage)}
-              </strong>
-            </span>
+            {activeCourse && (
+              <div className="flex items-center gap-x-3 gap-y-1 mt-3 text-xs text-stone-500 flex-wrap">
+                <span>
+                  {t('dashboard:goal_title', 'Daily Goal')}:{' '}
+                  <strong className="text-stone-800">{activeCourse.daily_goal_minutes} min</strong>
+                </span>
+                <span className="text-stone-300" aria-hidden="true">•</span>
+                <span>
+                  {t('dashboard:streak', 'Streak')}:{' '}
+                  <strong className="text-amber-700">
+                    {activeCourse.streak_days} {t('common:days', 'days')}
+                  </strong>
+                </span>
+                <span className="text-stone-300" aria-hidden="true">•</span>
+                <span>
+                  {t('progress:explanation_lang', 'Explanations')}:{' '}
+                  <strong className="text-stone-800">
+                    {getLanguageName(activeCourse.explanation_language, interfaceLanguage)}
+                  </strong>
+                </span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
-        {/* Quick Track Switcher for primary tracks + All-Languages Dropdown */}
-        <div className="flex items-center gap-2 bg-slate-950/70 p-1.5 rounded-2xl border border-slate-800">
-          <button
-            type="button"
-            onClick={() => onSelectLang('pt')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              selectedLang === 'pt'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            {getLanguageName('pt', interfaceLanguage)}
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectLang('es')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              selectedLang === 'es'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            {getLanguageName('es', interfaceLanguage)}
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectLang('en')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              selectedLang === 'en'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            {getLanguageName('en', interfaceLanguage)}
-          </button>
+          {/* Language track switcher (desktop segmented, mobile native select) + placement CTA */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            {/* Desktop Track Switcher */}
+            <div
+              role="group"
+              aria-label={t('progress:language_track_label', 'Learning track')}
+              className="hidden sm:inline-flex items-center gap-1 bg-stone-100 border border-stone-200 p-1 rounded-xl"
+            >
+              {TRACKS.map(lang => {
+                const isActive = selectedLang === lang;
+                return (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => onSelectLang(lang)}
+                    aria-pressed={isActive}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer min-h-[34px] ${
+                      isActive
+                        ? 'bg-white text-stone-900 border border-stone-200 shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    {getLanguageName(lang, interfaceLanguage)}
+                  </button>
+                );
+              })}
+            </div>
 
+            {/* Mobile Track Selector */}
+            <div className="relative sm:hidden">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                <Globe2 className="w-4 h-4" />
+              </div>
+              <select
+                value={selectedLang}
+                onChange={e => onSelectLang(e.target.value as Language)}
+                aria-label={t('progress:language_track_label', 'Learning track')}
+                className="w-full pl-9 pr-8 py-2.5 bg-white border border-stone-200 rounded-xl text-sm font-semibold text-stone-800 focus:outline-none focus:border-stone-500 cursor-pointer appearance-none min-h-[44px]"
+              >
+                {TRACKS.map(lang => (
+                  <option key={lang} value={lang}>
+                    {LANGUAGE_METADATA[lang]?.flag} {getLanguageName(lang, interfaceLanguage)} ({lang.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400 text-[10px]">
+                ▼
+              </div>
+            </div>
+
+            {hasDiagnosticAvailable && (
+              <Button
+                variant="outline"
+                size="md"
+                icon={<Award className="w-4 h-4 text-amber-700" />}
+                onClick={onOpenDiagnostic}
+                className="text-xs font-semibold cursor-pointer justify-center min-h-[44px] sm:min-h-[40px]"
+              >
+                {t('progress:take_diagnostic_btn', 'Placement Diagnostic')}
+              </Button>
+            )}
+          </div>
         </div>
-
-        {/* Diagnostic assessment trigger */}
-        {hasDiagnosticAvailable && (
-          <Button
-            variant="outline"
-            size="md"
-            icon={<Award className="w-4 h-4 text-indigo-400" />}
-            onClick={onOpenDiagnostic}
-            className="text-xs font-semibold cursor-pointer border-slate-700 hover:border-indigo-500/50"
-          >
-            {t('progress:take_diagnostic_btn', 'Placement Diagnostic')}
-          </Button>
-        )}
       </div>
-    </div>
+    </header>
   );
 };

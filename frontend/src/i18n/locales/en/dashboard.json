@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "Failed to load Today's Edition",
+  "err_continue": "Failed to load continue learning progress",
+  "err_vocab": "Failed to load vocabulary metrics",
+  "err_recent": "Failed to load recent activities",
+  "culture_preview_empty": "No live cultural articles loaded yet. Open Explore Countries to fetch from Wikipedia & AI Content Engine."
 }

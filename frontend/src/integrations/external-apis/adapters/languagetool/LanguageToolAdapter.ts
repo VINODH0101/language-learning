@@ -12,7 +12,6 @@ import {
   ValidationError,
   ProviderUnavailableError,
 } from '../../core';
-import { falseFriends } from '../../../../data/seedData';
 
 interface RawLTReplacement {
   value: string;
@@ -140,28 +139,8 @@ export class LanguageToolAdapter extends BaseApiProvider<ProofreadingInput, Norm
   }
 
   protected getFallback(input: ProofreadingInput, _error: unknown): NormalizedProofreadResult {
-    // Local offline heuristics: detect false friends and common mistakes
+    // Local offline heuristics: detect structural duplicates when offline
     const matches: NormalizedProofreadMatch[] = [];
-    const textLower = input.text.toLowerCase();
-
-    // Check false friends in target language
-    for (const ff of falseFriends) {
-      const term = input.language.startsWith('pt') ? ff.portuguese_term.toLowerCase() : ff.spanish_term.toLowerCase();
-      const pos = textLower.indexOf(term);
-      if (pos !== -1) {
-        matches.push({
-          id: `local-ff-${pos}`,
-          message: `Atenção: falso amigo detectado. "${term}". ${ff.interference_warning}`,
-          shortMessage: 'Falso Cognato',
-          offset: pos,
-          length: term.length,
-          replacements: input.language.startsWith('pt') ? [ff.spanish_term] : [ff.portuguese_term],
-          ruleId: 'FALSE_FRIEND_HEURISTIC',
-          category: 'Interferência Linguística',
-          issueType: 'warning',
-        });
-      }
-    }
 
     // Check double words: e.g. "o o", "the the", "de de"
     const doubleWordRegex = /\b([a-zA-ZáéíóúÁÉÍÓÚñÑçÇ]+)\s+\1\b/gi;

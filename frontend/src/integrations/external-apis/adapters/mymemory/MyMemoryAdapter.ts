@@ -13,7 +13,6 @@ import {
   ProviderUnavailableError,
 } from '../../core';
 import { StorageService } from '../../../../services/storage';
-import { trilingualDictionary } from '../../../../data/translationData';
 
 export class MyMemoryAdapter extends BaseApiProvider<TranslationInput, NormalizedTranslationResult> {
   public readonly metadata: ProviderMetadata = {
@@ -104,55 +103,6 @@ export class MyMemoryAdapter extends BaseApiProvider<TranslationInput, Normalize
   }
 
   protected getFallback(input: TranslationInput, _error: unknown): NormalizedTranslationResult {
-    const q = input.text.trim().toLowerCase();
-    
-    // Check trilingual dictionary
-    for (const item of trilingualDictionary) {
-      if (input.sourceLang === 'pt' && input.targetLang === 'en' && item.portuguese.toLowerCase() === q) {
-        return {
-          translatedText: item.english,
-          sourceLang: input.sourceLang,
-          targetLang: input.targetLang,
-          provider: 'offline-dictionary',
-          isVerified: true,
-          isApproximate: false,
-          notes: item.notes_for_pt_speakers,
-        };
-      }
-      if (input.sourceLang === 'es' && input.targetLang === 'en' && item.spanish.toLowerCase() === q) {
-        return {
-          translatedText: item.english,
-          sourceLang: input.sourceLang,
-          targetLang: input.targetLang,
-          provider: 'offline-dictionary',
-          isVerified: true,
-          isApproximate: false,
-          notes: item.notes_for_es_speakers,
-        };
-      }
-      if (input.sourceLang === 'en' && input.targetLang === 'pt' && item.english.toLowerCase() === q) {
-        return {
-          translatedText: item.portuguese,
-          sourceLang: input.sourceLang,
-          targetLang: input.targetLang,
-          provider: 'offline-dictionary',
-          isVerified: true,
-          isApproximate: false,
-        };
-      }
-      if (input.sourceLang === 'en' && input.targetLang === 'es' && item.english.toLowerCase() === q) {
-        return {
-          translatedText: item.spanish,
-          sourceLang: input.sourceLang,
-          targetLang: input.targetLang,
-          provider: 'offline-dictionary',
-          isVerified: true,
-          isApproximate: false,
-        };
-      }
-    }
-
-    // Default echo fallback
     return {
       translatedText: input.text.trim(),
       sourceLang: input.sourceLang,
@@ -160,7 +110,7 @@ export class MyMemoryAdapter extends BaseApiProvider<TranslationInput, Normalize
       provider: 'fallback',
       isVerified: false,
       isApproximate: true,
-      notes: 'Tradução indisponível offline para sentenças completas. Consulte termos no vocabulário.',
+      notes: 'Translation service is temporarily unavailable offline.',
     };
   }
 }

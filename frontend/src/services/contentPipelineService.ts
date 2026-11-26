@@ -34,6 +34,7 @@ import {
 } from '../types/contentCentred';
 import { Language, ExplanationLanguage, CEFRLevel } from '../types';
 import { contentCentredService } from './contentCentredService';
+import { generateUuid } from './uuid';
 import { saveProcessingJobLocal, getProcessingJobLocal, getAllProcessingJobsLocal } from './localDb';
 import { supabase } from './supabaseClient';
 import { authService } from './auth';
@@ -110,7 +111,7 @@ export class ContentPipelineService {
       }
     }
 
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const jobId = generateUuid();
     const startTime = Date.now();
 
     // 1. Create initial ContentItem in draft/processing status

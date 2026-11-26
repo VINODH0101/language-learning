@@ -98,7 +98,7 @@ export const AppContent: React.FC = () => {
         {currentRoute === 'english' && <EnglishPage />}
         {currentRoute === 'translate' && <TranslatePage />}
         {currentRoute === 'practice' && <PracticePage />}
-        {currentRoute === 'progress' && <ProgressPage />}
+        {currentRoute === 'progress' && <ProgressPage onNavigateTab={handleSelectTab} />}
         {currentRoute === 'settings' && <SettingsPage />}
         {currentRoute === 'admin' && (
           <AdminPage

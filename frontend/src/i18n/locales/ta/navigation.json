@@ -43,5 +43,15 @@
   "admin_destination_content_import": "Import Content",
   "admin_destination_processing_studio": "Processing Studio",
   "admin_destination_review": "Review & Publish",
-  "admin_destination_settings": "Settings"
+  "admin_destination_settings": "Settings",
+  "nav_notebooks": "குறிப்பேடுகள்",
+  "nav_words": "என் சொற்கள்",
+  "nav_mistakes": "என் தவறுகள்",
+  "notebooks_header": "தனிப்பட்ட குறிப்பேடுகள்",
+  "reading_room_title": "வாசிப்பு அறை",
+  "reading_room_desc": "உண்மையான உரைகள் & உரையாடல்கள்",
+  "tool_words_desc": "சேமித்த சொற்கள் & SM-2 அட்டைகள்",
+  "tool_mistakes_desc": "தவறு மீள்பார்வை & பயிற்சி",
+  "account_preferences_header": "கணக்கு & விருப்பங்கள்",
+  "settings_sync_status": "மொழி அமைப்பு, இலக்குகள் & விருப்பம்"
 }

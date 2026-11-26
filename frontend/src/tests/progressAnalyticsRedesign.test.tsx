@@ -161,4 +161,39 @@ describe('Lexilume Progress Page Redesign & Learning Analytics Suite', () => {
     expect(track.current_cefr_level).toBe('A1');
     expect(track.completed_curriculum_node_ids.length).toBe(0);
   });
+
+  it('7. Switches cleanly across all 3 Progress tabs (Path & Memory, Focus & Skills, Immersion & Placement) and triggers Practice CTA', () => {
+    const onNavigateTab = vi.fn();
+    render(
+      <I18nProvider>
+        <ProgressPage onNavigateTab={onNavigateTab} />
+      </I18nProvider>
+    );
+
+    // Default tab shows Path & Memory content (CEFR roadmap & Vocabulary retention)
+    const pathTab = screen.getByRole('tab', { name: /Path & Memory|Caminho & Memória/i });
+    const diagnosticsTab = screen.getByRole('tab', { name: /Focus & Skills|Foco & Competências/i });
+    const immersionTab = screen.getByRole('tab', { name: /Immersion & Placement|Imersão & Nivelamento/i });
+
+    expect(pathTab.getAttribute('aria-selected')).toBe('true');
+
+    // Switch to Focus & Skills
+    fireEvent.click(diagnosticsTab);
+    expect(diagnosticsTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('heading', { name: /Diagnostic Weak Areas & Mistake Recovery|Áreas Fracas/i })).toBeDefined();
+
+    // Switch to Immersion & Placement
+    fireEvent.click(immersionTab);
+    expect(immersionTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('heading', { name: /Daily Literature & Cultural Exploration|Daily Literature/i })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /World Discovery & Geography/i })).toBeDefined();
+
+    // Switch back to Path & Memory and click Review CTA if due/empty button present
+    fireEvent.click(pathTab);
+    const practiceBtn = screen.queryByRole('button', { name: /Review due cards|Practice Now|Practicar/i });
+    if (practiceBtn) {
+      fireEvent.click(practiceBtn);
+      expect(onNavigateTab).toHaveBeenCalledWith('practice');
+    }
+  });
 });

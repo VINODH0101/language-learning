@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "Günün Sayısı yüklenemedi",
+  "err_continue": "Devam eden öğrenme ilerlemesi yüklenemedi",
+  "err_vocab": "Kelime istatistikleri yüklenemedi",
+  "err_recent": "Son etkinlikler yüklenemedi",
+  "culture_preview_empty": "Henüz canlı kültür makalesi yüklenmedi. Wikipedia ve Yapay Zekâ İçerik Motorundan çekmek için Ülkeleri Keşfet'i açın."
 }

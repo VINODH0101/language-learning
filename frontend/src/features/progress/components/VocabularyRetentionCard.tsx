@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Sparkles, ArrowRight, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock } from 'lucide-react';
 import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import { Badge } from '../../../components/common/Badge';
@@ -27,100 +27,107 @@ export const VocabularyRetentionCard: React.FC<VocabularyRetentionCardProps> = (
   const consolidationPct =
     totalEncountered > 0 ? Math.round(((reviewingCount + masteredCount) / totalEncountered) * 100) : 0;
 
+  const stages = [
+    {
+      key: 'presented',
+      label: t('progress:stage_1_presented', 'Presented'),
+      count: presentedCount,
+      desc: t('progress:stage_1_desc', 'Exposed in lesson (0 recalls)'),
+      cardClass: 'bg-stone-50 border-stone-200',
+      dotClass: 'bg-stone-400',
+      valueClass: 'text-stone-900',
+      labelClass: 'text-stone-600',
+    },
+    {
+      key: 'learning',
+      label: t('progress:stage_2_learning', 'Learning'),
+      count: learningCount,
+      desc: t('progress:stage_2_desc', '1–2 successful recalls'),
+      cardClass: 'bg-sky-50/70 border-sky-200',
+      dotClass: 'bg-sky-500',
+      valueClass: 'text-sky-900',
+      labelClass: 'text-sky-800',
+    },
+    {
+      key: 'reviewing',
+      label: t('progress:stage_3_reviewing', 'Reviewing'),
+      count: reviewingCount,
+      desc: t('progress:stage_3_desc', '3–4 spaced repetitions'),
+      cardClass: 'bg-amber-50/70 border-amber-200',
+      dotClass: 'bg-amber-500',
+      valueClass: 'text-amber-900',
+      labelClass: 'text-amber-800',
+    },
+    {
+      key: 'mastered',
+      label: t('progress:stage_4_mastered', 'Mastered'),
+      count: masteredCount,
+      desc: t('progress:stage_4_desc', '≥5 recalls & ≥21 days'),
+      cardClass: 'bg-emerald-50/70 border-emerald-200',
+      dotClass: 'bg-emerald-600',
+      valueClass: 'text-emerald-900',
+      labelClass: 'text-emerald-800',
+    },
+  ];
+
   return (
     <Card
-      title={t('progress:sm2_lexicon_title', 'Lexicon Distribution by SuperMemo SM-2 Stage')}
+      title={t('progress:sm2_lexicon_title', 'SuperMemo SM-2 Lexical Retention Stages')}
       subtitle={t(
         'progress:sm2_lexicon_subtitle',
-        'Pedagogical differentiation between exposed, working, and consolidated long-term memory'
+        'Memory stages from first encounter to long-term retention'
       )}
     >
       {/* 4 SM-2 Distribution Stages */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-center">
-        {/* Stage 1: Presented */}
-        <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-left relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              {t('progress:stage_1_presented', '1. Presented')}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stages.map(stage => (
+          <div
+            key={stage.key}
+            className={`p-3.5 sm:p-4 rounded-xl border text-left ${stage.cardClass}`}
+          >
+            <div className="flex items-center justify-between gap-1.5 mb-1">
+              <span className={`text-[11px] font-bold uppercase tracking-wider truncate ${stage.labelClass}`}>
+                {stage.label}
+              </span>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${stage.dotClass}`} aria-hidden="true" />
+            </div>
+            <span className={`font-serif text-2xl sm:text-3xl font-bold block mt-0.5 ${stage.valueClass}`}>
+              {stage.count}
             </span>
-            <span className="w-2 h-2 rounded-full bg-slate-500" />
-          </div>
-          <span className="text-2xl font-black text-slate-200 block mt-1">{presentedCount}</span>
-          <span className="text-[11px] text-slate-500 block mt-1">
-            {t('progress:stage_1_desc', 'Exposed in lesson (0 recalls)')}
-          </span>
-        </div>
-
-        {/* Stage 2: Learning */}
-        <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-900/40 text-left relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider">
-              {t('progress:stage_2_learning', '2. Learning')}
+            <span className="text-[11px] text-stone-600 block mt-1 leading-snug">
+              {stage.desc}
             </span>
-            <span className="w-2 h-2 rounded-full bg-indigo-400" />
           </div>
-          <span className="text-2xl font-black text-indigo-400 block mt-1">{learningCount}</span>
-          <span className="text-[11px] text-indigo-300/70 block mt-1">
-            {t('progress:stage_2_desc', '1–2 successful recalls')}
-          </span>
-        </div>
-
-        {/* Stage 3: Reviewing */}
-        <div className="p-4 rounded-2xl bg-sky-950/20 border border-sky-900/40 text-left relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold text-sky-300 uppercase tracking-wider">
-              {t('progress:stage_3_reviewing', '3. Reviewing')}
-            </span>
-            <span className="w-2 h-2 rounded-full bg-sky-400" />
-          </div>
-          <span className="text-2xl font-black text-sky-400 block mt-1">{reviewingCount}</span>
-          <span className="text-[11px] text-sky-300/70 block mt-1">
-            {t('progress:stage_3_desc', '3–4 spaced repetitions')}
-          </span>
-        </div>
-
-        {/* Stage 4: Mastered */}
-        <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-900/40 text-left relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
-              {t('progress:stage_4_mastered', '4. Mastered')}
-            </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          </div>
-          <span className="text-2xl font-black text-emerald-400 block mt-1">{masteredCount}</span>
-          <span className="text-[11px] text-emerald-300/70 block mt-1">
-            {t('progress:stage_4_desc', '≥5 recalls & ≥21 days')}
-          </span>
-        </div>
+        ))}
       </div>
 
-      {/* Due Reviews & Practice Banner */}
-      <div className="mt-4 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      {/* Due Reviews & Practice Action Banner */}
+      <div className="mt-4 p-4 rounded-xl bg-[#FAF9F6] border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
           <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
               dueCount > 0
-                ? 'bg-amber-950/50 border border-amber-700/60 text-amber-400'
-                : 'bg-emerald-950/50 border border-emerald-700/60 text-emerald-400'
+                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
             }`}
           >
-            {dueCount > 0 ? <Clock className="w-5 h-5 animate-pulse" /> : <CheckCircle2 className="w-5 h-5" />}
+            {dueCount > 0 ? <Clock className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-200">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-stone-900">
                 {dueCount > 0
-                  ? `${dueCount} ${t('progress:words_due_today', 'vocabulary terms due for review today')}`
-                  : t('progress:all_caught_up', 'All reviews caught up for today!')}
+                  ? `${dueCount} ${t('progress:words_due_today', 'words due today')}`
+                  : t('progress:all_caught_up', 'All caught up! No items due.')}
               </span>
               <Badge variant={dueCount > 0 ? 'amber' : 'emerald'} size="sm">
-                {t('progress:consolidation_rate', 'Consolidation')}: {consolidationPct}%
+                {t('progress:consolidation_rate', 'Consolidation Rate')}: {consolidationPct}%
               </Badge>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-stone-500 mt-0.5">
               {t(
                 'progress:retention_explanation',
-                'SuperMemo SM-2 recalculates optimal review intervals to prevent forgetting curve lapses.'
+                'Spaced repetition brings back words right before you would forget them.'
               )}
             </p>
           </div>
@@ -132,11 +139,11 @@ export const VocabularyRetentionCard: React.FC<VocabularyRetentionCardProps> = (
             size="sm"
             icon={<ArrowRight className="w-4 h-4" />}
             onClick={onNavigatePractice}
-            className="shrink-0 text-xs font-semibold cursor-pointer"
+            className="shrink-0 text-xs font-semibold cursor-pointer min-h-[40px] w-full sm:w-auto justify-center"
           >
             {dueCount > 0
-              ? t('progress:review_due_words_btn', 'Review Due Flashcards')
-              : t('progress:practice_vocab_btn', 'Open Practice Studio')}
+              ? t('progress:review_due_words_btn', 'Review {{count}} Due Words', { count: dueCount })
+              : t('progress:practice_vocab_btn', 'Practice Vocabulary')}
           </Button>
         )}
       </div>

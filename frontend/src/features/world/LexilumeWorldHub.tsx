@@ -1,13 +1,5 @@
 /**
  * Lexilume World — Learn Languages Through the Real World
- * 
- * Unified portal bringing together:
- * 1. World Clock & Contextual Greetings
- * 2. Country Explorer (REST Countries)
- * 3. Weather Studio & Real-World Vocabulary (Open-Meteo)
- * 4. Cultural Calendar & Holidays (Nager.Date)
- * 5. Currency Practice & Financial Vocabulary (Frankfurter)
- * 6. Interactive Explore the World Map (Leaflet / OpenStreetMap)
  */
 
 import React, { useState } from 'react';
@@ -26,7 +18,7 @@ import { WeatherStudio } from './WeatherStudio';
 import { CulturalCalendar } from './CulturalCalendar';
 import { CurrencyPractice } from './CurrencyPractice';
 import { WorldMapExplorer } from './WorldMapExplorer';
-import { Badge } from '../../components/common/Badge';
+import { useI18n } from '../../i18n/i18nContext';
 
 export type WorldHubTab = 'clock' | 'countries' | 'weather' | 'calendar' | 'currency' | 'map';
 
@@ -39,34 +31,37 @@ export const LexilumeWorldHub: React.FC<LexilumeWorldHubProps> = ({
   initialTab = 'clock',
   learningLanguage = 'pt',
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<WorldHubTab>(initialTab);
 
-  const tabs: { id: WorldHubTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'clock', label: 'World Clock & Saudações', icon: <Clock className="w-4 h-4 text-sky-400" /> },
-    { id: 'countries', label: 'Explorador de Países', icon: <Globe2 className="w-4 h-4 text-emerald-400" /> },
-    { id: 'weather', label: 'Clima & Vocabulário', icon: <CloudSun className="w-4 h-4 text-amber-400" /> },
-    { id: 'calendar', label: 'Calendário Cultural', icon: <Calendar className="w-4 h-4 text-indigo-400" /> },
-    { id: 'currency', label: 'Câmbio & Finanças', icon: <Coins className="w-4 h-4 text-teal-400" /> },
-    { id: 'map', label: 'Mapa do Mundo', icon: <Compass className="w-4 h-4 text-rose-400" /> },
+  const tabs: { id: WorldHubTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'clock', label: t('world:tab_clock', 'World Clock & Greetings'), icon: Clock },
+    { id: 'countries', label: t('world:tab_countries', 'Country Explorer'), icon: Globe2 },
+    { id: 'weather', label: t('world:tab_weather', 'Weather & Vocabulary'), icon: CloudSun },
+    { id: 'calendar', label: t('world:tab_calendar', 'Cultural Calendar'), icon: Calendar },
+    { id: 'currency', label: t('world:tab_currency', 'Currency & Finance'), icon: Coins },
+    { id: 'map', label: t('world:tab_map', 'World Map'), icon: Compass },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* World Hub Top Navigator */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 no-scrollbar">
+    <div className="space-y-5">
+      {/* Calm Segmented World Navigator */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-white border border-stone-200 p-1.5 rounded-2xl shadow-xs">
         {tabs.map(tab => {
           const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition min-h-[38px] ${
                 isActive
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  ? 'bg-stone-900 text-white shadow-xs'
+                  : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
               }`}
             >
-              {tab.icon}
+              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber-300' : 'text-stone-400'}`} />
               <span>{tab.label}</span>
             </button>
           );

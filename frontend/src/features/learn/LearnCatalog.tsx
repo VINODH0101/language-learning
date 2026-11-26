@@ -16,6 +16,7 @@ import {
 } from '../../types/contentCentred';
 import { Badge } from '../../components/common/Badge';
 import { contentCentredService } from '../../services/contentCentredService';
+import { contentAccess, listItemToContentItem, recordToReaderVersion } from '../../services/contentAccess';
 import { authService } from '../../services/auth';
 import { useI18n } from '../../i18n/i18nContext';
 import { getLanguageName } from '../../lib/languages/languageMatrix';
@@ -40,8 +41,13 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
     const loadCatalog = async () => {
       setLoading(true);
       try {
-        const publishedItems = await contentCentredService.getContentItems({ status: 'published' });
-        setItems(publishedItems);
+        if (contentAccess.hasHttpBackend()) {
+          const page = await contentAccess.listContent({ pageSize: 50 });
+          setItems(page.data.map(listItemToContentItem));
+        } else {
+          const publishedItems = await contentCentredService.getContentItems({ status: 'published' });
+          setItems(publishedItems);
+        }
 
         const auth = authService.getState();
         const userId = auth.user?.id || 'guest_user';
@@ -62,6 +68,15 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
 
   const handleCardClick = async (item: ContentItem) => {
     try {
+      if (contentAccess.hasHttpBackend()) {
+        const record = (await contentAccess.getContent(item.id, item.current_version_id)) as any;
+        if (record) {
+          const activities = (await contentAccess.getActivities(item.id)) as LearningActivity[];
+          const version = recordToReaderVersion(item, record);
+          onSelectContent(item, version, activities);
+          return;
+        }
+      }
       const full = await contentCentredService.getContentItemById(item.id);
       if (full && full.version) {
         const activities = await contentCentredService.getActivitiesForVersion(full.version.id);
@@ -88,14 +103,17 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
       {/* Editorial Masthead Header */}
       <header className="border-b border-stone-200 pb-8 space-y-3">
         <div className="flex items-center justify-between text-xs text-stone-500 uppercase tracking-widest font-medium">
-          <span>Lexilume Gazette & Library</span>
-          <span>Authentic Language Acquisition</span>
+          <span>{t('learning:catalog_kicker_left', 'Lexilume Gazette & Library')}</span>
+          <span>{t('learning:catalog_kicker_right', 'Authentic Language Acquisition')}</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-serif font-bold text-stone-900 tracking-tight leading-tight">
-          The Reading Room
+          {t('learning:catalog_heading', 'The Reading Room')}
         </h1>
         <p className="text-sm sm:text-base text-stone-600 max-w-2xl leading-relaxed">
-          Acquire vocabulary, idioms, and natural grammar directly through authentic texts, stories, dialogues, and cultural narratives. Select any story below to begin reading.
+          {t(
+            'learning:catalog_subtitle',
+            'Acquire vocabulary, idioms, and natural grammar directly through authentic texts, stories, dialogues, and cultural narratives. Select any story below to begin reading.'
+          )}
         </p>
       </header>
 
@@ -108,7 +126,7 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search stories, essays & dialogues..."
+            placeholder={t('learning:catalog_search_placeholder', 'Search stories, essays & dialogues...')}
             className="w-full bg-white border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-500 transition-colors"
           />
         </div>
@@ -121,7 +139,7 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
             onChange={e => setSelectedLanguage(e.target.value)}
             className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-stone-500 cursor-pointer"
           >
-            <option value="all">{t('learning:all_languages', 'All Languages')}</option>
+            <option value="all">{t('learning:catalog_all_languages', 'All Languages')}</option>
             <option value="en">{getLanguageName('en', interfaceLanguage as any)}</option>
             <option value="pt">{getLanguageName('pt', interfaceLanguage as any)}</option>
             <option value="es">{getLanguageName('es', interfaceLanguage as any)}</option>
@@ -133,13 +151,13 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
             onChange={e => setSelectedGenre(e.target.value)}
             className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-stone-500 cursor-pointer"
           >
-            <option value="all">All Genres</option>
-            <option value="culture_and_travel">Culture & Travel</option>
-            <option value="conversation">Conversation</option>
-            <option value="dialogue">Dialogue</option>
-            <option value="short_story">Short Story</option>
-            <option value="workplace_email">Workplace Email</option>
-            <option value="news_article">News Article</option>
+            <option value="all">{t('learning:catalog_all_genres', 'All Genres')}</option>
+            <option value="culture_and_travel">{t('learning:genre_culture_and_travel', 'Culture & Travel')}</option>
+            <option value="conversation">{t('learning:genre_conversation', 'Conversation')}</option>
+            <option value="dialogue">{t('learning:genre_dialogue', 'Dialogue')}</option>
+            <option value="short_story">{t('learning:genre_short_story', 'Short Story')}</option>
+            <option value="workplace_email">{t('learning:genre_workplace_email', 'Workplace Email')}</option>
+            <option value="news_article">{t('learning:genre_news_article', 'News Article')}</option>
           </select>
 
           {/* CEFR */}
@@ -148,12 +166,12 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
             onChange={e => setSelectedCefr(e.target.value)}
             className="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-stone-500 cursor-pointer"
           >
-            <option value="all">All CEFR Levels</option>
-            <option value="A1">A1 Beginner</option>
-            <option value="A2">A2 Elementary</option>
-            <option value="B1">B1 Intermediate</option>
-            <option value="B2">B2 Upper-Int.</option>
-            <option value="C1">C1 Advanced</option>
+            <option value="all">{t('learning:catalog_all_cefr', 'All CEFR Levels')}</option>
+            <option value="A1">{t('learning:cefr_level_a1', 'A1 Beginner')}</option>
+            <option value="A2">{t('learning:cefr_level_a2', 'A2 Elementary')}</option>
+            <option value="B1">{t('learning:cefr_level_b1', 'B1 Intermediate')}</option>
+            <option value="B2">{t('learning:cefr_level_b2', 'B2 Upper-Int.')}</option>
+            <option value="C1">{t('learning:cefr_level_c1', 'C1 Advanced')}</option>
           </select>
         </div>
       </div>
@@ -161,9 +179,14 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
       {filteredItems.length === 0 ? (
         <div className="py-20 text-center space-y-3 bg-white border border-stone-200/80 rounded-xl">
           <BookOpen className="w-9 h-9 text-stone-400 mx-auto" />
-          <h3 className="text-base font-serif font-bold text-stone-800">No Content Matches Filters</h3>
+          <h3 className="text-base font-serif font-bold text-stone-800">
+            {t('learning:catalog_empty_title', 'No Content Matches Filters')}
+          </h3>
           <p className="text-xs text-stone-500 max-w-sm mx-auto">
-            Try adjusting your search keywords or language filters to discover authentic learning texts.
+            {t(
+              'learning:catalog_empty_desc',
+              'Try adjusting your search keywords or language filters to discover authentic learning texts.'
+            )}
           </p>
         </div>
       ) : (
@@ -177,13 +200,15 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
               <div className="max-w-3xl space-y-4">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] uppercase tracking-wider font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                    Featured Reading
+                    {t('learning:catalog_featured', 'Featured Reading')}
                   </span>
                   <Badge variant="indigo">{featuredItem.target_language.toUpperCase()}</Badge>
                   <Badge variant="slate">{featuredItem.primary_cefr}</Badge>
                   <span className="text-xs text-stone-500 flex items-center gap-1 ml-auto">
                     <Clock className="w-3.5 h-3.5 text-stone-400" />
-                    ~{featuredItem.estimated_read_minutes} min read
+                    {t('learning:catalog_min_read', '~{{count}} min read', {
+                      count: featuredItem.estimated_read_minutes,
+                    })}
                   </span>
                 </div>
 
@@ -192,11 +217,15 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
                 </h2>
 
                 <p className="text-sm text-stone-600 leading-relaxed line-clamp-3">
-                  {featuredItem.summary || 'Authentic educational narrative crafted for reading practice.'}
+                  {featuredItem.summary ||
+                    t(
+                      'learning:catalog_summary_fallback',
+                      'Authentic educational narrative crafted for reading practice.'
+                    )}
                 </p>
 
                 <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-stone-900 group-hover:translate-x-1 transition-transform">
-                  <span>Start Reading Story</span>
+                  <span>{t('learning:catalog_start_reading', 'Start Reading Story')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </div>
               </div>
@@ -211,7 +240,9 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
             return (
               <div className="space-y-4">
                 <h3 className="text-xs uppercase tracking-widest font-bold text-stone-500 border-b border-stone-200 pb-2">
-                  Catalog Stories & Articles ({gridItems.length})
+                  {t('learning:catalog_grid_heading', 'Catalog Stories & Articles ({{count}})', {
+                    count: gridItems.length,
+                  })}
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -235,7 +266,9 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
                             </div>
                             <span className="text-[11px] text-stone-500 flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5 text-stone-400" />
-                              ~{item.estimated_read_minutes} min
+                              {t('learning:catalog_min_short', '~{{count}} min', {
+                                count: item.estimated_read_minutes,
+                              })}
                             </span>
                           </div>
 
@@ -245,7 +278,11 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
                               {item.title}
                             </h4>
                             <p className="text-xs text-stone-600 mt-2 line-clamp-3 leading-relaxed">
-                              {item.summary || 'Authentic educational narrative crafted for reading practice.'}
+                              {item.summary ||
+                                t(
+                                  'learning:catalog_summary_fallback',
+                                  'Authentic educational narrative crafted for reading practice.'
+                                )}
                             </p>
                           </div>
                         </div>
@@ -255,7 +292,7 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
                           {isStarted && (
                             <div className="mb-2 space-y-1">
                               <div className="flex items-center justify-between text-[11px]">
-                                <span className="text-stone-500">Progress</span>
+                                <span className="text-stone-500">{t('learning:catalog_progress', 'Progress')}</span>
                                 <span className="font-medium text-stone-700">{progress.percent_complete}%</span>
                               </div>
                               <div className="w-full h-1 bg-stone-100 rounded-full overflow-hidden">
@@ -268,7 +305,13 @@ export const LearnCatalog: React.FC<LearnCatalogProps> = ({ onSelectContent }) =
                           )}
 
                           <div className="flex items-center justify-between text-xs font-medium text-stone-900 group-hover:text-stone-700">
-                            <span>{isDone ? 'Review Text' : isStarted ? 'Continue Reading' : 'Read Text'}</span>
+                            <span>
+                              {isDone
+                                ? t('learning:catalog_review_text', 'Review Text')
+                                : isStarted
+                                ? t('learning:catalog_continue_reading', 'Continue Reading')
+                                : t('learning:catalog_read_text', 'Read Text')}
+                            </span>
                             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </div>
                         </div>

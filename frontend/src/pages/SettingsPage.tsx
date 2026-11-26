@@ -69,9 +69,13 @@ export const SettingsPage: React.FC = () => {
       const newActive = courseService.setActiveCourse(courseId);
       setActiveCourse(newActive);
       setExplanationLang(newActive.explanation_language);
-      toast.success(`Curso ativo: ${getLanguageName(newActive.target_language, interfaceLanguage)}`);
+      toast.success(
+        t('settings:course_switched', 'Active course: {{language}}', {
+          language: getLanguageName(newActive.target_language, interfaceLanguage),
+        })
+      );
     } catch {
-      toast.error('Erro ao trocar curso.');
+      toast.error(t('settings:course_switch_error', 'Failed to switch course.'));
     }
   };
 
@@ -188,7 +192,9 @@ export const SettingsPage: React.FC = () => {
                   <label className="block font-mono text-xs font-bold text-stone-700 uppercase tracking-wider">
                     1. {t('settings_interface_lang')}
                   </label>
-                  <span className="font-mono text-[10px] text-stone-500">UI & Menus</span>
+                  <span className="font-mono text-[10px] text-stone-500">
+                    {t('settings:ui_menus_badge', 'UI & Menus')}
+                  </span>
                 </div>
                 <select
                   value={interfaceLanguage}
@@ -202,7 +208,10 @@ export const SettingsPage: React.FC = () => {
                   ))}
                 </select>
                 <p className="text-[11px] text-stone-500 leading-relaxed">
-                  Controls buttons, tab bars, notifications, and headers. Completely independent of what you study.
+                  {t(
+                    'settings:ui_controls_hint',
+                    'Controls buttons, tab bars, notifications, and headers. Completely independent of what you study.'
+                  )}
                 </p>
               </div>
 
@@ -212,7 +221,9 @@ export const SettingsPage: React.FC = () => {
                   <label className="block font-mono text-xs font-bold text-stone-700 uppercase tracking-wider">
                     2. {t('settings_learning_lang')}
                   </label>
-                  <span className="font-mono text-[10px] text-stone-500">Target Study</span>
+                  <span className="font-mono text-[10px] text-stone-500">
+                    {t('settings:target_study_badge', 'Target Study')}
+                  </span>
                 </div>
                 <select
                   value={activeCourse?.id || ''}
@@ -226,7 +237,10 @@ export const SettingsPage: React.FC = () => {
                   ))}
                 </select>
                 <p className="text-[11px] text-stone-500 leading-relaxed">
-                  The language you are acquiring: authentic reading texts, dialogues, and target exercise forms.
+                  {t(
+                    'settings:target_study_hint',
+                    'The language you are acquiring: authentic reading texts, dialogues, and target exercise forms.'
+                  )}
                 </p>
               </div>
 
@@ -236,19 +250,30 @@ export const SettingsPage: React.FC = () => {
                   <label className="block font-mono text-xs font-bold text-stone-700 uppercase tracking-wider">
                     3. {t('settings_explanation_lang')}
                   </label>
-                  <span className="font-mono text-[10px] text-stone-500">Grammar & Glosses</span>
+                  <span className="font-mono text-[10px] text-stone-500">
+                    {t('settings:grammar_glosses_badge', 'Grammar & Glosses')}
+                  </span>
                 </div>
                 <select
                   value={explanationLang}
                   onChange={(e) => setExplanationLang(e.target.value as any)}
                   className="w-full bg-white border border-stone-300 rounded-lg p-2.5 text-xs text-stone-900 focus:outline-none focus:border-stone-500 cursor-pointer font-medium"
                 >
-                  <option value="en">English (Grammar explanations & glosses in English)</option>
-                  <option value="pt">Português (Explicações teóricas e notas em Português)</option>
-                  <option value="es">Español (Explicaciones teóricas y notas en Español)</option>
+                  <option value="en">
+                    {t('settings:exp_option_en', 'English (Grammar explanations & glosses in English)')}
+                  </option>
+                  <option value="pt">
+                    {t('settings:exp_option_pt', 'Português (Grammar explanations & notes in Portuguese)')}
+                  </option>
+                  <option value="es">
+                    {t('settings:exp_option_es', 'Español (Grammar explanations & notes in Spanish)')}
+                  </option>
                 </select>
                 <p className="text-[11px] text-stone-500 leading-relaxed">
-                  Language used to instruct: syntactic formulas, false friend warnings, and error explanations.
+                  {t(
+                    'settings:grammar_glosses_hint',
+                    'Language used to instruct: syntactic formulas, false friend warnings, and error explanations.'
+                  )}
                 </p>
               </div>
 
@@ -258,7 +283,9 @@ export const SettingsPage: React.FC = () => {
                   <label className="block font-mono text-xs font-bold text-stone-700 uppercase tracking-wider">
                     4. {t('settings_regional_variety')} ({getLanguageName(activeTargetLang, interfaceLanguage)})
                   </label>
-                  <span className="font-mono text-[10px] text-stone-500">Phonetics & TTS</span>
+                  <span className="font-mono text-[10px] text-stone-500">
+                    {t('settings:phonetics_tts_badge', 'Phonetics & TTS')}
+                  </span>
                 </div>
                 <select
                   value={
@@ -283,7 +310,10 @@ export const SettingsPage: React.FC = () => {
                   ))}
                 </select>
                 <p className="text-[11px] text-stone-500 leading-relaxed">
-                  Controls pronunciation audio synthesis locale and regional grammatical nuances.
+                  {t(
+                    'settings:phonetics_tts_hint',
+                    'Controls pronunciation audio synthesis locale and regional grammatical nuances.'
+                  )}
                 </p>
               </div>
             </div>
@@ -292,7 +322,9 @@ export const SettingsPage: React.FC = () => {
             <div className="pt-4 border-t border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-bold text-stone-900 block">{t('settings_theme_label')}</span>
-                <span className="text-[11px] text-stone-500">{t('settings_theme_desc') || 'Adjust interface appearance and color mode'}</span>
+                <span className="text-[11px] text-stone-500">
+                  {t('settings:theme_desc', 'Adjust interface appearance and color mode')}
+                </span>
               </div>
               <div className="w-full sm:w-60">
                 <select
@@ -311,51 +343,59 @@ export const SettingsPage: React.FC = () => {
 
         {/* Global Regional Dialect Standards across all language tracks */}
         <Card
-          title={t('settings_dialect_standards_title') || 'Global Regional Dialect Standards'}
-          subtitle={t('settings_dialect_standards_subtitle') || 'Default variants saved in profile for each language studied'}
+          title={t('settings:dialect_standards_title', 'Global Regional Dialect Standards')}
+          subtitle={t('settings:dialect_standards_subtitle', 'Default variants saved in profile for each language studied')}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                {t('settings_pt_variety')}
+                {t('settings:pt_variety_label', 'Portuguese Dialect')}
               </label>
               <select
                 value={settings.pt_variety}
                 onChange={(e) => setSettings({ ...settings, pt_variety: e.target.value as any })}
                 className="w-full bg-white border border-stone-300 rounded-lg p-2.5 text-xs text-stone-900 focus:outline-none focus:border-stone-500"
               >
-                <option value="pt-BR">🇧🇷 Português Brasileiro (pt-BR)</option>
-                <option value="pt-PT">🇵🇹 Português Europeu (pt-PT)</option>
+                <option value="pt-BR">
+                  {REGIONAL_VARIETY_METADATA['pt-BR']?.flag} {getRegionalVarietyLabel('pt-BR', interfaceLanguage)}
+                </option>
+                <option value="pt-PT">
+                  {REGIONAL_VARIETY_METADATA['pt-PT']?.flag} {getRegionalVarietyLabel('pt-PT', interfaceLanguage)}
+                </option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                {t('settings_es_variety')}
+                {t('settings:es_variety_label', 'Spanish Dialect')}
               </label>
               <select
                 value={settings.es_variety}
                 onChange={(e) => setSettings({ ...settings, es_variety: e.target.value as any })}
                 className="w-full bg-white border border-stone-300 rounded-lg p-2.5 text-xs text-stone-900 focus:outline-none focus:border-stone-500"
               >
-                <option value="es-ES">🇪🇸 Peninsular (es-ES)</option>
-                <option value="es-419">🌎 Hispanoamericano (es-419)</option>
-                <option value="es-MX">🇲🇽 Mexicano (es-MX)</option>
-                <option value="es-AR">🇦🇷 Rioplatense (es-AR)</option>
+                {(['es-ES', 'es-419', 'es-MX', 'es-AR'] as const).map(v => (
+                  <option key={v} value={v}>
+                    {REGIONAL_VARIETY_METADATA[v]?.flag || '🌐'} {getRegionalVarietyLabel(v, interfaceLanguage)}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                {t('settings_en_variety')}
+                {t('settings:en_variety_label', 'English Dialect')}
               </label>
               <select
                 value={settings.en_variety || 'en-US'}
                 onChange={(e) => setSettings({ ...settings, en_variety: e.target.value as any })}
                 className="w-full bg-white border border-stone-300 rounded-lg p-2.5 text-xs text-stone-900 focus:outline-none focus:border-stone-500"
               >
-                <option value="en-US">🇺🇸 American English (en-US)</option>
-                <option value="en-GB">🇬🇧 British English (en-GB)</option>
+                {(['en-US', 'en-GB'] as const).map(v => (
+                  <option key={v} value={v}>
+                    {REGIONAL_VARIETY_METADATA[v]?.flag} {getRegionalVarietyLabel(v, interfaceLanguage)}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -399,8 +439,8 @@ export const SettingsPage: React.FC = () => {
 
         {/* Delivery & Schedule Preferences */}
         <Card
-          title={t('settings_delivery_title') || 'Preferências de Notificação e Email Diário'}
-          subtitle={t('settings_delivery_subtitle') || 'Configuração de fuso horário e entrega matinal via automação GitHub Actions'}
+          title={t('settings:delivery_title', 'Notification & Daily Email Preferences')}
+          subtitle={t('settings:delivery_subtitle', 'Timezone configuration and morning study digest automation')}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

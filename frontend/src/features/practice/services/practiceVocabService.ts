@@ -7,7 +7,7 @@
  */
 
 import { Language, VocabularyItem } from '../../../types';
-import { ptVocabulary, esVocabulary, enVocabulary } from '../../../data/seedData';
+import { VocabularyService } from '../../../services/vocabularyService';
 import { dailyContentService } from '../../../services/dailyContentService';
 import { getPhrasebookWords, SavedVocabularyRecord } from '../../../services/localDb';
 import { StorageService } from '../../../services/storage';
@@ -89,16 +89,33 @@ export class PracticeVocabService {
     const pool: VocabularyItem[] = [];
     const seenLemmas = new Set<string>();
 
-    // 1. Curated base seed vocabulary
-    let baseSeed: VocabularyItem[] = [];
-    if (language === 'pt') baseSeed = ptVocabulary;
-    else if (language === 'es') baseSeed = esVocabulary;
-    else if (language === 'en') baseSeed = enVocabulary;
+    // 1. Live AI Content Engine & Open API vocabulary
+    await VocabularyService.loadLiveCatalog(language, language === 'en' ? 'pt' : 'en').catch(() => {});
+    const liveEntries = VocabularyService.getVocabulary({ target_language: language });
 
-    for (const v of baseSeed) {
+    for (const v of liveEntries) {
       if (!seenLemmas.has(v.lemma.toLowerCase())) {
         seenLemmas.add(v.lemma.toLowerCase());
-        pool.push(v);
+        pool.push({
+          id: v.id,
+          language: v.target_language,
+          lemma: v.lemma,
+          part_of_speech: v.part_of_speech,
+          cefr_level: v.cefr_level,
+          definition_target:
+            v.definitions[language] || v.definitions.en || v.translations.en || v.lemma,
+          definition_en: v.definitions.en || v.translations.en || '',
+          definition_pt: v.definitions.pt || v.translations.pt,
+          definition_es: v.definitions.es || v.translations.es,
+          phonetic_ipa: v.phonetic_ipa,
+          regional_tags: ['all'],
+          example_sentence_target: v.example_sentence_target,
+          example_sentence_en: v.example_sentence_translations.en || '',
+          example_sentence_pt: v.example_sentence_translations.pt,
+          example_sentence_es: v.example_sentence_translations.es,
+          collocations: v.collocations || [],
+          attribution: v.attribution,
+        });
       }
     }
 

@@ -208,7 +208,18 @@ export function useI18n(): I18nContextValue {
       setInterfaceLanguage: async () => {},
       theme: 'dark',
       setTheme: () => {},
-      t: (key: string, fallback?: string) => fallback || key,
+      t: (key: string, fallback?: string, options?: Record<string, unknown>) => {
+        if (i18n.isInitialized) {
+          return String(i18n.t(key, { ...(options || {}), defaultValue: fallback || key }));
+        }
+        if (fallback && options) {
+          return Object.entries(options).reduce(
+            (acc, [k, v]) => acc.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v)),
+            fallback
+          );
+        }
+        return fallback || key;
+      },
     };
   }
   return ctx;

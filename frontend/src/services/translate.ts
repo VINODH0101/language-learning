@@ -1,16 +1,21 @@
 /**
- * Polyglot C1 Daily — Translation & English Learning Service.
- * 
- * Provides search, cross-linguistic lookup, and interactive English practice
- * for Portuguese and Spanish native speakers.
+ * Lexilume — Translation & Cross-Linguistic Search Service.
+ *
+ * Searches AI Content Engine generated vocabulary, saved IndexedDB phrasebook,
+ * and live open external APIs (MyMemory, Wiktionary/FreeDictionary/Dicionário Aberto, Tatoeba).
+ * Zero static seed fixtures.
  */
 
-import { trilingualDictionary, englishChallenges, TrilingualEntry, EnglishLearningChallenge } from '../data/translationData';
-import { ptVocabulary, esVocabulary, falseFriends } from '../data/seedData';
+import type { EnglishLearningChallenge } from '../data/translationData';
 import { StorageService } from './storage';
 import { MyMemoryAdapter } from '../integrations/external-apis/adapters/mymemory/MyMemoryAdapter';
+import { ExamplesManager } from './providers/examples/examplesManager';
+import { contentAccess } from './contentAccess';
+import { VocabularyService } from './vocabularyService';
+import { localDb } from './localDb';
 
 const myMemoryAdapter = new MyMemoryAdapter();
+const examplesManager = ExamplesManager.getInstance();
 
 export type TranslationDirection = 'pt-en' | 'es-en' | 'en-pt' | 'en-es' | 'pt-es' | 'es-pt' | 'all';
 
@@ -37,216 +42,201 @@ export interface TranslateOnlineResult {
   translatedText: string;
   sourceLang: 'pt' | 'es' | 'en';
   targetLang: 'pt' | 'es' | 'en';
-  providerName: 'dictionary' | 'mymemory' | 'fallback';
+  providerName: 'dictionary' | 'mymemory' | 'content_engine' | 'fallback';
   isVerified: boolean;
   isApproximate: boolean;
   notes?: string;
   fromCache?: boolean;
 }
 
-// In-memory bounded cache for translation queries
+// In-memory bounded cache for live translations & indexed live results
 const translationMemoryCache = new Map<string, TranslateOnlineResult>();
+const dynamicSearchIndex = new Map<string, SearchResultItem>();
+
+function parseDirection(direction: TranslationDirection): {
+  src: 'pt' | 'es' | 'en';
+  tgt: 'pt' | 'es' | 'en';
+} {
+  if (direction === 'all') return { src: 'pt', tgt: 'en' };
+  const [src, tgt] = direction.split('-') as ['pt' | 'es' | 'en', 'pt' | 'es' | 'en'];
+  return { src, tgt };
+}
 
 export class TranslationService {
   /**
-   * Search through trilingual corpus, seed vocabulary, and false friends.
+   * Synchronously searches cached live/generated results already indexed in memory.
    */
   static search(query: string, direction: TranslationDirection = 'all'): SearchResultItem[] {
     const q = query.trim().toLowerCase();
     if (!q) return [];
 
     const results: SearchResultItem[] = [];
-    const seenIds = new Set<string>();
-
-    // 1. Search trilingual dictionary
-    for (const item of trilingualDictionary) {
-      const matchEn = item.english.toLowerCase().includes(q);
-      const matchPt = item.portuguese.toLowerCase().includes(q);
-      const matchEs = item.spanish.toLowerCase().includes(q);
-
-      if (direction === 'pt-en' && matchPt) {
-        results.push({
-          id: `tri-${item.id}-pt-en`,
-          sourceText: item.portuguese,
-          sourceLang: 'pt',
-          targetText: item.english,
-          targetLang: 'en',
-          partOfSpeech: item.part_of_speech,
-          phoneticTarget: item.phonetic_en,
-          exampleSource: item.example_pt,
-          exampleTarget: item.example_en,
-          category: item.category,
-          notes: item.notes_for_pt_speakers,
-        });
-        seenIds.add(item.id);
-      } else if (direction === 'es-en' && matchEs) {
-        results.push({
-          id: `tri-${item.id}-es-en`,
-          sourceText: item.spanish,
-          sourceLang: 'es',
-          targetText: item.english,
-          targetLang: 'en',
-          partOfSpeech: item.part_of_speech,
-          phoneticTarget: item.phonetic_en,
-          exampleSource: item.example_es,
-          exampleTarget: item.example_en,
-          category: item.category,
-          notes: item.notes_for_es_speakers,
-        });
-        seenIds.add(item.id);
-      } else if (direction === 'en-pt' && matchEn) {
-        results.push({
-          id: `tri-${item.id}-en-pt`,
-          sourceText: item.english,
-          sourceLang: 'en',
-          targetText: item.portuguese,
-          targetLang: 'pt',
-          partOfSpeech: item.part_of_speech,
-          phoneticTarget: item.phonetic_pt,
-          exampleSource: item.example_en,
-          exampleTarget: item.example_pt,
-          category: item.category,
-          notes: item.notes_for_pt_speakers,
-        });
-        seenIds.add(item.id);
-      } else if (direction === 'en-es' && matchEn) {
-        results.push({
-          id: `tri-${item.id}-en-es`,
-          sourceText: item.english,
-          sourceLang: 'en',
-          targetText: item.spanish,
-          targetLang: 'es',
-          partOfSpeech: item.part_of_speech,
-          phoneticTarget: item.phonetic_es,
-          exampleSource: item.example_en,
-          exampleTarget: item.example_es,
-          category: item.category,
-          notes: item.notes_for_es_speakers,
-        });
-        seenIds.add(item.id);
-      } else if (direction === 'pt-es' && matchPt) {
-        results.push({
-          id: `tri-${item.id}-pt-es`,
-          sourceText: item.portuguese,
-          sourceLang: 'pt',
-          targetText: item.spanish,
-          targetLang: 'es',
-          partOfSpeech: item.part_of_speech,
-          phoneticTarget: item.phonetic_es,
-          exampleSource: item.example_pt,
-          exampleTarget: item.example_es,
-          category: item.category,
-          notes: item.notes_for_pt_speakers,
-        });
-        seenIds.add(item.id);
-      } else if (direction === 'es-pt' && matchEs) {
-        results.push({
-          id: `tri-${item.id}-es-pt`,
-          sourceText: item.spanish,
-          sourceLang: 'es',
-          targetText: item.portuguese,
-          targetLang: 'pt',
-          partOfSpeech: item.part_of_speech,
-          phoneticTarget: item.phonetic_pt,
-          exampleSource: item.example_es,
-          exampleTarget: item.example_pt,
-          category: item.category,
-          notes: item.notes_for_es_speakers,
-        });
-        seenIds.add(item.id);
-      } else if (direction === 'all' && (matchEn || matchPt || matchEs)) {
-        // Return rich trilingual card
-        results.push({
-          id: `tri-${item.id}-all`,
-          sourceText: matchPt ? item.portuguese : (matchEs ? item.spanish : item.english),
-          sourceLang: matchPt ? 'pt' : (matchEs ? 'es' : 'en'),
-          targetText: matchEn ? `${item.portuguese} (PT) / ${item.spanish} (ES)` : item.english,
-          targetLang: matchEn ? 'pt' : 'en',
-          partOfSpeech: item.part_of_speech,
-          phoneticTarget: item.phonetic_en,
-          exampleSource: matchPt ? item.example_pt : (matchEs ? item.example_es : item.example_en),
-          exampleTarget: item.example_en,
-          category: item.category,
-          notes: item.notes_for_pt_speakers || item.notes_for_es_speakers,
-        });
-        seenIds.add(item.id);
+    for (const item of dynamicSearchIndex.values()) {
+      const dirMatch =
+        direction === 'all' || `${item.sourceLang}-${item.targetLang}` === direction;
+      if (!dirMatch) continue;
+      if (
+        item.sourceText.toLowerCase().includes(q) ||
+        item.targetText.toLowerCase().includes(q)
+      ) {
+        results.push(item);
       }
     }
+    return results;
+  }
 
-    // 2. Search Portuguese vocabulary seed pool
-    if (direction === 'pt-en' || direction === 'all' || direction === 'en-pt') {
-      for (const voc of ptVocabulary) {
-        const matchPt = voc.lemma.toLowerCase().includes(q);
-        const matchEn = voc.definition_en.toLowerCase().includes(q);
+  /**
+   * Asynchronously searches AI Content Engine generated vocabulary, saved IndexedDB entries,
+   * Tatoeba example sentences, and live MyMemory translation memory.
+   */
+  static async searchLive(
+    query: string,
+    direction: TranslationDirection = 'all'
+  ): Promise<SearchResultItem[]> {
+    const clean = query.trim();
+    const q = clean.toLowerCase();
+    if (!q) return [];
 
-        if ((direction === 'pt-en' && matchPt) || (direction === 'en-pt' && matchEn) || (direction === 'all' && (matchPt || matchEn))) {
-          if (!seenIds.has(voc.lemma)) {
-            results.push({
-              id: `voc-pt-${voc.id}`,
-              sourceText: direction === 'en-pt' ? voc.definition_en : voc.lemma,
-              sourceLang: direction === 'en-pt' ? 'en' : 'pt',
-              targetText: direction === 'en-pt' ? voc.lemma : voc.definition_en,
-              targetLang: direction === 'en-pt' ? 'pt' : 'en',
+    const results: SearchResultItem[] = [];
+    const seenKeys = new Set<string>();
+    const addResult = (item: SearchResultItem) => {
+      const k = `${item.sourceLang}:${item.targetLang}:${item.sourceText.toLowerCase()}`;
+      if (seenKeys.has(k)) return;
+      seenKeys.add(k);
+      dynamicSearchIndex.set(item.id, item);
+      results.push(item);
+    };
+
+    const { src, tgt } = parseDirection(direction);
+    const langsToCheck: Array<{ s: 'pt' | 'es' | 'en'; t: 'pt' | 'es' | 'en' }> =
+      direction === 'all'
+        ? [
+            { s: 'pt', t: 'en' },
+            { s: 'es', t: 'en' },
+            { s: 'en', t: 'pt' },
+            { s: 'en', t: 'es' },
+          ]
+        : [{ s: src, t: tgt }];
+
+    // 1. Saved Phrasebook in IndexedDB
+    try {
+      const saved = await localDb.savedVocabulary.toArray();
+      for (const rec of saved) {
+        if (
+          rec.source_text.toLowerCase().includes(q) ||
+          rec.translated_text.toLowerCase().includes(q)
+        ) {
+          if (
+            direction === 'all' ||
+            (rec.source_lang === src && rec.target_lang === tgt)
+          ) {
+            addResult({
+              id: `saved-${rec.id}`,
+              sourceText: rec.source_text,
+              sourceLang: rec.source_lang as 'pt' | 'es' | 'en',
+              targetText: rec.translated_text,
+              targetLang: rec.target_lang as 'pt' | 'es' | 'en',
+              partOfSpeech: rec.part_of_speech,
+              phoneticTarget: rec.phonetic_ipa,
+              exampleSource: rec.context_sentence,
+              isVerified: rec.is_verified,
+              providerName: 'saved_phrasebook',
+            });
+          }
+        }
+      }
+    } catch {
+      // IndexedDB unavailable in non-browser context
+    }
+
+    // 2. Published AI Content Engine & dynamic VocabularyService catalog
+    for (const pair of langsToCheck) {
+      try {
+        const aiVocab = await contentAccess.getPublishedVocabularyEntries(pair.s, pair.t);
+        const dynamicVocab = VocabularyService.getVocabulary({ target_language: pair.s });
+        const mergedVocab = [...aiVocab];
+        for (const dv of dynamicVocab) {
+          if (!mergedVocab.some(m => m.id === dv.id || m.lemma.toLowerCase() === dv.lemma.toLowerCase())) {
+            mergedVocab.push(dv);
+          }
+        }
+        for (const voc of mergedVocab) {
+          const translation =
+            voc.translations[pair.t] || voc.definitions[pair.t] || voc.translations.en || voc.definitions.en || '';
+          if (
+            voc.lemma.toLowerCase().includes(q) ||
+            translation.toLowerCase().includes(q)
+          ) {
+            addResult({
+              id: `ai-${voc.id}-${pair.s}-${pair.t}`,
+              sourceText: voc.lemma,
+              sourceLang: pair.s,
+              targetText: translation,
+              targetLang: pair.t,
               partOfSpeech: voc.part_of_speech,
-              phoneticTarget: voc.phonetic_ipa || undefined,
-              exampleSource: direction === 'en-pt' ? voc.example_sentence_en : voc.example_sentence_target,
-              exampleTarget: direction === 'en-pt' ? voc.example_sentence_target : voc.example_sentence_en,
-              falseFriendWarning: voc.false_friend_warning || undefined,
+              phoneticTarget: voc.phonetic_ipa,
+              exampleSource: voc.example_sentence_target,
+              exampleTarget: voc.example_sentence_translations[pair.t],
+              notes: voc.grammar_notes,
+              isVerified: true,
+              providerName: 'content_engine',
             });
-            seenIds.add(voc.lemma);
           }
         }
+      } catch {
+        // Offline / backend unreachable
       }
     }
 
-    // 3. Search Spanish vocabulary seed pool
-    if (direction === 'es-en' || direction === 'all' || direction === 'en-es') {
-      for (const voc of esVocabulary) {
-        const matchEs = voc.lemma.toLowerCase().includes(q);
-        const matchEn = voc.definition_en.toLowerCase().includes(q);
-
-        if ((direction === 'es-en' && matchEs) || (direction === 'en-es' && matchEn) || (direction === 'all' && (matchEs || matchEn))) {
-          if (!seenIds.has(voc.lemma)) {
-            results.push({
-              id: `voc-es-${voc.id}`,
-              sourceText: direction === 'en-es' ? voc.definition_en : voc.lemma,
-              sourceLang: direction === 'en-es' ? 'en' : 'es',
-              targetText: direction === 'en-es' ? voc.lemma : voc.definition_en,
-              targetLang: direction === 'en-es' ? 'es' : 'en',
-              partOfSpeech: voc.part_of_speech,
-              phoneticTarget: voc.phonetic_ipa || undefined,
-              exampleSource: direction === 'en-es' ? voc.example_sentence_en : voc.example_sentence_target,
-              exampleTarget: direction === 'en-es' ? voc.example_sentence_target : voc.example_sentence_en,
-              falseFriendWarning: voc.false_friend_warning || undefined,
-            });
-            seenIds.add(voc.lemma);
-          }
-        }
-      }
+    // 3. Live Tatoeba Open Corpus Examples
+    try {
+      const pairs = await examplesManager.getExamples({
+        query: clean,
+        sourceLang: src,
+        targetLang: tgt,
+        limit: 5,
+      });
+      pairs.forEach((p, idx) => {
+        addResult({
+          id: `tatoeba-${src}-${tgt}-${idx}-${p.id}`,
+          sourceText: p.sourceText,
+          sourceLang: src,
+          targetText: p.targetText,
+          targetLang: tgt,
+          category: 'corpus_example',
+          notes: p.attribution,
+          isVerified: p.isPedagogicallyVerified,
+          providerName: 'tatoeba',
+        });
+      });
+    } catch {
+      // Ignore network/rate limit errors
     }
 
-    // 4. Search False Friends pool for Portuguese <-> Spanish interference warnings
-    if (direction === 'pt-es' || direction === 'es-pt' || direction === 'all') {
-      for (const ff of falseFriends) {
-        const matchPt = ff.portuguese_term.toLowerCase().includes(q);
-        const matchEs = ff.spanish_term.toLowerCase().includes(q);
-
-        if ((direction === 'pt-es' && matchPt) || (direction === 'es-pt' && matchEs) || (direction === 'all' && (matchPt || matchEs))) {
-          if (!seenIds.has(ff.id)) {
-            results.push({
-              id: `ff-${ff.id}`,
-              sourceText: direction === 'es-pt' ? ff.spanish_term : ff.portuguese_term,
-              sourceLang: direction === 'es-pt' ? 'es' : 'pt',
-              targetText: direction === 'es-pt' ? `${ff.portuguese_term} (Significado PT: ${ff.pt_meaning_en})` : `${ff.spanish_term} (Significado ES: ${ff.es_meaning_en})`,
-              targetLang: direction === 'es-pt' ? 'pt' : 'es',
-              exampleSource: direction === 'es-pt' ? ff.es_example : ff.pt_example,
-              exampleTarget: direction === 'es-pt' ? ff.pt_example : ff.es_example,
-              falseFriendWarning: ff.interference_warning,
-              category: 'false_cognate',
-            });
-            seenIds.add(ff.id);
-          }
+    // 4. Live MyMemory Translation Memory lookup if no exact hit yet
+    if (results.length === 0) {
+      try {
+        const resp = await myMemoryAdapter.execute({
+          text: clean,
+          sourceLang: src,
+          targetLang: tgt,
+        });
+        if (resp.translatedText && resp.provider !== 'fallback') {
+          addResult({
+            id: `mymemory-${src}-${tgt}-${q}`,
+            sourceText: clean,
+            sourceLang: src,
+            targetText: resp.translatedText,
+            targetLang: tgt,
+            notes: resp.notes,
+            isVerified: resp.isVerified,
+            isApproximate: resp.isApproximate,
+            providerName: resp.provider,
+            fromCache: resp.fromCache,
+          });
         }
+      } catch {
+        // Propagate empty honestly when offline
       }
     }
 
@@ -254,15 +244,34 @@ export class TranslationService {
   }
 
   /**
-   * Get interactive English learning challenges for Portuguese or Spanish speakers.
+   * Fetches interactive English practice challenges published in the AI Content Engine.
    */
-  static getChallenges(lang?: 'pt' | 'es'): EnglishLearningChallenge[] {
-    if (!lang) return englishChallenges;
-    return englishChallenges.filter(c => c.source_lang === lang);
+  static async getLiveChallenges(lang?: 'pt' | 'es'): Promise<EnglishLearningChallenge[]> {
+    try {
+      const exercises = await contentAccess.getPublishedPracticeExercises('en');
+      const mapped: EnglishLearningChallenge[] = exercises.map(ex => ({
+        id: ex.id,
+        source_lang: lang || 'pt',
+        source_text: ex.context_passage || ex.prompt,
+        target_english: ex.acceptable_solutions[0] || '',
+        accepted_answers: ex.acceptable_solutions,
+        options: [
+          ex.acceptable_solutions[0],
+          ...(ex.distractors || []).map(d => d.text),
+        ].filter(Boolean),
+        explanation_pt: ex.explanation,
+        explanation_es: ex.explanation,
+        common_transfer_mistake: ex.distractors?.[0]?.why_incorrect || '',
+        topic: ex.curriculum_node_id || 'AI Content Practice',
+      }));
+      return lang ? mapped.filter(c => c.source_lang === lang) : mapped;
+    } catch {
+      return [];
+    }
   }
 
   /**
-   * Check learner's answer to an English translation challenge.
+   * Check learner's answer to a dynamically loaded English translation challenge.
    */
   static checkChallenge(
     challenge: EnglishLearningChallenge,
@@ -276,19 +285,20 @@ export class TranslationService {
     if (isAccepted) {
       return {
         isCorrect: true,
-        feedback: 'Correto! Excellent translation! Your grammar and lexical choice match standard English C1 register.',
+        feedback: 'Correct! Your grammar and lexical choice match standard English usage.',
       };
     }
 
     return {
       isCorrect: false,
-      feedback: `A resposta mais precisa seria: "${challenge.target_english}". ${challenge.source_lang === 'pt' ? challenge.explanation_pt : challenge.explanation_es} (${challenge.common_transfer_mistake})`,
+      feedback: `"${challenge.target_english}". ${
+        challenge.source_lang === 'pt' ? challenge.explanation_pt : challenge.explanation_es
+      }`,
     };
   }
 
   /**
-   * Translate text with input validation, quota guard, in-memory cache, and multi-provider fallback.
-   * Returns immediately without persisting a database row!
+   * Translate text via AI Content Engine cache/dictionary first, then live MyMemory API.
    */
   static async translateOnline(
     text: string,
@@ -298,14 +308,14 @@ export class TranslationService {
   ): Promise<{ success: boolean; result?: TranslateOnlineResult; error?: string }> {
     const cleanText = text.trim();
     if (!cleanText) {
-      return { success: false, error: 'O texto para tradução não pode estar vazio.' };
+      return { success: false, error: 'Text for translation cannot be empty.' };
     }
 
     // 1. Enforce max input length (1,000 chars)
     if (cleanText.length > 1000) {
       return {
         success: false,
-        error: `O texto excede o limite máximo permitido de 1.000 caracteres (foram enviados ${cleanText.length}).`,
+        error: `Text exceeds maximum allowed limit of 1,000 characters (${cleanText.length} sent).`,
       };
     }
 
@@ -316,9 +326,40 @@ export class TranslationService {
       return { success: true, result: { ...cached, fromCache: true } };
     }
 
-    // 3. Fast lookup in verified educational dictionary
+    // 3. Check published AI Content Engine vocabulary
+    try {
+      const aiVocab = await contentAccess.getPublishedVocabularyEntries(sourceLang, targetLang);
+      const exactVocab = aiVocab.find(
+        v => v.lemma.trim().toLowerCase() === cleanText.toLowerCase()
+      );
+      if (exactVocab) {
+        const translated =
+          exactVocab.translations[targetLang] ||
+          exactVocab.definitions[targetLang] ||
+          exactVocab.definitions.en;
+        if (translated) {
+          const verifiedResult: TranslateOnlineResult = {
+            translatedText: translated,
+            sourceLang,
+            targetLang,
+            providerName: 'content_engine',
+            isVerified: true,
+            isApproximate: false,
+            notes: exactVocab.example_sentence_target,
+          };
+          translationMemoryCache.set(cacheKey, verifiedResult);
+          return { success: true, result: verifiedResult };
+        }
+      }
+    } catch {
+      // Fall through to live API
+    }
+
+    // 4. Check indexed live results
     const dir = `${sourceLang}-${targetLang}` as TranslationDirection;
-    const dictMatches = this.search(cleanText, dir);
+    const dictMatches = this.search(cleanText, dir).filter(
+      m => m.sourceText.trim().toLowerCase() === cleanText.toLowerCase()
+    );
     if (dictMatches.length > 0) {
       const best = dictMatches[0];
       const verifiedResult: TranslateOnlineResult = {
@@ -326,25 +367,25 @@ export class TranslationService {
         sourceLang,
         targetLang,
         providerName: 'dictionary',
-        isVerified: true,
-        isApproximate: false,
+        isVerified: Boolean(best.isVerified),
+        isApproximate: Boolean(best.isApproximate),
         notes: best.notes || best.falseFriendWarning,
       };
       translationMemoryCache.set(cacheKey, verifiedResult);
       return { success: true, result: verifiedResult };
     }
 
-    // 4. Check and consume daily ephemeral quota
+    // 5. Check and consume daily ephemeral quota
     const quotaOk = StorageService.consumeTranslationQuotaToken(isRegistered);
     if (!quotaOk) {
       const quota = StorageService.getTranslationQuotaStatus(isRegistered);
       return {
         success: false,
-        error: `Limite diário de traduções atingido (${quota.limit} consultas/dia). Salve termos no seu vocabulário ou tente amanhã.`,
+        error: `Daily translation quota reached (${quota.limit} lookups/day).`,
       };
     }
 
-    // 5. Query external free MyMemory translation memory API through integration adapter
+    // 6. Query live external MyMemory API
     try {
       const adapterResult = await myMemoryAdapter.execute({
         text: cleanText,
@@ -356,7 +397,9 @@ export class TranslationService {
         translatedText: adapterResult.translatedText,
         sourceLang,
         targetLang,
-        providerName: (adapterResult.provider === 'mymemory' ? 'mymemory' : 'fallback') as 'mymemory' | 'fallback',
+        providerName: (adapterResult.provider === 'mymemory' ? 'mymemory' : 'fallback') as
+          | 'mymemory'
+          | 'fallback',
         isVerified: adapterResult.isVerified,
         isApproximate: adapterResult.isApproximate,
         notes: adapterResult.notes,
@@ -372,17 +415,18 @@ export class TranslationService {
       console.warn('MyMemory adapter request error:', e);
     }
 
-    // 6. Graceful Fallback if remote API is down or unavailable
-    const fallbackResult: TranslateOnlineResult = {
-      translatedText: cleanText,
-      sourceLang,
-      targetLang,
-      providerName: 'fallback',
-      isVerified: false,
-      isApproximate: true,
-      notes: 'Tradução automática indisponível no momento. Consulte termos isolados no dicionário de alta frequência.',
+    // 7. Honest offline fallback
+    return {
+      success: true,
+      result: {
+        translatedText: cleanText,
+        sourceLang,
+        targetLang,
+        providerName: 'fallback',
+        isVerified: false,
+        isApproximate: true,
+        notes: 'Live translation temporarily unavailable offline.',
+      },
     };
-    return { success: true, result: fallbackResult };
-    return { success: true, result: fallbackResult };
   }
 }

@@ -19,13 +19,10 @@ import {
   validateGrammarRecord,
   validateExerciseRecord,
 } from './contentValidators';
-import {
-  SAMPLE_VOCABULARY_CATALOG,
-  SAMPLE_GRAMMAR_CATALOG,
-  SAMPLE_EXERCISES_CATALOG,
-} from './sampleContentCatalog';
+import { getLanguagePedagogy } from './languagePedagogy';
 import { ContentGapRegistry } from './gapRegistry';
 import { localDb } from '../localDb';
+import { contentAccess } from '../contentAccess';
 import { DictionaryManager } from '../providers/dictionary/dictionaryManager';
 import { ExamplesManager } from '../providers/examples/examplesManager';
 import { FrequencyManager } from '../providers/frequency/frequencyManager';
@@ -79,26 +76,213 @@ export class ContentPipeline {
       gapNotes.push(`[Gap Documentado] ${gap.category}: ${gap.pedagogicalMitigation}`);
     }
 
-    // Step 5: Retrieve relevant reference data from providers or curated catalog
-    let vocabPool: MultilingualVocabularyRecord[] = [
-      ...(SAMPLE_VOCABULARY_CATALOG[targetLanguage] || []),
-    ];
+    // Step 5: Retrieve live data from external open providers + published Content Engine items
+    const vocabPool: MultilingualVocabularyRecord[] = [];
+    const grammarPool: MultilingualGrammarRecord[] = [];
+    const exercisePool: MultilingualExerciseRecord[] = [];
 
-    let grammarPool: MultilingualGrammarRecord[] = [];
-    if (SAMPLE_GRAMMAR_CATALOG[targetLanguage]) {
-      grammarPool.push(SAMPLE_GRAMMAR_CATALOG[targetLanguage]);
+    const topicQuery = (input.topic || '').trim();
+
+    // 5a. Fetch AI Content Engine published vocabulary, grammar, and exercises
+    try {
+      const publishedVocab = await contentAccess.getPublishedVocabularyEntries(
+        targetLanguage,
+        explanationLanguage
+      );
+      for (const v of publishedVocab) {
+        vocabPool.push({
+          id: v.id,
+          word: v.lemma,
+          language: targetLanguage,
+          locale,
+          translation:
+            v.translations[explanationLanguage as keyof typeof v.translations] ||
+            v.translations.en ||
+            v.lemma,
+          definition:
+            v.definitions[explanationLanguage as keyof typeof v.definitions] ||
+            v.definitions.en ||
+            v.lemma,
+          part_of_speech: v.part_of_speech,
+          cefr_level: v.cefr_level,
+          example_sentence_target: v.example_sentence_target || v.lemma,
+          example_sentence_translation:
+            v.example_sentence_translations[
+              explanationLanguage as keyof typeof v.example_sentence_translations
+            ] ||
+            v.example_sentence_translations.en ||
+            '',
+          phonetic_ipa: v.phonetic_ipa,
+          frequency_rank: v.frequency_rank,
+          synonyms: [],
+          antonyms: [],
+          inflections: [],
+          collocations: v.collocations || [],
+          attribution: v.attribution,
+        });
+      }
+    } catch {
+      // Offline / backend unavailable
     }
 
-    let exercisePool: MultilingualExerciseRecord[] = SAMPLE_EXERCISES_CATALOG.filter(
-      e => e.language === targetLanguage
-    );
+    // 5b. Live Open API lookup when topic query is specified and no published vocabulary found
+    if (topicQuery && vocabPool.length === 0) {
+      try {
+        const lookup = await this.dictionaryManager.lookup(topicQuery, targetLanguage);
+        const firstMeaning = lookup.meanings[0];
+        const freq = await this.frequencyManager
+          .getWordFrequency({ word: topicQuery, language: targetLanguage })
+          .catch(() => null);
+        const examplePairs = await this.examplesManager.getExamples({
+          query: topicQuery,
+          sourceLang: targetLanguage,
+          targetLang: explanationLanguage,
+          limit: 2,
+        });
+        const firstDef = firstMeaning?.definitions[0] || topicQuery;
+        const exampleTarget =
+          examplePairs[0]?.sourceText ||
+          firstMeaning?.examples?.[0] ||
+          topicQuery;
+        const exampleTranslation =
+          examplePairs[0]?.targetText || firstDef;
 
-    // If exercises for specific language are fewer than 3, supplement with common cross-linguistic types
-    if (exercisePool.length === 0) {
-      exercisePool = SAMPLE_EXERCISES_CATALOG.slice(0, 3);
-      gapNotes.push(
-        `Exercícios específicos de nível para ${targetLanguage} complementados com modelos de prática adaptáveis.`
+        if (exampleTarget.length >= 4) {
+          vocabPool.push({
+            id: `live-voc-${targetLanguage}-${Date.now()}`,
+            word: lookup.word || topicQuery,
+            language: targetLanguage,
+            locale,
+            translation: firstDef,
+            definition: firstDef,
+            part_of_speech: firstMeaning?.partOfSpeech || 'noun',
+            cefr_level: cefrLevel,
+            example_sentence_target: exampleTarget,
+            example_sentence_translation: exampleTranslation,
+            phonetic_ipa: lookup.phonetic,
+            frequency_rank: freq?.rank,
+            frequency_per_million: freq?.frequencyPerMillion,
+            synonyms: [],
+            antonyms: [],
+            inflections: [],
+            collocations: [],
+            attribution: {
+              source_name: lookup.provider || 'Open Lexicon API',
+              source_url: lookup.sourceUrl || 'https://www.wiktionary.org',
+              license_type: 'CC-BY-SA 4.0',
+              attribution_text: `Resolved dynamically from ${lookup.provider || 'Open Lexicon API'}.`,
+            },
+          });
+        }
+      } catch {
+        gapNotes.push(
+          `No live dictionary entry retrieved for "${topicQuery}" (${targetLanguage}).`
+        );
+      }
+    }
+
+    // 5c. Grammar rule derived from structural language pedagogy metadata + published grammar notes
+    try {
+      const publishedGrammar = await contentAccess.getPublishedGrammarNotes(
+        targetLanguage,
+        explanationLanguage
       );
+      for (const g of publishedGrammar) {
+        grammarPool.push({
+          id: g.id,
+          rule_code: g.rule_code,
+          language: targetLanguage,
+          cefr_level: g.cefr_level,
+          title: g.title,
+          category: g.category || 'grammar',
+          explanation: g.explanation_markdown,
+          structural_formula: g.structural_formula,
+          examples: g.examples.map(ex => ({
+            target: ex.target,
+            translation: ex.en,
+            note: ex.note,
+          })),
+          common_errors: g.common_errors,
+          language_specific_notes: g.regional_notes,
+          attribution: g.attribution,
+        });
+      }
+    } catch {
+      // Ignore if backend offline
+    }
+
+    if (grammarPool.length === 0) {
+      const pedagogy = getLanguagePedagogy(targetLanguage);
+      const firstFeature = pedagogy.keyPedagogicalPillars[0] || pedagogy.scriptFamily;
+      grammarPool.push({
+        id: `pedagogy-gram-${targetLanguage}-${cefrLevel.toLowerCase()}`,
+        rule_code: `${targetLanguage.toUpperCase()}-STRUCTURE-${cefrLevel}`,
+        language: targetLanguage,
+        cefr_level: cefrLevel,
+        title: topicQuery || firstFeature,
+        category: 'structure',
+        explanation: `${pedagogy.displayName}: ${firstFeature}. ${pedagogy.orthographicNotes}`,
+        structural_formula: `${pedagogy.scriptFamily} • ${firstFeature}`,
+        examples: vocabPool.slice(0, 2).map(v => ({
+          target: v.example_sentence_target,
+          translation: v.example_sentence_translation,
+        })),
+        common_errors: [],
+        language_specific_notes: { [locale]: pedagogy.orthographicNotes },
+        attribution: {
+          source_name: 'Lexilume Pedagogical Structure Matrix',
+          source_url: 'https://github.com/VINODH0101/language-learning',
+          license_type: 'CC-BY-SA 4.0',
+          attribution_text: 'Structural grammar metadata from LanguagePedagogy profile.',
+        },
+      });
+    }
+
+    // 5d. Published Content Engine exercises or dynamically built from fetched vocabulary
+    try {
+      const publishedEx = await contentAccess.getPublishedPracticeExercises(targetLanguage);
+      for (const ex of publishedEx) {
+        exercisePool.push({
+          id: ex.id,
+          language: targetLanguage,
+          cefr_level: cefrLevel,
+          exercise_type: ex.exercise_type === 'cloze' ? 'cloze' : 'multiple_choice',
+          prompt: ex.prompt,
+          context_passage: ex.context_passage,
+          acceptable_solutions: ex.acceptable_solutions,
+          distractors: ex.distractors || [],
+          explanation: ex.explanation,
+          attribution: ex.attribution,
+        });
+      }
+    } catch {
+      // Ignore if offline
+    }
+
+    if (exercisePool.length === 0 && vocabPool.length > 0) {
+      const firstVoc = vocabPool[0];
+      const secondaryVocab = vocabPool[1];
+      exercisePool.push({
+        id: `dyn-ex-${firstVoc.id}`,
+        language: targetLanguage,
+        cefr_level: firstVoc.cefr_level,
+        exercise_type: 'multiple_choice',
+        prompt: `Identify the meaning of "${firstVoc.word}" (${targetLanguage.toUpperCase()}):`,
+        context_passage: firstVoc.example_sentence_target,
+        acceptable_solutions: [firstVoc.translation],
+        distractors: [
+          {
+            text: secondaryVocab ? secondaryVocab.translation : `${firstVoc.part_of_speech} (category)`,
+            why_incorrect: 'Grammatical category or distinct lexical meaning rather than translation.',
+          },
+          {
+            text: `${firstVoc.cefr_level} ${firstVoc.part_of_speech} label`,
+            why_incorrect: 'Metadata classification rather than semantic translation.',
+          },
+        ],
+        explanation: `${firstVoc.word}: ${firstVoc.definition}`,
+        attribution: firstVoc.attribution,
+      });
     }
 
     // Step 6: Generate or assemble learning content

@@ -359,6 +359,17 @@ class SyncEngine {
       // --- Content-Centred Platform Synchronization (Phase 7 / Milestone 7.8) ---
       if (item.action === 'SYNC_LEARNER_PROGRESS') {
         const prog = item.payload as any;
+
+        // Seed/legacy content uses non-UUID ids that cannot be inserted into
+        // UUID foreign-key columns. Keep such progress local-only and do not
+        // repeatedly fail (and re-queue) on a guaranteed FK violation.
+        if (!isValidUuid(prog.content_item_id)) {
+          return true;
+        }
+        if (prog.content_version_id && !isValidUuid(prog.content_version_id)) {
+          return true;
+        }
+
         const payload: Record<string, unknown> = {
           user_id: userId,
           content_item_id: prog.content_item_id,

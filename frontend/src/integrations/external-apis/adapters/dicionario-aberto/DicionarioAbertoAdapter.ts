@@ -12,8 +12,6 @@ import {
   ValidationError,
   ProviderUnavailableError,
 } from '../../core';
-import { ptVocabulary } from '../../../../data/seedData';
-import { trilingualDictionary } from '../../../../data/translationData';
 
 interface RawDicionarioAbertoEntry {
   word: string;
@@ -143,64 +141,6 @@ export class DicionarioAbertoAdapter extends BaseApiProvider<DictionaryInput, No
       etymology,
       provider: this.metadata.id,
       sourceUrl: `https://dicionario-aberto.net/search/${encodeURIComponent(input.word)}`,
-    };
-  }
-
-  protected getFallback(input: DictionaryInput, _error: unknown): NormalizedDictionaryEntry {
-    const q = input.word.trim().toLowerCase();
-
-    // 1. Check ptVocabulary
-    const vocMatch = ptVocabulary.find(v => v.lemma.toLowerCase() === q);
-    if (vocMatch) {
-      return {
-        word: vocMatch.lemma,
-        language: 'pt',
-        phonetic: vocMatch.phonetic_ipa,
-        meanings: [
-          {
-            partOfSpeech: vocMatch.part_of_speech,
-            definitions: [
-              vocMatch.definition_target,
-              vocMatch.definition_en ? `EN: ${vocMatch.definition_en}` : '',
-            ].filter(Boolean),
-            examples: [vocMatch.example_sentence_target],
-          },
-        ],
-        provider: 'offline-seed',
-      };
-    }
-
-    // 2. Check trilingualDictionary
-    const triMatch = trilingualDictionary.find(t => t.portuguese.toLowerCase() === q);
-    if (triMatch) {
-      return {
-        word: triMatch.portuguese,
-        language: 'pt',
-        phonetic: triMatch.phonetic_pt,
-        meanings: [
-          {
-            partOfSpeech: triMatch.part_of_speech,
-            definitions: [
-              `EN: ${triMatch.english}`,
-              `ES: ${triMatch.spanish}`,
-            ],
-            examples: [triMatch.example_pt],
-          },
-        ],
-        provider: 'offline-seed',
-      };
-    }
-
-    return {
-      word: input.word,
-      language: 'pt',
-      meanings: [
-        {
-          partOfSpeech: 'termo',
-          definitions: ['Definição indisponível offline no momento.'],
-        },
-      ],
-      provider: 'fallback',
     };
   }
 

@@ -6,7 +6,7 @@ import { WikipediaAdapter } from '../../integrations/external-apis/adapters/wiki
 import { JikanAdapter } from '../../integrations/external-apis/adapters/jikan/JikanAdapter';
 import { LanguageToolAdapter } from '../../integrations/external-apis/adapters/languagetool/LanguageToolAdapter';
 import { GeminiAdapter } from '../../integrations/external-apis/adapters/gemini/GeminiAdapter';
-import { ValidationError } from '../../integrations/external-apis/core/ApiError';
+import { ValidationError, ProviderUnavailableError } from '../../integrations/external-apis/core/ApiError';
 import { ApiCache } from '../../integrations/external-apis/core/ApiCache';
 
 describe('External API Adapters Suite', () => {
@@ -26,19 +26,42 @@ describe('External API Adapters Suite', () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it('falls back to local trilingual dictionary when offline', async () => {
+    it('returns approximate fallback notice when offline without cache, and serves ApiCache when previously fetched', async () => {
       const adapter = new MyMemoryAdapter();
-      // Force fetch rejection across all retries
-      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          responseData: { translatedText: 'prerogative', match: 0.99 },
+          responseStatus: 200,
+        }),
+      } as Response);
 
-      const result = await adapter.execute({
+      const online = await adapter.execute({
         text: 'prerrogativa',
         sourceLang: 'pt',
         targetLang: 'en',
       });
+      expect(online.translatedText).toBe('prerogative');
 
-      expect(result.translatedText.toLowerCase()).toContain('prerogative');
-      expect(result.isVerified).toBe(true);
+      // Now offline for same cached query -> cache hit
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+      const cachedHit = await adapter.execute({
+        text: 'prerrogativa',
+        sourceLang: 'pt',
+        targetLang: 'en',
+      });
+      expect(cachedHit.translatedText).toBe('prerogative');
+      expect(cachedHit.fromCache).toBe(true);
+
+      // Offline uncached query -> honest unverified fallback response (no fake verified dictionary hit)
+      const offlineUncached = await adapter.execute({
+        text: 'inedito offline term',
+        sourceLang: 'pt',
+        targetLang: 'en',
+      });
+      expect(offlineUncached.provider).toBe('fallback');
+      expect(offlineUncached.isVerified).toBe(false);
     });
   });
 
@@ -86,13 +109,13 @@ describe('External API Adapters Suite', () => {
       expect(result.meanings[0].definitions[0]).toContain('The capacity to recover');
     });
 
-    it('falls back to local enVocabulary seed data when fetch fails', async () => {
+    it('throws ProviderUnavailableError when offline with no cached response', async () => {
       const adapter = new FreeDictionaryAdapter();
-      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Network Error'));
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Network Error'));
 
-      const result = await adapter.execute({ word: 'resilience', language: 'en' });
-      expect(result.word).toBe('resilience');
-      expect(result.meanings[0].definitions.length).toBeGreaterThan(0);
+      await expect(
+        adapter.execute({ word: 'resilience', language: 'en' })
+      ).rejects.toThrow(ProviderUnavailableError);
     });
   });
 
@@ -119,13 +142,32 @@ describe('External API Adapters Suite', () => {
       expect(result.meanings[0].definitions[0]).toContain('Faixa de terreno');
     });
 
-    it('falls back to local ptVocabulary when offline', async () => {
+    it('throws ProviderUnavailableError offline without seed data, and hits ApiCache after fetch', async () => {
       const adapter = new DicionarioAbertoAdapter();
-      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Network Error'));
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Network Error'));
 
-      const result = await adapter.execute({ word: 'saudade', language: 'pt' });
-      expect(result.word).toBe('saudade');
-      expect(result.meanings[0].definitions.length).toBeGreaterThan(0);
+      await expect(
+        adapter.execute({ word: 'saudade', language: 'pt' })
+      ).rejects.toThrow(ProviderUnavailableError);
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => [
+          {
+            word: 'saudade',
+            xml: '<entry><form><orth>saudade</orth></form><gramGrp>s.f.</gramGrp><def>Sentimento melancólico de ausência.</def></entry>',
+          },
+        ],
+      } as Response);
+
+      const online = await adapter.execute({ word: 'saudade', language: 'pt' });
+      expect(online.word).toBe('saudade');
+
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Offline'));
+      const cached = await adapter.execute({ word: 'saudade', language: 'pt' });
+      expect((cached as typeof cached & { fromCache?: boolean }).fromCache).toBe(true);
+      expect(cached.meanings[0].definitions[0]).toContain('Sentimento melancólico');
     });
   });
 
@@ -161,13 +203,12 @@ describe('External API Adapters Suite', () => {
       expect(articles[0].contentParagraphs[0]).toContain('Proclamação da República');
     });
 
-    it('falls back to curated cultural catalog when offline', async () => {
+    it('returns empty list honestly offline without cache, and serves cached feed after online fetch', async () => {
       const adapter = new WikipediaAdapter();
-      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Network Error'));
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Network Error'));
 
-      const articles = await adapter.execute({ language: 'pt' });
-      expect(articles.length).toBeGreaterThan(0);
-      expect(articles[0].language).toBe('pt');
+      const emptyOffline = await adapter.execute({ language: 'pt' });
+      expect(emptyOffline).toEqual([]);
     });
   });
 

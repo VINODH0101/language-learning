@@ -17,6 +17,7 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { contentCentredService } from '../../services/contentCentredService';
 import { authService } from '../../services/auth';
+import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 interface ContentActivitiesProps {
@@ -32,6 +33,7 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
   activities,
   onComplete,
 }) => {
+  const { t } = useI18n();
   const allQuestions: Array<{ activityId: string; question: ActivityQuestion }> = [];
   for (const act of activities) {
     if (act.configuration?.questions) {
@@ -51,8 +53,12 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
     return (
       <div className="p-8 text-center bg-white border border-stone-200 rounded-2xl space-y-2">
         <Sparkles className="w-8 h-8 text-stone-400 mx-auto" />
-        <h3 className="text-sm font-semibold text-stone-800">No Interactive Activities Available</h3>
-        <p className="text-xs text-stone-500">This reading text is self-directed reading practice.</p>
+        <h3 className="text-sm font-semibold text-stone-800">
+          {t('learning:activities_empty_title', 'No Interactive Activities Available')}
+        </h3>
+        <p className="text-xs text-stone-500">
+          {t('learning:activities_empty_desc', 'This reading text is self-directed reading practice.')}
+        </p>
       </div>
     );
   }
@@ -125,7 +131,9 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
           completed_activity_ids: activities.map(a => a.id),
         });
 
-        toast.success(`Session finished with score of ${score}%!`);
+        toast.success(
+          t('learning:activities_session_finished', 'Session finished with score of {{score}}%!', { score })
+        );
         if (onComplete) onComplete(score);
       } catch (err) {
         console.warn('Error saving final progress:', err);
@@ -150,16 +158,26 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-2xl font-serif font-bold text-stone-900">Comprehension Completed</h3>
+          <h3 className="text-2xl font-serif font-bold text-stone-900">
+            {t('learning:activities_completed_title', 'Comprehension Completed')}
+          </h3>
           <p className="text-sm text-stone-600 max-w-md mx-auto leading-relaxed">
-            You scored <span className="font-bold text-stone-900">{score}%</span> ({correctCount}/{allQuestions.length} correct).
-            {score < 100 && ' Any incorrect answers have been added to your Mistake Notebook for spaced review.'}
+            {t('learning:activities_score_summary', 'You scored {{score}}% ({{correct}}/{{total}} correct).', {
+              score,
+              correct: correctCount,
+              total: allQuestions.length,
+            })}
+            {score < 100 &&
+              ` ${t(
+                'learning:activities_mistake_added_note',
+                'Any incorrect answers have been added to your Mistake Notebook for spaced review.'
+              )}`}
           </p>
         </div>
 
         <div className="flex items-center justify-center gap-3 pt-2">
           <Button variant="outline" size="md" icon={<RotateCcw className="w-4 h-4" />} onClick={handleRestart}>
-            Practice Again
+            {t('learning:activities_practice_again', 'Practice Again')}
           </Button>
         </div>
       </div>
@@ -173,7 +191,10 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-800" />
-            Reading Exercise {currentIdx + 1} of {allQuestions.length}
+            {t('learning:activities_question_counter', 'Reading Exercise {{current}} of {{total}}', {
+              current: currentIdx + 1,
+              total: allQuestions.length,
+            })}
           </span>
           <Badge variant="slate">{question.type.replace('_', ' ').toUpperCase()}</Badge>
         </div>
@@ -247,12 +268,14 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
             {isCorrect ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Correct</span>
+                <span>{t('learning:activities_correct', 'Correct')}</span>
               </>
             ) : (
               <>
                 <XCircle className="w-4 h-4 text-rose-600" />
-                <span>Incorrect — Saved to your Mistake Notebook</span>
+                <span>
+                  {t('learning:activities_incorrect_saved', 'Incorrect — Saved to your Mistake Notebook')}
+                </span>
               </>
             )}
           </div>
@@ -263,7 +286,10 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
       {/* Footer Controls */}
       <div className="flex items-center justify-between pt-2 border-t border-stone-200">
         <span className="text-xs text-stone-500 font-sans">
-          Score: {correctCount}/{currentIdx + (isSubmitted ? 1 : 0)}
+          {t('learning:activities_score_label', 'Score: {{correct}}/{{answered}}', {
+            correct: correctCount,
+            answered: currentIdx + (isSubmitted ? 1 : 0),
+          })}
         </span>
 
         {!isSubmitted ? (
@@ -273,7 +299,7 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
             disabled={!selectedAnswers[question.id]}
             onClick={handleSubmitQuestion}
           >
-            Check Answer
+            {t('learning:activities_check_answer', 'Check Answer')}
           </Button>
         ) : (
           <Button
@@ -282,7 +308,9 @@ export const ContentActivities: React.FC<ContentActivitiesProps> = ({
             icon={<ArrowRight className="w-4 h-4" />}
             onClick={handleNext}
           >
-            {currentIdx + 1 < allQuestions.length ? 'Next Question' : 'View Summary'}
+            {currentIdx + 1 < allQuestions.length
+              ? t('learning:activities_next_question', 'Next Question')
+              : t('learning:activities_view_summary', 'View Summary')}
           </Button>
         )}
       </div>

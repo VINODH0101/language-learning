@@ -106,5 +106,15 @@
   "rest_countries_data": "REST Countries & Open-Meteo Data",
   "curriculum_curating_title": "Curriculum Status",
   "decoupling_advisory_title": "Four-Way Decoupling Notice",
-  "no_exercises_in_track": "No exercises found for this track."
+  "no_exercises_in_track": "No exercises found for this track.",
+  "overview_title": "Your progress so far",
+  "section_focus": "Focus now",
+  "section_path": "Learning path",
+  "section_insights": "Insights",
+  "section_placement": "Placement",
+  "tab_path_vocab": "学習パスと語彙",
+  "tab_diagnostics_skills": "弱点とスキル",
+  "tab_immersion_placement": "イマージョンと診断",
+  "progress_view_aria": "進捗ビュー",
+  "methodology_toggle": "算出方法を見る"
 }

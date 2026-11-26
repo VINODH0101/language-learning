@@ -6,9 +6,6 @@
  * - Stage 2: Understand (Reading, Listening, Comprehension)
  * - Stage 3: Use the Language (Speaking, Conversation, Writing)
  * - Stage 4: Test Yourself (Quizzes, Grammar exercises, False-friend challenges)
- * 
- * Seamlessly integrates Contextual Learning Panel (ContextualLookupWrapper)
- * allowing users to highlight any word for instant definitions, IPA, audio, and Dexie saving.
  */
 
 import React, { useMemo } from 'react';
@@ -26,8 +23,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  HelpCircle,
-  Volume2,
 } from 'lucide-react';
 import { Language } from '../../types';
 import { useCourse, SectionTab } from './useCourse';
@@ -45,6 +40,7 @@ import { ContextualLookupWrapper } from '../../components/common/ContextualWordP
 import { Button } from '../../components/common/Button';
 import { useI18n } from '../../i18n/i18nContext';
 import { Badge } from '../../components/common/Badge';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 
 export interface CourseViewProps {
   language: Language;
@@ -65,7 +61,7 @@ interface StageMeta {
 }
 
 export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
-  const { t } = useI18n();
+  const { t, interfaceLanguage } = useI18n();
   const {
     lesson,
     activeTab,
@@ -76,7 +72,7 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
     markComplete,
   } = useCourse(language);
 
-  // 4 Guided Learning Stages Definitions
+  // 4 Guided Learning Stages
   const stages: StageMeta[] = useMemo(() => [
     {
       id: 'stage_1_learn',
@@ -115,17 +111,16 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
       label: t('learning:stage4_title', '4. Test Yourself'),
       subtitle: t('learning:stage4_subtitle', 'Exercises, False Friends & Resources'),
       tabs: [
-        { id: 'exercises', label: t('learning:tab_exercises', 'Exercises & Quizzes'), icon: (props) => <CheckCircle {...props} className="w-4 h-4 text-emerald-400" /> },
-        { id: 'false_friends', label: t('learning:tab_false_friends', 'False Friends'), icon: (props) => <AlertTriangle {...props} className="w-4 h-4 text-amber-400" /> },
+        { id: 'exercises', label: t('learning:tab_exercises', 'Exercises & Quizzes'), icon: (props) => <CheckCircle {...props} /> },
+        { id: 'false_friends', label: t('learning:tab_false_friends', 'False Friends'), icon: (props) => <AlertTriangle {...props} /> },
         { id: 'resources', label: t('learning:tab_resources', 'External Resources'), icon: (props) => <ExternalLink {...props} /> },
       ],
     },
   ], [t]);
 
-  // Compute active stage from active tab
   const activeStage = useMemo(() => {
     for (const stage of stages) {
-      if (stage.tabs.some(t => t.id === activeTab)) {
+      if (stage.tabs.some(tb => tb.id === activeTab)) {
         return stage;
       }
     }
@@ -133,14 +128,13 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
   }, [stages, activeTab]);
 
   const handleStageSelect = (stage: StageMeta) => {
-    // If current tab is already in that stage, keep it; otherwise select stage's first tab
-    if (!stage.tabs.some(t => t.id === activeTab)) {
+    if (!stage.tabs.some(tb => tb.id === activeTab)) {
       selectTab(stage.tabs[0].id);
     }
   };
 
   const handleNextStage = () => {
-    const nextIdx = activeStage.stageNumber; // 1-based index to 0-based next
+    const nextIdx = activeStage.stageNumber;
     if (nextIdx < stages.length) {
       selectTab(stages[nextIdx].tabs[0].id);
     }
@@ -154,7 +148,11 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
   };
 
   if (!lesson) {
-    return <div className="p-8 text-center text-slate-400">{t('common:loading', 'Loading...')}</div>;
+    return (
+      <div className="p-8 text-center text-stone-500 text-sm">
+        {t('common:loading', 'Loading...')}
+      </div>
+    );
   }
 
   return (
@@ -163,45 +161,49 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
       variety={lesson.regional_variety}
       explanationLanguage={lesson.explanation_language}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Top Header */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <Badge variant="emerald" size="sm">
-                {t(`common:lang_${language}`, language.toUpperCase())} {lesson.cefr_level || 'C1'}
-              </Badge>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* Top Editorial Lesson Header */}
+        <header className="bg-white border border-stone-200 rounded-2xl p-5 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-2 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold uppercase tracking-widest text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200/80">
+                {getLanguageName(language, interfaceLanguage as any)} {lesson.cefr_level || 'C1'}
+              </span>
               <Badge variant="slate" size="sm">
                 {lesson.regional_variety}
               </Badge>
               {lesson.explanation_language && (
-                <Badge variant="amber" size="sm">
-                  {t('dashboard:explanations_in', 'Explanations')}: {lesson.explanation_language.toUpperCase()}
+                <Badge variant="emerald" size="sm">
+                  {t('dashboard:explanations_in', 'Explanations in')}: {lesson.explanation_language.toUpperCase()}
                 </Badge>
               )}
-              <span className="text-xs text-slate-400 font-mono">
-                {lesson.lesson_date} • {lesson.estimated_study_minutes} {t('common:minutes', 'min')}
+              <span className="text-xs text-stone-500 font-mono">
+                {lesson.lesson_date} • {lesson.estimated_study_minutes} min
               </span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-100">{lesson.curriculum_topic_title}</h1>
-            <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-              {lesson.section_1_objectives[0]?.can_do_statement}
-            </p>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight leading-tight">
+              {lesson.curriculum_topic_title}
+            </h1>
+            {lesson.section_1_objectives[0]?.can_do_statement && (
+              <p className="text-xs sm:text-sm text-stone-600 max-w-2xl leading-relaxed">
+                {lesson.section_1_objectives[0].can_do_statement}
+              </p>
+            )}
           </div>
 
-          <div className="shrink-0 flex items-center gap-3">
+          <div className="shrink-0">
             <Button
               variant={isCompleted ? 'secondary' : 'primary'}
               size="md"
-              className={!isCompleted ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              icon={isCompleted ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Award className="w-4 h-4" />}
+              className={!isCompleted ? 'w-full md:w-auto justify-center min-h-[44px]' : 'w-full md:w-auto justify-center min-h-[44px]'}
+              icon={isCompleted ? <CheckCircle className="w-4 h-4 text-emerald-700" /> : <Award className="w-4 h-4" />}
               onClick={markComplete}
               disabled={isCompleted}
             >
               {isCompleted ? t('learning:completed_btn', 'Lesson Completed') : t('learning:complete_lesson_btn', "Complete Today's Lesson")}
             </Button>
           </div>
-        </div>
+        </header>
 
         {/* 4 GUIDED LEARNING STAGES STEPPER */}
         <div className="space-y-3">
@@ -213,41 +215,41 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
               return (
                 <button
                   key={stg.id}
+                  type="button"
                   onClick={() => handleStageSelect(stg)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                  className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                     isCurrent
-                      ? 'bg-gradient-to-br from-indigo-950/80 to-slate-900 border-indigo-500 shadow-md ring-1 ring-indigo-500/50'
+                      ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
                       : isPast
-                      ? 'bg-slate-900/90 border-emerald-900/60 hover:border-emerald-700 text-slate-300'
-                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-400'
+                      ? 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-300 text-stone-800'
+                      : 'bg-white border-stone-200 hover:border-stone-300 text-stone-700'
                   }`}
-                  aria-label={`${t('learning:stage', 'Etapa')} ${stg.stageNumber}: ${stg.label}`}
+                  aria-label={`${stg.stageNumber}: ${stg.label}`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span
                       className={`text-[10px] uppercase font-bold tracking-wider ${
-                        isCurrent ? 'text-indigo-400' : isPast ? 'text-emerald-400' : 'text-slate-500'
+                        isCurrent ? 'text-amber-300' : isPast ? 'text-emerald-700' : 'text-stone-400'
                       }`}
                     >
-                      {t('learning:stage', 'Etapa')} {stg.stageNumber} / 4
+                      {stg.stageNumber} / 4
                     </span>
-                    {isPast && <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
-                    {isCurrent && (
-                      <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-                    )}
+                    {isPast && <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />}
+                    {isCurrent && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                   </div>
-                  <div className="font-bold text-xs sm:text-sm text-slate-100">{stg.label}</div>
-                  <div className="text-[11px] text-slate-400 truncate">{stg.subtitle}</div>
+                  <div className={`font-serif font-bold text-sm ${isCurrent ? 'text-white' : 'text-stone-900'}`}>
+                    {stg.label}
+                  </div>
+                  <div className={`text-[11px] truncate mt-0.5 ${isCurrent ? 'text-stone-300' : 'text-stone-500'}`}>
+                    {stg.subtitle}
+                  </div>
                 </button>
               );
             })}
           </div>
 
           {/* Granular Sub-Tabs within Active Stage */}
-          <div className="flex items-center gap-1.5 overflow-x-auto p-1.5 rounded-xl bg-slate-900/80 border border-slate-800" role="tablist">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 shrink-0">
-              {t('learning:stage_sections', 'Seções')} {activeStage.stageNumber}:
-            </span>
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 rounded-xl bg-white border border-stone-200" role="tablist">
             {activeStage.tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               const count =
@@ -260,19 +262,20 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => selectTab(tab.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer min-h-[36px] ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer min-h-[38px] ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
                   }`}
                 >
-                  {tab.icon({ className: 'w-3.5 h-3.5' })}
+                  {tab.icon({ className: `w-3.5 h-3.5 ${isActive ? 'text-amber-300' : 'text-stone-400'}` })}
                   <span>{tab.label}</span>
                   {count !== undefined && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? 'bg-amber-500/20 text-amber-200' : 'bg-stone-100 text-stone-600'}`}>
                       {count}
                     </span>
                   )}
@@ -282,18 +285,19 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
           </div>
         </div>
 
-        {/* Tip: Contextual Word Lookup */}
-        <div className="px-4 py-2 rounded-xl bg-indigo-950/30 border border-indigo-900/40 text-[11px] text-indigo-300 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span>
-              <strong>Dica de Aprendizado:</strong> Selecione qualquer palavra no texto para ver tradução, pronúncia e salvá-la no seu vocabulário.
-            </span>
-          </div>
+        {/* Quiet Lookup Tip */}
+        <div className="px-4 py-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-stone-700 flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+          <span>
+            {t(
+              'learning:course_lookup_tip',
+              'Select or click any word in the lesson to view instant translation, IPA audio, and save it to My Words.'
+            )}
+          </span>
         </div>
 
-        {/* Active Tab Panel */}
-        <div className="pt-1" role="tabpanel">
+        {/* Active Tab Panel wrapped in editorial bridge for legacy lesson subcomponents */}
+        <div className="pt-1 practice-stage" role="tabpanel">
           {activeTab === 'vocab' && (
             <VocabularySection
               vocabulary={lesson.section_2_vocabulary}
@@ -319,27 +323,29 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
           )}
 
           {activeTab === 'conv' && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800 w-fit">
+            <div className="space-y-5">
+              <div className="inline-flex items-center gap-1.5 bg-white p-1.5 rounded-xl border border-stone-200">
                 <button
+                  type="button"
                   onClick={() => setConvView('daily')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition ${
                     convView === 'daily'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-stone-900 text-white'
+                      : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
-                  {t('learning:tab_conv', 'Diálogo da Lição')}
+                  {t('learning:tab_conv', 'Authentic Dialogue')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setConvView('scenarios')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition ${
                     convView === 'scenarios'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-stone-900 text-white'
+                      : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
-                  {t('world:world_scenarios', 'Cenários do Mundo Real')}
+                  {t('world:world_scenarios', 'Real-World Scenarios')}
                 </button>
               </div>
               {convView === 'daily' ? (
@@ -387,12 +393,12 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
 
           {activeTab === 'false_friends' && (
             <div className="space-y-4">
-              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                <h3 className="text-sm font-semibold text-slate-200">
-                  Interferência Linguística: Falsos Amigos Críticos
+              <div className="bg-white p-4 rounded-xl border border-stone-200">
+                <h3 className="font-serif text-base font-bold text-stone-900">
+                  {t('learning:false_friends_heading', 'Linguistic Interference: Critical False Cognates')}
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Vocábulos com formas semelhantes mas sentidos divergentes que costumam induzir a erros.
+                <p className="text-xs text-stone-600 mt-0.5">
+                  {t('practice:false_friends_subtitle', 'Compare cognates that diverge in everyday usage.')}
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -405,13 +411,10 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
 
           {activeTab === 'resources' && (
             <div className="space-y-4">
-              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                <h3 className="text-sm font-semibold text-slate-200">
-                  Recursos Abertos de Aprofundamento Cultural e Linguístico
+              <div className="bg-white p-4 rounded-xl border border-stone-200">
+                <h3 className="font-serif text-base font-bold text-stone-900">
+                  {t('learning:open_resources_heading', 'Open Cultural & Linguistic Resources')}
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Fontes primárias, áudios e portais culturais para complementar o estudo.
-                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {lesson.section_12_further_resources.map((res, idx) => (
@@ -420,15 +423,15 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
                     href={res.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 block transition-all group"
+                    className="p-4 rounded-xl bg-white border border-stone-200 hover:border-stone-400 block transition-all group shadow-xs"
                   >
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-bold text-indigo-400 group-hover:text-indigo-300">
+                      <span className="text-xs font-bold text-stone-900 group-hover:text-amber-800">
                         {res.title}
                       </span>
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300" />
+                      <ExternalLink className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700" />
                     </div>
-                    <p className="text-xs text-slate-300">{res.description}</p>
+                    <p className="text-xs text-stone-600">{res.description}</p>
                   </a>
                 ))}
               </div>
@@ -437,7 +440,7 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
         </div>
 
         {/* STAGE STEPPER BOTTOM NAVIGATION */}
-        <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+        <div className="pt-4 border-t border-stone-200 flex items-center justify-between gap-3">
           {activeStage.stageNumber > 1 ? (
             <Button
               variant="outline"
@@ -445,7 +448,7 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
               icon={<ArrowLeft className="w-4 h-4" />}
               onClick={handlePrevStage}
             >
-              {t('learning:prev_stage_btn', 'Etapa Anterior')} ({stages[activeStage.stageNumber - 2].label})
+              {t('learning:prev_stage_btn', 'Previous Stage')} ({stages[activeStage.stageNumber - 2].label})
             </Button>
           ) : (
             <div />
@@ -458,18 +461,17 @@ export const CourseView: React.FC<CourseViewProps> = ({ language }) => {
               icon={<ArrowRight className="w-4 h-4" />}
               onClick={handleNextStage}
             >
-              {t('learning:next_stage_btn', 'Próxima')}: {stages[activeStage.stageNumber].label}
+              {t('learning:next_stage_btn', 'Next Stage')}: {stages[activeStage.stageNumber].label}
             </Button>
           ) : (
             <Button
               variant="primary"
               size="md"
-              className="bg-emerald-600 hover:bg-emerald-700"
               icon={<CheckCircle className="w-4 h-4" />}
               onClick={markComplete}
               disabled={isCompleted}
             >
-              {isCompleted ? t('learning:completed_btn', 'Lição Concluída!') : t('learning:complete_lesson_btn', 'Concluir Lição de Hoje')}
+              {isCompleted ? t('learning:completed_btn', 'Lesson Completed') : t('learning:complete_lesson_btn', "Complete Today's Lesson")}
             </Button>
           )}
         </div>

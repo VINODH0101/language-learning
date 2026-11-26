@@ -82,7 +82,7 @@ export class JikanAdapter extends BaseApiProvider<CultureInput, NormalizedCultur
 
     const characters = data?.data || [];
     if (characters.length === 0) {
-      return this.getFallback(input, null);
+      return [];
     }
 
     return characters.map(char => {
@@ -114,24 +114,5 @@ export class JikanAdapter extends BaseApiProvider<CultureInput, NormalizedCultur
         provider: this.metadata.id,
       };
     });
-  }
-
-  protected getFallback(input: CultureInput, _error: unknown): NormalizedCulturalEntity[] {
-    return [
-      {
-        id: `jikan-fallback-${input.query}`,
-        title: input.query,
-        japaneseTitle: '文化読解',
-        summary: `Perfil de leitura cultural sobre ${input.query} (disponível em modo offline).`,
-        category: 'Cultura & Leitura',
-        readingPassage: `A narrativa de ${input.query} aborda temas universais como perseverança, trabalho em equipe e superação de adversidades. Este texto serve como material autêntico de compreensão leitora intermediária e avançada (nível CEFR B2/C1).`,
-        glossary: {
-          'Perseverança': 'Qualidade de quem não desiste diante de obstáculos',
-          'Adversidade': 'Situação desfavorável ou momento difícil',
-        },
-        cefrLevel: 'B2',
-        provider: 'fallback',
-      },
-    ];
   }
 }

@@ -854,8 +854,7 @@ GRANT SELECT ON TABLE
     public.vocabulary_items,
     public.grammar_rules,
     public.exercise_templates,
-    public.curated_materials,
-    public.daily_published_content
+    public.curated_materials
 TO anon;
 
 -- ==============================================================================
@@ -884,6 +883,8 @@ CREATE TABLE IF NOT EXISTS public.daily_published_content (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+GRANT SELECT ON TABLE public.daily_published_content TO anon;
 
 CREATE INDEX IF NOT EXISTS idx_daily_content_active 
     ON public.daily_published_content(content_type, learning_language, is_active);

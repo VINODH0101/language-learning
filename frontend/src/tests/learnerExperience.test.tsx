@@ -1,7 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { contentCentredService, SEED_CONTENT_ITEMS } from '../services/contentCentredService';
+import { contentCentredService } from '../services/contentCentredService';
+import { ContentItem, ContentVersion, LearningActivity } from '../types/contentCentred';
 import { LearnCatalog } from '../features/learn/LearnCatalog';
 import { ReaderView } from '../features/learn/ReaderView';
 import { ContextualLookupModal } from '../features/learn/ContextualLookupModal';
@@ -9,11 +10,167 @@ import { ContentActivities } from '../features/learn/ContentActivities';
 import { MyWordsPage } from '../pages/MyWordsPage';
 import { MyMistakesPage } from '../pages/MyMistakesPage';
 
-describe('Lexilume Learner Experience (Milestones 7.5, 7.6, 7.7)', () => {
-  const seedDublin = SEED_CONTENT_ITEMS[0];
+function createMockDublinItem(): ContentItem & { version: ContentVersion; activities: LearningActivity[] } {
+  const now = new Date().toISOString();
+  const item: ContentItem = {
+    id: 'ci_coffee_dublin_001',
+    title: 'A Morning Coffee in Dublin',
+    slug: 'morning-coffee-dublin',
+    target_language: 'en',
+    explanation_language: 'pt',
+    source_language: 'en',
+    summary: 'Ordering a flat white on a rainy Dublin morning.',
+    genre: 'short_story',
+    content_type: 'story',
+    primary_cefr: 'B1',
+    estimated_read_minutes: 4,
+    status: 'published',
+    current_version_id: 'cv_coffee_dublin_v1',
+    rights_status: 'public_domain',
+    created_at: now,
+    updated_at: now,
+  };
+  const version: ContentVersion = {
+    id: 'cv_coffee_dublin_v1',
+    content_item_id: item.id,
+    version_number: 1,
+    cefr_level: 'B1',
+    word_count: 18,
+    sentence_count: 2,
+    is_published: true,
+    published_at: now,
+    created_at: now,
+    audio_metadata: {},
+    structured_payload: {
+      title: 'A Morning Coffee in Dublin',
+      paragraphs: [
+        {
+          id: 'p1',
+          order: 1,
+          sentences: [
+            {
+              id: 's1',
+              order: 1,
+              text: 'The barista poured the velvety flat white while rain tapped against the window.',
+              tokens: [
+                { text: 'The', lemma: 'the', pos: 'det' },
+                { text: 'barista', lemma: 'barista', pos: 'noun' },
+                { text: 'poured', lemma: 'pour', pos: 'verb' },
+                { text: 'the', lemma: 'the', pos: 'det' },
+                { text: 'velvety', lemma: 'velvety', pos: 'adjective', gloss_id: 'g_velvety' },
+                { text: 'flat white', lemma: 'flat white', pos: 'noun' },
+              ],
+              translations: {
+                pt: 'O barista despejou o flat white aveludado enquanto a chuva batia na janela.',
+                es: 'El barista sirvió el flat white aterciopelado mientras la lluvia golpeaba la ventana.',
+                en: 'The barista poured the velvety flat white while rain tapped against the window.',
+              },
+            },
+          ],
+        },
+      ],
+      annotations: {
+        g_velvety: {
+          id: 'g_velvety',
+          lemma: 'velvety',
+          term: 'velvety',
+          pos: 'adjective',
+          cefr: 'B2',
+          contextual_meaning: 'Having a soft, smooth, creamy texture pleasant to the palate.',
+          context_translation: { pt: 'aveludado, cremoso', es: 'aterciopelado, cremoso', en: 'velvety' },
+        },
+      },
+      grammar_points: [],
+    },
+  };
+  const activities: LearningActivity[] = [
+    {
+      id: 'act_dublin_1',
+      content_version_id: version.id,
+      activity_type: 'reading_comprehension',
+      activity_title: 'Café Atmosphere',
+      activity_order: 1,
+      estimated_minutes: 2,
+      created_at: now,
+      configuration: {
+        instructions: 'Answer based on the text.',
+        questions: [
+          {
+            id: 'q1',
+            type: 'multiple_choice',
+            stem: 'What was the weather like outside the café?',
+            options: [
+              { id: 'opt1', text: 'It was raining outside' },
+              { id: 'opt2', text: 'It was a clear and sunny morning' },
+            ],
+            correct_answer: 'opt1',
+            explanation: 'The text states rain tapped against the window.',
+          },
+        ],
+      },
+    },
+  ];
+  return { ...item, version, activities };
+}
 
-  beforeEach(() => {
+describe('Lexilume Learner Experience (Milestones 7.5, 7.6, 7.7)', () => {
+  const seedDublin = createMockDublinItem();
+
+  beforeEach(async () => {
+    localStorage.clear();
+    contentCentredService.clearLocalRegistries();
     vi.clearAllMocks();
+    const now = new Date().toISOString();
+    const ptItem: ContentItem = {
+      id: 'ci_bairro_alto_pt',
+      title: 'Um Passeio pelo Bairro Alto',
+      slug: 'passeio-bairro-alto',
+      target_language: 'pt',
+      explanation_language: 'en',
+      summary: 'A walk through Lisbon.',
+      genre: 'culture_and_travel',
+      content_type: 'story',
+      primary_cefr: 'A2',
+      estimated_read_minutes: 3,
+      status: 'published',
+      current_version_id: 'cv_bairro_alto_v1',
+      rights_status: 'public_domain',
+      created_at: now,
+      updated_at: now,
+    };
+    const esItem: ContentItem = {
+      id: 'ci_san_miguel_es',
+      title: 'Tapas en el Mercado de San Miguel',
+      slug: 'mercado-san-miguel',
+      target_language: 'es',
+      explanation_language: 'en',
+      summary: 'Exploring flavors in Madrid.',
+      genre: 'culture_and_travel',
+      content_type: 'story',
+      primary_cefr: 'B1',
+      estimated_read_minutes: 4,
+      status: 'published',
+      current_version_id: 'cv_san_miguel_v1',
+      rights_status: 'public_domain',
+      created_at: now,
+      updated_at: now,
+    };
+    await contentCentredService.saveContentItem(seedDublin, { systemBypass: true });
+    await contentCentredService.saveContentVersion(seedDublin.version, { systemBypass: true });
+    await contentCentredService.publishContentVersion(seedDublin.id, seedDublin.version.id, { systemBypass: true });
+    await contentCentredService.saveLearningActivity(seedDublin.activities[0], { systemBypass: true });
+    await contentCentredService.saveContentItem(ptItem, { systemBypass: true });
+    await contentCentredService.saveContentVersion(
+      { ...seedDublin.version, id: 'cv_bairro_alto_v1', content_item_id: ptItem.id },
+      { systemBypass: true }
+    );
+    await contentCentredService.publishContentVersion(ptItem.id, 'cv_bairro_alto_v1', { systemBypass: true });
+    await contentCentredService.saveContentItem(esItem, { systemBypass: true });
+    await contentCentredService.saveContentVersion(
+      { ...seedDublin.version, id: 'cv_san_miguel_v1', content_item_id: esItem.id },
+      { systemBypass: true }
+    );
+    await contentCentredService.publishContentVersion(esItem.id, 'cv_san_miguel_v1', { systemBypass: true });
   });
 
   it('1. LearnCatalog renders authentic published content with language and duration badges', async () => {

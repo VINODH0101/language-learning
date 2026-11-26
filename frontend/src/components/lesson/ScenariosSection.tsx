@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MessageSquare,
   Sparkles,
@@ -13,7 +13,8 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { Language, DialogueScenario } from '../../types';
-import { dialogueScenarios } from '../../data/scenarioData';
+import { dailyContentService } from '../../services/dailyContentService';
+import { contentAccess } from '../../services/contentAccess';
 import { AudioButton } from '../common/AudioButton';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
@@ -30,9 +31,59 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
   variety,
 }) => {
   const { t, interfaceLanguage } = useI18n();
-  const scenarios = dialogueScenarios.filter(s => s.language === language);
-  const [selectedId, setSelectedId] = useState<string>(scenarios[0]?.id || '');
+  const [scenarios, setScenarios] = useState<DialogueScenario[]>([]);
+  const [selectedId, setSelectedId] = useState<string>('');
   const [showTranslations, setShowTranslations] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [daily, aiConvos] = await Promise.all([
+          dailyContentService.getAllContent(),
+          contentAccess.getPublishedConversations(language).catch(() => []),
+        ]);
+        const merged = [
+          ...aiConvos,
+          ...daily.activeConversations.filter(c => c.learning_language === language),
+          ...daily.archivedConversations.filter(c => c.learning_language === language),
+        ];
+        const unique = new Map<string, DialogueScenario>();
+        for (const c of merged) {
+          if (unique.has(c.id)) continue;
+          unique.set(c.id, {
+            id: c.id,
+            language: c.learning_language,
+            title: c.title,
+            category: 'daily_life' as DialogueScenario['category'],
+            cefr_level: c.cefr_level,
+            context: c.scenario || c.cultural_context,
+            turns: c.dialogue.map(turn => ({
+              speaker: turn.speaker,
+              line: turn.line,
+              translation: turn.translation || '',
+              natural_translation: turn.translation,
+              translation_pt: c.learning_language === 'pt' ? turn.line : turn.translation,
+              translation_es: c.learning_language === 'es' ? turn.line : turn.translation,
+            })),
+            pragmatic_tips: c.cultural_context ? [c.cultural_context] : [],
+            vocabulary: [],
+          });
+        }
+        if (!cancelled) {
+          const list = Array.from(unique.values());
+          setScenarios(list);
+          setSelectedId(prev => prev || list[0]?.id || '');
+        }
+      } catch {
+        if (!cancelled) setScenarios([]);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   const activeScenario = scenarios.find(s => s.id === selectedId) || scenarios[0];
 

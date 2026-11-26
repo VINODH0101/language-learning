@@ -43,5 +43,15 @@
   "admin_destination_content_import": "Import Content",
   "admin_destination_processing_studio": "Processing Studio",
   "admin_destination_review": "Review & Publish",
-  "admin_destination_settings": "Settings"
+  "admin_destination_settings": "Settings",
+  "nav_notebooks": "Notebooks",
+  "nav_words": "My Words",
+  "nav_mistakes": "My Mistakes",
+  "notebooks_header": "Personal Notebooks",
+  "reading_room_title": "The Reading Room",
+  "reading_room_desc": "Authentic texts, stories & dialogues",
+  "tool_words_desc": "Saved vocabulary & SM-2 cards",
+  "tool_mistakes_desc": "Error review & targeted practice",
+  "account_preferences_header": "Account & Preferences",
+  "settings_sync_status": "Language Matrix, Goals & Preferences"
 }

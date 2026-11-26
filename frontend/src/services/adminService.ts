@@ -18,6 +18,7 @@ import { authService } from './auth';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { dailyContentService } from './dailyContentService';
 import { ProviderHealthTracker, ProviderHealthRecord } from './monitoring/providerHealth';
+import i18n from '../i18n/config';
 import {
   PendingContentItem,
   FailedJobItem,
@@ -29,102 +30,6 @@ import {
 const STORAGE_KEY_REVIEW = 'lexilume_admin_review_queue_v1';
 const STORAGE_KEY_JOBS = 'lexilume_admin_background_jobs_v1';
 const STORAGE_KEY_AUDIT = 'lexilume_admin_audit_logs_v1';
-
-export const INITIAL_REVIEW_ITEMS: PendingContentItem[] = [
-  {
-    id: 'rev-01',
-    type: 'vocabulary',
-    titleOrTerm: 'perspicácia',
-    language: 'pt',
-    cefrLevel: 'C1',
-    source: 'Wiktionary / Kaikki',
-    status: 'pending',
-    reasonFlagged: 'Revisão periódica de frequência alta (wordfreq top 8.000)',
-    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-  },
-  {
-    id: 'rev-02',
-    type: 'reading',
-    titleOrTerm: 'Barroco Joanino no Norte de Portugal',
-    language: 'pt',
-    cefrLevel: 'C1',
-    source: 'Curated Studio',
-    status: 'pending',
-    reasonFlagged: 'Verificação de licença aberta e atribuição de autor',
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-  {
-    id: 'rev-03',
-    type: 'dialogue',
-    titleOrTerm: 'Negociação na Feira da Ladra',
-    language: 'pt',
-    cefrLevel: 'B2',
-    source: 'Deterministic Synthesis Engine',
-    status: 'pending',
-    reasonFlagged: 'Validação sintática e verificação de naturalidade oral',
-    createdAt: new Date(Date.now() - 3600000 * 36).toISOString(),
-  },
-  {
-    id: 'rev-04',
-    type: 'exercise',
-    titleOrTerm: 'Subjuntivo em Orações Concessivas (embora vs apesar de)',
-    language: 'es',
-    cefrLevel: 'B2',
-    source: 'LanguageTool Rule Repository',
-    status: 'pending',
-    reasonFlagged: 'Conferência de distratores gramaticais',
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-  },
-];
-
-export const INITIAL_FAILED_JOBS: FailedJobItem[] = [
-  {
-    id: 'job-901',
-    jobType: 'CEFR C1 Sentence Synthesis',
-    language: 'pt',
-    cefrLevel: 'C1',
-    status: 'failed',
-    errorReason: 'Rate limit temporário do servidor upstream (HTTP 429)',
-    retryCount: 1,
-    maxRetries: 3,
-    payload: { batchSize: 25, node: 'pt-c1-syntax-04' },
-    lastRunAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-    createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-  },
-  {
-    id: 'job-902',
-    jobType: 'Tatoeba Multilingual Alignments',
-    language: 'es',
-    cefrLevel: 'B2',
-    status: 'failed',
-    errorReason: 'Socket timeout durante sincronização de lote',
-    retryCount: 2,
-    maxRetries: 3,
-    payload: { source: 'tatoeba', corpus: 'spa-eng' },
-    lastRunAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-    createdAt: new Date(Date.now() - 3600000 * 14).toISOString(),
-  },
-];
-
-export const INITIAL_AUDIT_LOGS: AdminAuditLog[] = [
-  {
-    id: 'aud_01',
-    admin_id: 'usr_admin_001',
-    admin_email: 'admin@polyglot.dev',
-    action: 'bootstrap_initial_admin',
-    target_user_id: 'usr_admin_001',
-    details: { mechanism: 'bootstrap_admin.py', role: 'admin' },
-    created_at: new Date(Date.now() - 3600 * 1000 * 24 * 3).toISOString(),
-  },
-  {
-    id: 'aud_02',
-    admin_id: 'usr_admin_001',
-    admin_email: 'admin@polyglot.dev',
-    action: 'system_security_scan',
-    details: { rls_verified: true, keys_scrubbed: true },
-    created_at: new Date(Date.now() - 3600 * 1000 * 24 * 1).toISOString(),
-  },
-];
 
 export class AdminService {
   private static instance: AdminService;
@@ -262,6 +167,12 @@ export class AdminService {
 
     if (isSupabaseConfigured) {
       try {
+        const { data: reviewRow } = await supabase
+          .from('content_review_items')
+          .select('content_item_id, content_version_id')
+          .eq('id', id)
+          .maybeSingle();
+
         await supabase
           .from('content_review_items')
           .update({
@@ -271,6 +182,19 @@ export class AdminService {
             updated_at: nowIso,
           })
           .eq('id', id);
+
+        if (reviewRow?.content_item_id) {
+          await supabase
+            .from('content_items')
+            .update({ status: 'published', updated_at: nowIso })
+            .eq('id', reviewRow.content_item_id);
+        }
+        if (reviewRow?.content_version_id) {
+          await supabase
+            .from('content_versions')
+            .update({ is_published: true, published_at: nowIso })
+            .eq('id', reviewRow.content_version_id);
+        }
       } catch (err) {
         console.warn('Failed to update review item in Supabase', err);
       }
@@ -278,7 +202,7 @@ export class AdminService {
 
     await this.logAdminAction('approve_content', undefined, {
       itemId: id,
-      notes: notes || 'Item pedagógico aprovado para distribuição.',
+      notes: notes || String(i18n.t('admin:svc_approve_note', 'Pedagogical item approved for distribution.')),
       approvedBy: adminEmail,
     });
 
@@ -342,7 +266,7 @@ export class AdminService {
 
     const newItem: PendingContentItem = {
       ...item,
-      id: `rev-${Date.now().toString(36)}`,
+      id: `rev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
@@ -413,13 +337,22 @@ export class AdminService {
     const job = jobs.find(j => j.id === jobId);
 
     if (!job) {
-      return { success: false, message: 'Tarefa não encontrada.' };
+      return {
+        success: false,
+        message: String(i18n.t('admin:svc_job_not_found', 'Task not found.')),
+      };
     }
 
     if (job.retryCount >= job.maxRetries) {
       return {
         success: false,
-        message: `Limite de ${job.maxRetries} tentativas excedido para a tarefa ${jobId}. Verifique os logs upstream.`,
+        message: String(
+          i18n.t('admin:svc_job_limit_exceeded', {
+            max: job.maxRetries,
+            id: jobId,
+            defaultValue: 'Retry limit of {{max}} attempts exceeded for task {{id}}. Check upstream logs.',
+          })
+        ),
       };
     }
 
@@ -464,7 +397,14 @@ export class AdminService {
     this.notify();
     return {
       success: true,
-      message: `Tarefa ${jobId} reprocessada com sucesso (tentativa ${nextRetryCount}/${job.maxRetries}).`,
+      message: String(
+        i18n.t('admin:svc_job_requeued', {
+          id: jobId,
+          attempt: nextRetryCount,
+          max: job.maxRetries,
+          defaultValue: 'Task {{id}} reprocessed successfully (attempt {{attempt}}/{{max}}).',
+        })
+      ),
     };
   }
 
@@ -579,6 +519,83 @@ export class AdminService {
     return ProviderHealthTracker.getInstance().getAllStatuses();
   }
 
+  public async triggerAiGenerationRun(schedules?: Array<Record<string, unknown>>): Promise<{
+    success: boolean;
+    mode: 'http' | 'offline';
+    message: string;
+    report?: Record<string, unknown>;
+  }> {
+    if (authService.getState().role !== 'admin') {
+      throw new Error('Access denied: Admin privileges required.');
+    }
+
+    const apiBase =
+      typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CONTENT_API_BASE
+        ? String((import.meta as any).env.VITE_CONTENT_API_BASE).replace(/\/+$/, '')
+        : '';
+
+    if (!apiBase) {
+      return {
+        success: false,
+        mode: 'offline',
+        message: String(
+          i18n.t(
+            'admin:svc_api_not_configured',
+            'Backend Content API is not configured (VITE_CONTENT_API_BASE). Run via CLI: python scripts/run_content_generation.py.'
+          )
+        ),
+      };
+    }
+
+    const response = await fetch(`${apiBase}/admin/generation/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Role': 'admin',
+      },
+      body: JSON.stringify(schedules ? { schedules } : {}),
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI generation trigger failed (HTTP ${response.status})`);
+    }
+
+    const report = (await response.json()) as Record<string, unknown>;
+    await this.logAdminAction('trigger_ai_generation', undefined, report);
+    this.notify();
+    return {
+      success: true,
+      mode: 'http',
+      message: String(
+        i18n.t('admin:svc_generation_completed', {
+          count: report.jobs_completed ?? 0,
+          defaultValue: 'Generation finished: {{count}} draft(s) queued for review.',
+        })
+      ),
+      report,
+    };
+  }
+
+  public async getAiOverview(): Promise<Record<string, unknown> | null> {
+    if (authService.getState().role !== 'admin') {
+      return null;
+    }
+    const apiBase =
+      typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CONTENT_API_BASE
+        ? String((import.meta as any).env.VITE_CONTENT_API_BASE).replace(/\/+$/, '')
+        : '';
+    if (!apiBase) return null;
+    try {
+      const response = await fetch(`${apiBase}/admin/overview`, {
+        headers: { 'X-Admin-Role': 'admin' },
+      });
+      if (!response.ok) return null;
+      return (await response.json()) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
   // ==========================================
   // Local Storage Helpers
   // ==========================================
@@ -588,7 +605,7 @@ export class AdminService {
       const raw = localStorage.getItem(STORAGE_KEY_REVIEW);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return [...INITIAL_REVIEW_ITEMS];
+    return [];
   }
 
   private saveLocalReviewItems(items: PendingContentItem[]): void {
@@ -602,7 +619,7 @@ export class AdminService {
       const raw = localStorage.getItem(STORAGE_KEY_JOBS);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return [...INITIAL_FAILED_JOBS];
+    return [];
   }
 
   private saveLocalJobs(jobs: FailedJobItem[]): void {
@@ -616,7 +633,7 @@ export class AdminService {
       const raw = localStorage.getItem(STORAGE_KEY_AUDIT);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return [...INITIAL_AUDIT_LOGS];
+    return [];
   }
 
   private saveLocalAuditLogs(logs: AdminAuditLog[]): void {

@@ -19,10 +19,12 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { SpeechService } from '../../services/speech';
 import { contentCentredService } from '../../services/contentCentredService';
+import { extractParagraphsFromAiBody } from '../../services/contentAccess';
 import { StorageService } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { ContextualLookupModal, ContextualLookupData } from './ContextualLookupModal';
 import { ContentActivities } from './ContentActivities';
+import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 interface ReaderViewProps {
@@ -38,14 +40,30 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   activities,
   onBack,
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'read' | 'activities'>('read');
   const [selectedSentenceId, setSelectedSentenceId] = useState<string | null>(null);
   const [lookupData, setLookupData] = useState<ContextualLookupData | null>(null);
   const [playingSentenceId, setPlayingSentenceId] = useState<string | null>(null);
   const [showAllTranslations, setShowAllTranslations] = useState(false);
 
-  const payload = version.structured_payload;
-  const allSentences = (payload.paragraphs || []).flatMap(p => p.sentences || []);
+  const rawPayload = (version.structured_payload || {}) as Record<string, any>;
+  const resolvedParagraphs =
+    Array.isArray(rawPayload.paragraphs) && rawPayload.paragraphs.length > 0
+      ? (rawPayload.paragraphs as ContentParagraph[])
+      : extractParagraphsFromAiBody(
+          item.title,
+          item.summary || '',
+          rawPayload,
+          item.explanation_language || 'en'
+        );
+  const payload = {
+    ...rawPayload,
+    paragraphs: resolvedParagraphs,
+    annotations: rawPayload.annotations || {},
+    grammar_points: rawPayload.grammar_points || [],
+  };
+  const allSentences = payload.paragraphs.flatMap(p => p.sentences || []);
   const totalSentences = allSentences.length;
 
   // Active reading-session tracking refs
@@ -280,7 +298,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     if (token.pos === 'PUNCT') return;
 
     const glossId = token.gloss_id || `g_${token.lemma.toLowerCase()}`;
-    const annotation = payload.annotations[glossId];
+    const annotation = payload.annotations?.[glossId];
 
     setLookupData({
       selectedText: token.text,
@@ -325,7 +343,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       {/* Top Editorial Toolbar */}
       <div className="flex items-center justify-between gap-4 border-b border-stone-200 pb-4">
         <Button variant="ghost" size="sm" icon={<ArrowLeft className="w-4 h-4" />} onClick={onBack}>
-          Library
+          {t('learning:reader_back_library', 'Library')}
         </Button>
 
         <div className="flex items-center gap-2">
@@ -340,7 +358,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Read</span>
+              <span>{t('learning:reader_tab_read', 'Read')}</span>
             </button>
             <button
               onClick={() => {
@@ -352,7 +370,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-800" />
-              <span>Activities ({activities.reduce((s, a) => s + (a.configuration?.questions?.length || 0), 0)})</span>
+              <span>
+                {t('learning:reader_tab_activities', 'Activities ({{count}})', {
+                  count: activities.reduce((s, a) => s + (a.configuration?.questions?.length || 0), 0),
+                })}
+              </span>
             </button>
           </div>
 
@@ -364,9 +386,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               recordUserInteraction();
               setShowAllTranslations(prev => !prev);
             }}
-            title="Toggle translations for all sentences"
+            title={t('learning:reader_toggle_translations_title', 'Toggle translations for all sentences')}
           >
-            {showAllTranslations ? 'Hide Translations' : 'Translations'}
+            {showAllTranslations
+              ? t('learning:reader_hide_translations', 'Hide Translations')
+              : t('learning:reader_show_translations', 'Translations')}
           </Button>
         </div>
       </div>
@@ -385,7 +409,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               <Badge variant="slate">{version.cefr_level}</Badge>
               <span className="text-xs text-stone-500 flex items-center gap-1 ml-auto">
                 <Clock className="w-3.5 h-3.5 text-stone-400" />
-                ~{item.estimated_read_minutes} min read
+                {t('learning:catalog_min_read', '~{{count}} min read', { count: item.estimated_read_minutes })}
               </span>
             </div>
 
@@ -395,7 +419,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
             {item.author && (
               <p className="text-xs font-sans text-stone-500">
-                By <span className="text-stone-800 font-medium">{item.author}</span>
+                {t('learning:reader_by_author', 'By')}{' '}
+                <span className="text-stone-800 font-medium">{item.author}</span>
                 {item.attribution_notice && ` • ${item.attribution_notice}`}
               </p>
             )}
@@ -421,31 +446,41 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                           : 'hover:bg-amber-50/70'
                       }`}
                     >
-                      {/* Word Tokens */}
-                      {sentence.tokens.map((token, tokIdx) => {
-                        const hasGloss = Boolean(token.gloss_id || payload.annotations[`g_${token.lemma.toLowerCase()}`]);
-                        const isPunct = token.pos === 'PUNCT';
+                      {/* Word Tokens (or raw sentence fallback if un-tokenized) */}
+                      {sentence.tokens && sentence.tokens.length > 0 ? (
+                        sentence.tokens.map((token, tokIdx) => {
+                          const hasGloss = Boolean(
+                            token.gloss_id || payload.annotations?.[`g_${token.lemma.toLowerCase()}`]
+                          );
+                          const isPunct = token.pos === 'PUNCT';
 
-                        return (
-                          <span
-                            key={tokIdx}
-                            tabIndex={isPunct ? -1 : 0}
-                            role={isPunct ? undefined : 'button'}
-                            aria-label={isPunct ? undefined : `Lookup ${token.text}`}
-                            onClick={e => handleTokenClick(e, token, sentence, paragraph)}
-                            onKeyDown={e => handleTokenKeyDown(e, token, sentence, paragraph)}
-                            className={`transition-colors select-text ${
-                              isPunct
-                                ? 'text-stone-400 font-serif'
-                                : hasGloss
-                                ? 'text-stone-900 font-serif font-medium underline decoration-stone-300 decoration-dotted underline-offset-4 hover:text-amber-900 hover:decoration-amber-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-sm'
-                                : 'hover:text-stone-700 focus:outline-none focus:underline'
-                            }`}
-                          >
-                            {token.text}{' '}
-                          </span>
-                        );
-                      })}
+                          return (
+                            <span
+                              key={tokIdx}
+                              tabIndex={isPunct ? -1 : 0}
+                              role={isPunct ? undefined : 'button'}
+                              aria-label={
+                                isPunct
+                                  ? undefined
+                                  : t('learning:reader_lookup_aria', 'Lookup {{word}}', { word: token.text })
+                              }
+                              onClick={e => handleTokenClick(e, token, sentence, paragraph)}
+                              onKeyDown={e => handleTokenKeyDown(e, token, sentence, paragraph)}
+                              className={`transition-colors select-text ${
+                                isPunct
+                                  ? 'text-stone-400 font-serif'
+                                  : hasGloss
+                                  ? 'text-stone-900 font-serif font-medium underline decoration-stone-300 decoration-dotted underline-offset-4 hover:text-amber-900 hover:decoration-amber-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-sm'
+                                  : 'hover:text-stone-700 focus:outline-none focus:underline'
+                              }`}
+                            >
+                              {token.text}{' '}
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span>{sentence.text} </span>
+                      )}
 
                       {/* Sentence Audio Trigger */}
                       <button
@@ -453,8 +488,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                         className={`inline-flex items-center align-middle ml-1 p-0.5 rounded text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition-colors cursor-pointer ${
                           isPlaying ? 'text-stone-900 animate-pulse' : ''
                         }`}
-                        title="Listen to sentence"
-                        aria-label="Listen to sentence"
+                        title={t('learning:reader_listen_sentence', 'Listen to sentence')}
+                        aria-label={t('learning:reader_listen_sentence', 'Listen to sentence')}
                       >
                         <Volume2 className="w-3.5 h-3.5" />
                       </button>
@@ -475,7 +510,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           {/* Bottom Reader Actions */}
           <footer className="pt-8 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-4">
             <span className="text-xs text-stone-500 font-sans">
-              Click any sentence for translation, or click underlined words for contextual vocabulary definitions.
+              {t(
+                'learning:reader_footer_hint',
+                'Click any sentence for translation, or click underlined words for contextual vocabulary definitions.'
+              )}
             </span>
 
             {activities.length > 0 && (
@@ -488,7 +526,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                   setActiveTab('activities');
                 }}
               >
-                Comprehension Activities
+                {t('learning:reader_cta_activities', 'Comprehension Activities')}
               </Button>
             )}
           </footer>
@@ -501,7 +539,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           activities={activities}
           onComplete={score => {
             recordUserInteraction();
-            toast.success(`Completed reading session with ${score}%!`);
+            toast.success(
+              t('learning:activities_session_finished', 'Session finished with score of {{score}}%!', { score })
+            );
           }}
         />
       )}

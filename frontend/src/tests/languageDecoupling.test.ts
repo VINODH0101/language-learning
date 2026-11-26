@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   isValidRegionalVariety,
   enforceRegionalVariety,
@@ -12,11 +12,47 @@ import {
 import { courseService } from '../services/courseService';
 import { ClientLessonGenerator } from '../services/lessonGenerator';
 import { SpeechService } from '../services/speech';
+import { VocabularyService } from '../services/vocabularyService';
+import type { VocabularyEntry } from '../types/vocabulary';
+
+const DECOUPLING_ATTR = {
+  source_name: 'Lexilume Live Engine',
+  source_url: 'https://lexilume.local',
+  license_type: 'Original-Curated',
+  attribution_text: 'Generated for decoupling matrix tests',
+};
+
+function makeDecouplingVocab(): VocabularyEntry[] {
+  const entries: VocabularyEntry[] = [];
+  for (const lang of ['pt', 'es', 'en'] as const) {
+    for (let i = 0; i < 8; i++) {
+      entries.push({
+        id: `dec_${lang}_${i}`,
+        lemma: `${lang}_lexeme_${i}`,
+        target_language: lang,
+        part_of_speech: 'noun',
+        cefr_level: 'C1',
+        translations: { en: `en_${i}`, pt: `pt_${i}`, es: `es_${i}` },
+        definitions: { en: `def_en_${i}`, pt: `def_pt_${i}`, es: `def_es_${i}` },
+        example_sentence_target: `${lang}_lexeme_${i} in context.`,
+        example_sentence_translations: { en: `ex_en_${i}`, pt: `ex_pt_${i}`, es: `ex_es_${i}` },
+        topic: 'daily_life',
+        attribution: DECOUPLING_ATTR,
+      });
+    }
+  }
+  return entries;
+}
 
 describe('Enforce Separation between Interface, Learning, Explanation, and Regional Variety', () => {
   beforeEach(() => {
     localStorage.clear();
     courseService.setUserId('test_decoupling_user');
+    VocabularyService.setDynamicCatalog(makeDecouplingVocab());
+  });
+
+  afterEach(() => {
+    VocabularyService.clearDynamicCatalog();
   });
 
   describe('1. Regional Variety Strict Scoping by Learning Language', () => {

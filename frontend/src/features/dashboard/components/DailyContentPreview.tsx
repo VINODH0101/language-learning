@@ -93,7 +93,50 @@ export const DailyContentPreview: React.FC<DailyContentPreviewProps> = ({
     );
   }
 
-  if (!dailyPoem && !dailyConversation && publishedStories.length === 0) return null;
+  if (!dailyPoem && !dailyConversation && publishedStories.length === 0) {
+    return (
+      <section aria-label="Today's Edition" className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
+          <div>
+            <span className="text-xs uppercase tracking-widest text-stone-500 font-semibold block mb-1">
+              {t('dashboard:todays_edition_kicker', "Today's Edition")}
+            </span>
+            <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
+              {t('dashboard:daily_masterpiece_learning', "Today's Edition: Daily Immersion: Poetry & Dialogue")}
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-500 mt-1">
+              {t('dashboard:todays_edition_subhead', 'A selection of stories, ideas and conversations to explore today.')}
+            </p>
+          </div>
+          {onExploreAll && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExploreAll}
+              className="self-start sm:self-auto shrink-0"
+            >
+              <span>{t('dashboard:explore_all_stories', 'Explore All')}</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1 text-stone-500" />
+            </Button>
+          )}
+        </div>
+        <div className="rounded-xl border border-dashed border-stone-200 bg-[#FBF9F5] p-6 text-center space-y-3">
+          <BookOpen className="w-6 h-6 text-stone-400 mx-auto" />
+          <p className="text-sm text-stone-600 max-w-xl mx-auto">
+            {t(
+              'dashboard:culture_preview_empty',
+              'No live generated editions or cultural passages are cached yet. Connect to load fresh content from the AI Content Engine and open educational APIs.'
+            )}
+          </p>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} icon={<RefreshCw className="w-3.5 h-3.5" />}>
+              {t('common:retry', 'Retry')}
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   // Today's Edition is capped at three items in total. Poetry and dialogue are
   // included first; published stories only fill any remaining slots.

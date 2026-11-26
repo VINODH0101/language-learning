@@ -43,5 +43,15 @@
   "admin_destination_content_import": "Import Content",
   "admin_destination_processing_studio": "Processing Studio",
   "admin_destination_review": "Review & Publish",
-  "admin_destination_settings": "Settings"
+  "admin_destination_settings": "Settings",
+  "nav_notebooks": "Defterler",
+  "nav_words": "Kelimelerim",
+  "nav_mistakes": "Hatalarım",
+  "notebooks_header": "Kişisel Defterler",
+  "reading_room_title": "Okuma Odası",
+  "reading_room_desc": "Özgün metinler, hikayeler ve diyaloglar",
+  "tool_words_desc": "Kayıtlı kelimeler ve SM-2 kartları",
+  "tool_mistakes_desc": "Hata inceleme ve odaklı pratik",
+  "account_preferences_header": "Hesap ve Tercihler",
+  "settings_sync_status": "Dil Matrisi, Hedefler ve Tercihler"
 }

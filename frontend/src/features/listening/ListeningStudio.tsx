@@ -25,6 +25,9 @@ import {
 } from 'lucide-react';
 import { Language } from '../../types';
 import { SpeechService } from '../../services/speech';
+import { contentAccess } from '../../services/contentAccess';
+import { dailyContentService } from '../../services/dailyContentService';
+import { VocabularyService } from '../../services/vocabularyService';
 import { ContextualWordPopover } from '../../components/common/ContextualWordPopover';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
@@ -52,162 +55,77 @@ export interface ListeningPassage {
   questions: ListeningQuestion[];
 }
 
-const LISTENING_DATA: Record<string, ListeningPassage[]> = {
-  pt: [
-    {
-      id: 'pt-listen-1',
-      title: 'Aviso na Estação de Santa Apolónia',
-      category: 'Vida Diária & Transportes',
-      cefrLevel: 'B1',
-      sentences: [
-        {
-          id: 's1',
-          targetText: 'Atenção passageiros com destino ao Porto, o comboio Alfa Pendular com partida às quinze horas e trinta minutos encontra-se na linha quatro.',
-          explanationText: 'Attention passengers heading to Porto, the Alfa Pendular train departing at 15:30 is on platform four.',
-        },
-        {
-          id: 's2',
-          targetText: 'Solicita-se a todos os passageiros que preparem os respetivos bilhetes e documentos de identificação antes de embarcar.',
-          explanationText: 'All passengers are kindly requested to prepare their respective tickets and ID documents prior to boarding.',
-        },
-        {
-          id: 's3',
-          targetText: 'Lembramos que o uso de máscara no interior das carruagens é facultativo, mas recomendado para pessoas em situação vulnerável.',
-          explanationText: 'We remind you that wearing a mask inside carriages is optional, but recommended for vulnerable individuals.',
-        },
-        {
-          id: 's4',
-          targetText: 'Desejamos a todos uma excelente e segura viagem pelos caminhos de ferro portugueses.',
-          explanationText: 'We wish everyone an excellent and safe journey on the Portuguese railways.',
-        },
-      ],
-      questions: [
-        {
-          id: 'q1',
-          question: 'Para onde viaja o comboio Alfa Pendular mencionado?',
-          options: ['Coimbra', 'Porto', 'Faro', 'Braga'],
-          correctIndex: 1,
-          explanation: 'O áudio informa explicitamente "passageiros com destino ao Porto".',
-        },
-        {
-          id: 'q2',
-          question: 'Em que linha o comboio está posicionado?',
-          options: ['Linha 2', 'Linha 3', 'Linha 4', 'Linha 7'],
-          correctIndex: 2,
-          explanation: 'O locutor anuncia que o comboio "encontra-se na linha quatro".',
-        },
-      ],
-    },
-    {
-      id: 'pt-listen-2',
-      title: 'Debate Ecológico: Energia Limpa e Sustentabilidade',
-      category: 'Ciência & Sociedade',
-      cefrLevel: 'C1',
-      sentences: [
-        {
-          id: 's1',
-          targetText: 'A transição energética requer não apenas subsídios estatais, mas uma reformulação estrutural de toda a cadeia de abastecimento.',
-          explanationText: 'The energy transition requires not merely state subsidies, but a structural overhaul of the entire supply chain.',
-        },
-        {
-          id: 's2',
-          targetText: 'A intermitência dos recursos eólicos e solares exige sistemas robustos de armazenamento eletroquímico e redes inteligentes.',
-          explanationText: 'The intermittency of wind and solar resources demands robust electrochemical storage systems and smart grids.',
-        },
-        {
-          id: 's3',
-          targetText: 'Caso contrário, correremos o risco de estagnação e dependência cíclica de combustíveis fósseis em períodos de pico.',
-          explanationText: 'Otherwise, we run the risk of stagnation and cyclical reliance on fossil fuels during peak periods.',
-        },
-      ],
-      questions: [
-        {
-          id: 'q1',
-          question: 'Qual é o principal desafio associado às energias eólica e solar mencionado?',
-          options: ['Custo de extração elevado', 'Intermitência dos recursos', 'Falta de interesse público', 'Incompatibilidade física'],
-          correctIndex: 1,
-          explanation: 'O locutor destaca explicitamente que "A intermitência dos recursos eólicos e solares exige sistemas robustos".',
-        },
-      ],
-    },
-  ],
-  es: [
-    {
-      id: 'es-listen-1',
-      title: 'Anuncio en el Aeropuerto de Barajas',
-      category: 'Viajes & Logística',
-      cefrLevel: 'B1',
-      sentences: [
-        {
-          id: 's1',
-          targetText: 'Última llamada para los pasajeros del vuelo IB3160 con destino a la ciudad de Barcelona.',
-          explanationText: 'Last call for passengers of flight IB3160 bound for Barcelona.',
-        },
-        {
-          id: 's2',
-          targetText: 'Por favor, acérquense inmediatamente a la puerta de embarque K24 situada en la terminal cuatro.',
-          explanationText: 'Please proceed immediately to boarding gate K24 located in terminal four.',
-        },
-        {
-          id: 's3',
-          targetText: 'El embarque finalizará en cinco minutos y las puertas del avión se cerrarán.',
-          explanationText: 'Boarding will close in five minutes and aircraft doors will be secured.',
-        },
-      ],
-      questions: [
-        {
-          id: 'q1',
-          question: '¿Cuál es el destino del vuelo IB3160?',
-          options: ['Madrid', 'Valencia', 'Barcelona', 'Sevilla'],
-          correctIndex: 2,
-          explanation: 'El mensaje indica claramente que el vuelo tiene "destino a la ciudad de Barcelona".',
-        },
-      ],
-    },
-  ],
-  en: [
-    {
-      id: 'en-listen-1',
-      title: 'University Symposium on Cognitive Linguistics',
-      category: 'Academia & Research',
-      cefrLevel: 'B2',
-      sentences: [
-        {
-          id: 's1',
-          targetText: 'Today we explore how syntactic metaphors fundamentally shape human conceptual frameworks.',
-          explanationText: 'Hoje exploramos como metáforas sintáticas moldam fundamentalmente os quadros conceituais humanos.',
-        },
-        {
-          id: 's2',
-          targetText: 'Rather than serving as mere poetic ornament, metaphors actively structure how we process abstract relations.',
-          explanationText: 'Em vez de servir como mero ornamento poético, metáforas estruturam ativamente como processamos relações abstratas.',
-        },
-        {
-          id: 's3',
-          targetText: 'Empirical experiments in neuroscience have repeatedly substantiated this foundational hypothesis.',
-          explanationText: 'Experimentos empíricos em neurociência têm repetidamente comprovado esta hipótese fundamental.',
-        },
-      ],
-      questions: [
-        {
-          id: 'q1',
-          question: 'According to the speaker, what role do metaphors serve?',
-          options: ['Mere poetic decoration', 'Grammar filler', 'Structuring how we process abstract relations', 'Memory distraction'],
-          correctIndex: 2,
-          explanation: 'The lecture emphasizes that metaphors "actively structure how we process abstract relations".',
-        },
-      ],
-    },
-  ],
-};
-
 export interface ListeningStudioProps {
   language: Language;
+  passages?: ListeningPassage[];
 }
 
-export const ListeningStudio: React.FC<ListeningStudioProps> = ({ language }) => {
-  const passages = LISTENING_DATA[language] || LISTENING_DATA.pt;
+export const ListeningStudio: React.FC<ListeningStudioProps> = ({ language, passages: providedPassages }) => {
+  const [passages, setPassages] = useState<ListeningPassage[]>(providedPassages || []);
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(0);
+
+  useEffect(() => {
+    if (providedPassages) {
+      setPassages(providedPassages);
+      setSelectedPassageIndex(0);
+      return;
+    }
+    let cancelled = false;
+    const loadLivePassages = async () => {
+      try {
+        await VocabularyService.loadLiveCatalog(language, language === 'en' ? 'pt' : 'en').catch(() => {});
+        const [publishedConvos, daily, sentences] = await Promise.all([
+          contentAccess.getPublishedConversations(language).catch(() => []),
+          dailyContentService.getAllContent(),
+          Promise.resolve(VocabularyService.getSentences(language)),
+        ]);
+
+        const built: ListeningPassage[] = [];
+        for (const c of [...publishedConvos, ...daily.activeConversations.filter(x => x.learning_language === language)]) {
+          if (c.dialogue.length === 0) continue;
+          built.push({
+            id: `listen-conv-${c.id}`,
+            title: c.title,
+            category: 'Conversation',
+            cefrLevel: c.cefr_level,
+            sentences: c.dialogue.map((t, i) => ({
+              id: `s-${i}`,
+              targetText: t.line,
+              explanationText: t.translation || '',
+            })),
+            questions: [],
+          });
+        }
+
+        if (sentences.length > 0) {
+          built.push({
+            id: `listen-corpus-${language}`,
+            title: `Tatoeba Corpus Sentences (${language.toUpperCase()})`,
+            category: 'Open Corpus Audio',
+            cefrLevel: 'B1',
+            sentences: sentences.slice(0, 6).map((s, i) => ({
+              id: `t-${i}`,
+              targetText: s.sentence_target,
+              explanationText: s.translations.en || Object.values(s.translations)[0] || '',
+            })),
+            questions: [],
+          });
+        }
+
+        if (!cancelled) {
+          setPassages(built);
+          setSelectedPassageIndex(0);
+        }
+      } catch {
+        if (!cancelled) setPassages([]);
+      }
+    };
+    loadLivePassages();
+    return () => {
+      cancelled = true;
+    };
+  }, [language, providedPassages]);
+
   const passage = passages[selectedPassageIndex] || passages[0];
 
   const [activeSentenceIndex, setActiveSentenceIndex] = useState<number | null>(null);
@@ -261,6 +179,7 @@ export const ListeningStudio: React.FC<ListeningStudioProps> = ({ language }) =>
   };
 
   const calculateScore = () => {
+    if (!passage) return { correct: 0, total: 0 };
     let correct = 0;
     for (const q of passage.questions) {
       if (answers[q.id] === q.correctIndex) {
@@ -269,6 +188,18 @@ export const ListeningStudio: React.FC<ListeningStudioProps> = ({ language }) =>
     }
     return { correct, total: passage.questions.length };
   };
+
+  if (!passage) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3 shadow-sm">
+        <Headphones className="w-8 h-8 text-indigo-400 mx-auto" />
+        <h3 className="text-base font-bold text-slate-100">Listening Practice Studio</h3>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          No listening transcripts available yet for {language.toUpperCase()}. Publish conversations via Admin Content Studio or fetch open corpus sentences.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

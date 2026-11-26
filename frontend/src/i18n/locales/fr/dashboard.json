@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "Échec du chargement de l'édition du jour",
+  "err_continue": "Échec du chargement de la progression",
+  "err_vocab": "Échec du chargement des statistiques lexicales",
+  "err_recent": "Échec du chargement des activités récentes",
+  "culture_preview_empty": "Aucun article culturel chargé pour le moment. Ouvrez Explorer les Pays pour interroger Wikipédia et le Moteur IA."
 }

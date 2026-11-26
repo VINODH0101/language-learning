@@ -15,9 +15,11 @@ import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { contentCentredService } from '../services/contentCentredService';
 import { authService } from '../services/auth';
+import { useI18n } from '../i18n/i18nContext';
 import { toast } from 'sonner';
 
 export const MyMistakesPage: React.FC = () => {
+  const { t } = useI18n();
   const [mistakes, setMistakes] = useState<UserMistake[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -46,10 +48,10 @@ export const MyMistakesPage: React.FC = () => {
   const handleResolveMistake = async (id: string) => {
     try {
       await contentCentredService.resolveUserMistake(id, 'mastered');
-      toast.success('Mistake marked as mastered and resolved!');
+      toast.success(t('learning:mistakes_resolved_toast', 'Mistake marked as mastered and resolved!'));
       await loadMistakes();
     } catch (err: any) {
-      toast.error('Error updating mistake status');
+      toast.error(t('learning:mistakes_update_error_toast', 'Error updating mistake status'));
     }
   };
 
@@ -59,7 +61,9 @@ export const MyMistakesPage: React.FC = () => {
       setRetestingId(null);
       setRetestInput('');
     } else {
-      toast.error('Incorrect response. Review the pedagogical explanation below.');
+      toast.error(
+        t('learning:mistakes_retest_incorrect_toast', 'Incorrect response. Review the pedagogical explanation below.')
+      );
     }
   };
 
@@ -75,13 +79,16 @@ export const MyMistakesPage: React.FC = () => {
       <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-2">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium tracking-wide">
           <AlertTriangle className="w-3.5 h-3.5 text-rose-700" />
-          <span>Error Diagnostics & Remediation</span>
+          <span>{t('learning:mistakes_badge', 'Error Diagnostics & Remediation')}</span>
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 tracking-tight">
-          My Mistakes Notebook
+          {t('learning:mistakes_title', 'My Mistakes Notebook')}
         </h1>
         <p className="text-sm text-stone-600 max-w-xl font-normal leading-relaxed">
-          Uncertain grammar structures and comprehension misses encountered in reading are indexed here with pedagogical feedback for active re-testing.
+          {t(
+            'learning:mistakes_subtitle',
+            'Uncertain grammar structures and comprehension misses encountered in reading are indexed here with pedagogical feedback for active re-testing.'
+          )}
         </p>
       </div>
 
@@ -89,10 +96,14 @@ export const MyMistakesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
         <div className="flex items-center gap-2">
           <Badge variant="rose">
-            {mistakes.filter(m => m.status === 'unresolved').length} Unresolved
+            {t('learning:mistakes_unresolved_count', '{{count}} Unresolved', {
+              count: mistakes.filter(m => m.status === 'unresolved').length,
+            })}
           </Badge>
           <Badge variant="emerald">
-            {mistakes.filter(m => m.status === 'mastered').length} Mastered
+            {t('learning:mistakes_mastered_count', '{{count}} Mastered', {
+              count: mistakes.filter(m => m.status === 'mastered').length,
+            })}
           </Badge>
         </div>
 
@@ -102,9 +113,9 @@ export const MyMistakesPage: React.FC = () => {
             onChange={e => setFilterStatus(e.target.value)}
             className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-stone-400 focus:bg-white"
           >
-            <option value="all">All Statuses</option>
-            <option value="unresolved">Unresolved Only</option>
-            <option value="mastered">Mastered Only</option>
+            <option value="all">{t('learning:mistakes_status_all', 'All Statuses')}</option>
+            <option value="unresolved">{t('learning:mistakes_status_unresolved', 'Unresolved Only')}</option>
+            <option value="mastered">{t('learning:mistakes_status_mastered', 'Mastered Only')}</option>
           </select>
 
           <select
@@ -112,12 +123,14 @@ export const MyMistakesPage: React.FC = () => {
             onChange={e => setFilterCategory(e.target.value)}
             className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-stone-400 focus:bg-white"
           >
-            <option value="all">All Categories</option>
-            <option value="vocabulary_choice">Vocabulary Choice</option>
-            <option value="comprehension_inference">Comprehension Inference</option>
-            <option value="verb_tense">Verb Tense</option>
-            <option value="preposition">Preposition</option>
-            <option value="word_order">Word Order</option>
+            <option value="all">{t('learning:mistakes_cat_all', 'All Categories')}</option>
+            <option value="vocabulary_choice">{t('learning:err_cat_vocabulary_choice', 'Vocabulary Choice')}</option>
+            <option value="comprehension_inference">
+              {t('learning:err_cat_comprehension_inference', 'Comprehension Inference')}
+            </option>
+            <option value="verb_tense">{t('learning:err_cat_verb_tense', 'Verb Tense')}</option>
+            <option value="preposition">{t('learning:err_cat_preposition', 'Preposition')}</option>
+            <option value="word_order">{t('learning:err_cat_word_order', 'Word Order')}</option>
           </select>
         </div>
       </div>
@@ -126,9 +139,14 @@ export const MyMistakesPage: React.FC = () => {
       {filteredMistakes.length === 0 ? (
         <div className="bg-white border border-stone-200 rounded-2xl p-16 text-center space-y-3 shadow-sm">
           <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-          <h3 className="font-serif text-lg font-bold text-stone-800">No Unresolved Mistakes!</h3>
+          <h3 className="font-serif text-lg font-bold text-stone-800">
+            {t('learning:mistakes_empty_title', 'No Unresolved Mistakes!')}
+          </h3>
           <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-            You currently have no recorded errors matching this filter. Continue reading authentic stories and completing comprehension exercises.
+            {t(
+              'learning:mistakes_empty_desc',
+              'You currently have no recorded errors matching this filter. Continue reading authentic stories and completing comprehension exercises.'
+            )}
           </p>
         </div>
       ) : (
@@ -144,10 +162,14 @@ export const MyMistakesPage: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Badge variant={mistake.status === 'mastered' ? 'emerald' : 'rose'}>
-                      {mistake.error_category.replace('_', ' ').toUpperCase()}
+                      {t(`learning:err_cat_${mistake.error_category}`, mistake.error_category.replace('_', ' '))}
                     </Badge>
                     <span className="font-mono text-[11px] text-stone-500">
-                      {mistake.occurrences_count} {mistake.occurrences_count === 1 ? 'occurrence' : 'occurrences'}
+                      {mistake.occurrences_count === 1
+                        ? t('learning:mistakes_occurrence_one', '1 occurrence')
+                        : t('learning:mistakes_occurrence_many', '{{count}} occurrences', {
+                            count: mistake.occurrences_count,
+                          })}
                     </span>
                   </div>
 
@@ -160,11 +182,15 @@ export const MyMistakesPage: React.FC = () => {
                   {/* Previous submission vs correct answer */}
                   <div className="p-3 bg-stone-50 border border-stone-200 rounded-lg space-y-2 text-xs">
                     <div className="flex items-center gap-2 text-rose-800 bg-rose-50/70 p-2 rounded border border-rose-100">
-                      <span className="font-mono font-semibold text-[10px] uppercase text-rose-700">Your answer:</span>
+                      <span className="font-mono font-semibold text-[10px] uppercase text-rose-700">
+                        {t('learning:mistakes_your_answer', 'Your answer:')}
+                      </span>
                       <span className="font-mono font-medium">"{mistake.user_response}"</span>
                     </div>
                     <div className="flex items-center gap-2 text-emerald-800 bg-emerald-50/70 p-2 rounded border border-emerald-100">
-                      <span className="font-mono font-semibold text-[10px] uppercase text-emerald-700">Correct:</span>
+                      <span className="font-mono font-semibold text-[10px] uppercase text-emerald-700">
+                        {t('learning:mistakes_correct_label', 'Correct:')}
+                      </span>
                       <span className="font-mono font-semibold">"{mistake.correct_response}"</span>
                     </div>
                   </div>
@@ -182,15 +208,15 @@ export const MyMistakesPage: React.FC = () => {
                         type="text"
                         value={retestInput}
                         onChange={e => setRetestInput(e.target.value)}
-                        placeholder="Type the correct response..."
+                        placeholder={t('learning:mistakes_retest_placeholder', 'Type the correct response...')}
                         className="w-full bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-500 focus:bg-white font-mono"
                       />
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => setRetestingId(null)}>
-                          Cancel
+                          {t('common:cancel', 'Cancel')}
                         </Button>
                         <Button variant="primary" size="sm" onClick={() => handleRetestSubmit(mistake)}>
-                          Submit
+                          {t('learning:mistakes_submit_btn', 'Submit')}
                         </Button>
                       </div>
                     </div>
@@ -207,7 +233,7 @@ export const MyMistakesPage: React.FC = () => {
                               setRetestInput('');
                             }}
                           >
-                            Re-test
+                            {t('learning:mistakes_retest_btn', 'Re-test')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -215,13 +241,13 @@ export const MyMistakesPage: React.FC = () => {
                             icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                             onClick={() => handleResolveMistake(mistake.id)}
                           >
-                            Mark Mastered
+                            {t('learning:mistakes_mark_mastered', 'Mark Mastered')}
                           </Button>
                         </>
                       ) : (
                         <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
                           <Award className="w-4 h-4 text-emerald-600" />
-                          Mastered
+                          {t('learning:mistakes_mastered_label', 'Mastered')}
                         </span>
                       )}
                     </div>

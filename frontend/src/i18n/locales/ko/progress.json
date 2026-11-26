@@ -106,5 +106,15 @@
   "rest_countries_data": "REST Countries & Open-Meteo Data",
   "curriculum_curating_title": "Curriculum Status",
   "decoupling_advisory_title": "Four-Way Decoupling Notice",
-  "no_exercises_in_track": "No exercises found for this track."
+  "no_exercises_in_track": "No exercises found for this track.",
+  "overview_title": "Your progress so far",
+  "section_focus": "Focus now",
+  "section_path": "Learning path",
+  "section_insights": "Insights",
+  "section_placement": "Placement",
+  "tab_path_vocab": "학습 경로 및 기억",
+  "tab_diagnostics_skills": "집중 및 기술",
+  "tab_immersion_placement": "몰입 및 레벨 평가",
+  "progress_view_aria": "진도 보기",
+  "methodology_toggle": "계산 방식 보기"
 }

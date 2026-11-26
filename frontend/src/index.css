@@ -79,3 +79,262 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Practice stage — light editorial theme bridge
+   ---------------------------------------------------------------------------
+   The practice activity modules (flashcards, exercises, studios, lookups) were
+   authored against the legacy dark slate palette. This scoped layer remaps
+   those tokens onto the light paper theme so every practice mode sits
+   comfortably beside Home / Learn / Admin without rewriting each module.
+
+   New practice UI should use the stone palette directly. Once the legacy
+   modules are migrated, this block can be deleted as a single unit.
+--------------------------------------------------------------------------- */
+.practice-stage {
+  /* Surfaces */
+  --color-slate-950: #f5f3ec;
+  --color-slate-900: #ffffff;
+  --color-slate-800: #e7e5e4;
+  --color-slate-700: #e7e5e4;
+  --color-slate-600: #a8a29e;
+  --color-slate-500: #857f77;
+  --color-slate-400: #57534e;
+  --color-slate-300: #44403c;
+  --color-slate-200: #292524;
+  --color-slate-100: #1c1917;
+
+  /* Accent text on tinted surfaces */
+  --color-emerald-100: #065f46;
+  --color-emerald-200: #065f46;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #047857;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+  --color-emerald-950: #ecfdf5;
+
+  --color-indigo-100: #3730a3;
+  --color-indigo-200: #3730a3;
+  --color-indigo-300: #4338ca;
+  --color-indigo-400: #4338ca;
+  --color-indigo-800: #c7d2fe;
+  --color-indigo-900: #e0e7ff;
+  --color-indigo-950: #eef2ff;
+
+  --color-amber-100: #92400e;
+  --color-amber-200: #92400e;
+  --color-amber-300: #b45309;
+  --color-amber-400: #b45309;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+  --color-amber-950: #fffbeb;
+
+  --color-rose-100: #9f1239;
+  --color-rose-200: #9f1239;
+  --color-rose-300: #be123c;
+  --color-rose-400: #be123c;
+  --color-rose-800: #fecdd3;
+  --color-rose-900: #ffe4e6;
+  --color-rose-950: #fff1f2;
+
+  --color-purple-100: #6b21a8;
+  --color-purple-200: #6b21a8;
+  --color-purple-300: #7e22ce;
+  --color-purple-400: #7e22ce;
+  --color-purple-800: #e9d5ff;
+  --color-purple-900: #f3e8ff;
+  --color-purple-950: #faf5ff;
+
+  --color-sky-300: #0369a1;
+  --color-sky-400: #0369a1;
+  --color-teal-300: #0f766e;
+  --color-teal-400: #0f766e;
+}
+
+/* Solid slate surfaces (the variable also drives borders, so restore cards) */
+.practice-stage .bg-slate-800,
+.practice-stage .bg-slate-850 {
+  background-color: #f5f3ec;
+}
+
+/* Slate opacity surfaces */
+.practice-stage .bg-slate-950\/80,
+.practice-stage .bg-slate-950\/70,
+.practice-stage .bg-slate-850\/60,
+.practice-stage .bg-slate-850\/50 {
+  background-color: #f5f3ec;
+}
+.practice-stage .bg-slate-950\/60,
+.practice-stage .bg-slate-950\/40,
+.practice-stage .bg-slate-900\/60,
+.practice-stage .bg-slate-900\/40,
+.practice-stage .bg-slate-800\/60,
+.practice-stage .bg-slate-800\/40 {
+  background-color: #faf9f6;
+}
+.practice-stage .bg-slate-900\/90,
+.practice-stage .bg-slate-900\/80 {
+  background-color: #ffffff;
+}
+.practice-stage .bg-slate-800\/80 {
+  background-color: #f5f3ec;
+}
+.practice-stage .bg-slate-700\/80,
+.practice-stage .bg-slate-700\/60,
+.practice-stage .hover\:bg-slate-700\/80:hover,
+.practice-stage .hover\:bg-slate-700\/60:hover {
+  background-color: #e7e5e4;
+}
+.practice-stage .hover\:bg-slate-950\/80:hover {
+  background-color: #f5f3ec;
+}
+
+/* Accent opacity surfaces */
+.practice-stage .bg-emerald-950\/80,
+.practice-stage .bg-emerald-950\/60,
+.practice-stage .hover\:bg-emerald-950\/40:hover {
+  background-color: #d1fae5;
+}
+.practice-stage .bg-emerald-950\/40,
+.practice-stage .bg-emerald-950\/30,
+.practice-stage .bg-emerald-950\/20,
+.practice-stage .bg-emerald-500\/10 {
+  background-color: #ecfdf5;
+}
+.practice-stage .bg-indigo-950\/80,
+.practice-stage .bg-indigo-950\/60 {
+  background-color: #e0e7ff;
+}
+.practice-stage .bg-indigo-950\/50,
+.practice-stage .bg-indigo-950\/40,
+.practice-stage .bg-indigo-500\/10 {
+  background-color: #eef2ff;
+}
+.practice-stage .bg-amber-950\/60,
+.practice-stage .hover\:bg-amber-950\/40:hover {
+  background-color: #fde68a;
+}
+.practice-stage .bg-amber-950\/40,
+.practice-stage .bg-amber-950\/20,
+.practice-stage .bg-amber-500\/10,
+.practice-stage .bg-amber-500\/20 {
+  background-color: #fffbeb;
+}
+.practice-stage .bg-rose-950\/80,
+.practice-stage .bg-rose-950\/60 {
+  background-color: #ffe4e6;
+}
+.practice-stage .bg-rose-950\/40,
+.practice-stage .bg-rose-950\/30,
+.practice-stage .bg-rose-950\/20 {
+  background-color: #fff1f2;
+}
+.practice-stage .bg-purple-950\/40,
+.practice-stage .bg-purple-950\/20,
+.practice-stage .bg-purple-500\/10 {
+  background-color: #faf5ff;
+}
+.practice-stage .bg-sky-500\/20 {
+  background-color: #f0f9ff;
+}
+
+/* Slate opacity borders */
+.practice-stage .border-slate-800\/80,
+.practice-stage .border-slate-800\/60 {
+  border-color: #e7e5e4;
+}
+.practice-stage .border-slate-700\/90,
+.practice-stage .border-slate-700\/50 {
+  border-color: #d6d3d1;
+}
+
+/* Accent opacity borders */
+.practice-stage .border-emerald-800\/80,
+.practice-stage .border-emerald-800\/60,
+.practice-stage .border-emerald-800\/40,
+.practice-stage .border-emerald-900\/30,
+.practice-stage .border-emerald-500\/30,
+.practice-stage .border-emerald-500\/20 {
+  border-color: #a7f3d0;
+}
+.practice-stage .border-emerald-500\/80 {
+  border-color: #6ee7b7;
+}
+.practice-stage .border-indigo-800\/80,
+.practice-stage .border-indigo-800\/60,
+.practice-stage .border-indigo-800\/40 {
+  border-color: #c7d2fe;
+}
+.practice-stage .border-indigo-500\/60,
+.practice-stage .border-indigo-500\/20 {
+  border-color: #a5b4fc;
+}
+.practice-stage .border-amber-800\/60,
+.practice-stage .border-amber-800\/40,
+.practice-stage .border-amber-900\/60,
+.practice-stage .border-amber-900\/30,
+.practice-stage .border-amber-500\/60,
+.practice-stage .border-amber-500\/40,
+.practice-stage .border-amber-500\/20,
+.practice-stage .hover\:border-amber-500\/60:hover {
+  border-color: #fde68a;
+}
+.practice-stage .border-rose-800\/80,
+.practice-stage .border-rose-800\/60,
+.practice-stage .border-rose-800\/40,
+.practice-stage .border-rose-900\/60,
+.practice-stage .border-rose-900\/30,
+.practice-stage .border-rose-500\/30 {
+  border-color: #fecdd3;
+}
+.practice-stage .border-rose-500\/80 {
+  border-color: #fda4af;
+}
+.practice-stage .border-purple-500\/80,
+.practice-stage .border-purple-500\/50,
+.practice-stage .border-purple-500\/30,
+.practice-stage .border-purple-500\/20,
+.practice-stage .border-purple-900\/40,
+.practice-stage .border-purple-900\/30,
+.practice-stage .hover\:border-purple-500\/50:hover {
+  border-color: #e9d5ff;
+}
+.practice-stage .border-sky-500\/40 {
+  border-color: #7dd3fc;
+}
+
+/* Rings & decorations */
+.practice-stage .ring-emerald-500\/40 {
+  --tw-ring-color: #6ee7b7;
+}
+.practice-stage .ring-indigo-500\/40 {
+  --tw-ring-color: #a5b4fc;
+}
+.practice-stage .ring-purple-500\/40,
+.practice-stage .focus\:ring-purple-500\/50:focus {
+  --tw-ring-color: #d8b4fe;
+}
+.practice-stage .focus\:ring-amber-500\/50:focus {
+  --tw-ring-color: #fcd34d;
+}
+.practice-stage .decoration-emerald-500\/40 {
+  text-decoration-color: #6ee7b7;
+}
+.practice-stage .decoration-amber-500\/40 {
+  text-decoration-color: #fcd34d;
+}
+.practice-stage .decoration-sky-400\/50 {
+  text-decoration-color: #7dd3fc;
+}
+.practice-stage .text-indigo-300\/80 {
+  color: #3730a3;
+}
+
+/* The contextual lookup dialog uses literal white text on its dark surface. */
+.practice-stage [role='dialog'] .text-white,
+.practice-stage .hover\:text-white:hover {
+  color: #1c1917;
+}
+
+
+

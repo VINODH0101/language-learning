@@ -153,7 +153,7 @@ describe('Navigation Component & UX', () => {
     expect(signInBtn.getAttribute('aria-label') || signInBtn.getAttribute('title')).toMatch(/entrar|sign in/i);
   });
 
-  it('renders all 7 primary learner destinations on desktop', () => {
+  it('renders all 5 calm primary learner destinations on desktop and unified profile settings', () => {
     renderNav('dashboard');
 
     // Desktop main navigation container
@@ -166,14 +166,19 @@ describe('Navigation Component & UX', () => {
     expect(within(navMenu).getByRole('button', { name: /Content Library/i })).toBeDefined();
     // 3. Practice
     expect(within(navMenu).getByRole('button', { name: /^Practice$/i })).toBeDefined();
-    // 4. My Words
-    expect(within(navMenu).getByRole('button', { name: /^My Words$/i })).toBeDefined();
-    // 5. My Mistakes
-    expect(within(navMenu).getByRole('button', { name: /^My Mistakes$/i })).toBeDefined();
-    // 6. Progress
+    // 4. Notebooks (My Words & My Mistakes grouped to avoid desktop clutter)
+    const notebooksBtn = within(navMenu).getByRole('button', { name: /Notebooks/i });
+    expect(notebooksBtn).toBeDefined();
+    fireEvent.click(notebooksBtn);
+    expect(within(navMenu).getByText(/^My Words$/i)).toBeDefined();
+    expect(within(navMenu).getByText(/^My Mistakes$/i)).toBeDefined();
+    // 5. Progress
     expect(within(navMenu).getByRole('button', { name: /^Progress$/i })).toBeDefined();
-    // 7. Settings
-    expect(within(navMenu).getByRole('button', { name: /^Settings$/i })).toBeDefined();
+    // Settings is unified cleanly inside the Profile menu rather than duplicated on the top bar
+    expect(within(navMenu).queryByRole('button', { name: /^Settings$/i })).toBeNull();
+    const profileBtn = screen.getByRole('button', { name: /Profile and Settings Menu/i });
+    fireEvent.click(profileBtn);
+    expect(screen.getByText(/My Profile & Track/i)).toBeDefined();
   });
 
   it('renders 5 destinations on mobile bottom dock including More which opens drawer', () => {

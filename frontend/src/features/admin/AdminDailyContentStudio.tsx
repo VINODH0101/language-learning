@@ -61,8 +61,8 @@ export const AdminDailyContentStudio: React.FC = () => {
   const [poemExcerpt, setPoemExcerpt] = useState('');
   const [poemFullText, setPoemFullText] = useState('');
   const [poemCulturalContext, setPoemCulturalContext] = useState('');
-  const [poemCountryName, setPoemCountryName] = useState('Portugal');
-  const [poemCountryCode, setPoemCountryCode] = useState('PT');
+  const [poemCountryName, setPoemCountryName] = useState('');
+  const [poemCountryCode, setPoemCountryCode] = useState('');
   const [poemTranslation, setPoemTranslation] = useState('');
 
   // New Conversation Form
@@ -70,12 +70,11 @@ export const AdminDailyContentStudio: React.FC = () => {
   const [convoScenario, setConvoScenario] = useState('');
   const [convoLanguage, setConvoLanguage] = useState<Language>('pt');
   const [convoCefr, setConvoCefr] = useState<CEFRLevel>('B1');
-  const [convoCountryName, setConvoCountryName] = useState('Portugal');
-  const [convoCountryCode, setConvoCountryCode] = useState('PT');
+  const [convoCountryName, setConvoCountryName] = useState('');
+  const [convoCountryCode, setConvoCountryCode] = useState('');
   const [convoCulturalContext, setConvoCulturalContext] = useState('');
   const [convoLines, setConvoLines] = useState<DialogueLine[]>([
-    { speaker: 'Ana', line: 'Bom dia! Um café expresso e um pastel de nata, por favor.', translation: 'Good morning! An espresso and a custard tart, please.' },
-    { speaker: 'Atendente', line: 'Com certeza! Deseja com canela por cima?', translation: 'Certainly! Would you like cinnamon on top?' },
+    { speaker: '', line: '', translation: '' },
   ]);
 
   const loadData = async () => {

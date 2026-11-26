@@ -144,13 +144,13 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     } catch (err: any) {
       if (isCurrent && !isCurrent()) return;
       console.warn('Error resolving today edition:', err);
-      setEditionError(err?.message || "Failed to load Today's Edition");
+      setEditionError(err?.message || t('dashboard:err_edition', "Failed to load Today's Edition"));
     } finally {
       if (!isCurrent || isCurrent()) {
         setIsEditionLoading(false);
       }
     }
-  }, []);
+  }, [t]);
 
   // Section 2 & 3 orchestrated loader: resolves Continue Learning first, then passes story ID to exclude
   const loadContinueAndEdition = useCallback(async (course: Course, userId: string, isCurrent?: () => boolean) => {
@@ -164,7 +164,7 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     } catch (err: any) {
       if (isCurrent && !isCurrent()) return;
       console.warn('Error resolving continue learning:', err);
-      setContinueError(err?.message || 'Failed to load continue learning progress');
+      setContinueError(err?.message || t('dashboard:err_continue', 'Failed to load continue learning progress'));
     } finally {
       if (!isCurrent || isCurrent()) {
         setIsContinueLoading(false);
@@ -176,7 +176,7 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     // Orchestrated Section 3 loader: never duplicate the Continue Learning item.
     const excludedId = getContinueContentItemId(resolvedItem);
     await loadEdition(course, excludedId, isCurrent);
-  }, [loadEdition]);
+  }, [loadEdition, t]);
 
   // Section 4 loader (independent)
   const loadVocab = useCallback(async (course: Course, userId: string, isCurrent?: () => boolean) => {
@@ -190,13 +190,13 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     } catch (err: any) {
       if (isCurrent && !isCurrent()) return;
       console.warn('Error resolving vocabulary summary:', err);
-      setVocabError(err?.message || 'Failed to load vocabulary metrics');
+      setVocabError(err?.message || t('dashboard:err_vocab', 'Failed to load vocabulary metrics'));
     } finally {
       if (!isCurrent || isCurrent()) {
         setIsVocabLoading(false);
       }
     }
-  }, []);
+  }, [t]);
 
   // Section 6 loader (independent)
   const loadRecent = useCallback(async (course: Course, userId: string, isCurrent?: () => boolean) => {
@@ -209,13 +209,13 @@ export const DashboardView: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     } catch (err: any) {
       if (isCurrent && !isCurrent()) return;
       console.warn('Error resolving recent activities:', err);
-      setRecentError(err?.message || 'Failed to load recent activities');
+      setRecentError(err?.message || t('dashboard:err_recent', 'Failed to load recent activities'));
     } finally {
       if (!isCurrent || isCurrent()) {
         setIsRecentLoading(false);
       }
     }
-  }, []);
+  }, [t]);
 
   // Orchestrate independent Home sections when activeCourse changes
   useEffect(() => {

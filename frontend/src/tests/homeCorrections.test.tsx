@@ -11,9 +11,11 @@ import {
 import { I18nProvider } from '../i18n/i18nContext';
 import { authService } from '../services/auth';
 import { StorageService } from '../services/storage';
-import { contentCentredService, SEED_CONTENT_ITEMS } from '../services/contentCentredService';
+import { contentCentredService } from '../services/contentCentredService';
 import { ClientLessonGenerator } from '../services/lessonGenerator';
 import { dailyContentService } from '../services/dailyContentService';
+import { VocabularyService } from '../services/vocabularyService';
+import type { ContentItem, ContentVersion, LearningActivity } from '../types/contentCentred';
 import {
   getContinueContentItemId,
   getLocalTodayDateString,
@@ -105,8 +107,89 @@ const setVisibility = (state: 'visible' | 'hidden') => {
   document.dispatchEvent(new Event('visibilitychange'));
 };
 
+const createMockReaderItem = (): ContentItem & {
+  version: ContentVersion;
+  activities: LearningActivity[];
+} => {
+  const now = new Date().toISOString();
+  return {
+    id: 'ci_mock_reader_001',
+    title: 'A Morning Coffee in Dublin',
+    slug: 'morning-coffee-dublin',
+    target_language: 'en',
+    explanation_language: 'pt',
+    source_language: 'en',
+    summary: 'Sample reader passage for telemetry tests.',
+    genre: 'short_story',
+    content_type: 'story',
+    primary_cefr: 'B1',
+    estimated_read_minutes: 4,
+    status: 'published',
+    current_version_id: 'cv_mock_reader_v1',
+    rights_status: 'public_domain',
+    created_at: now,
+    updated_at: now,
+    version: {
+      id: 'cv_mock_reader_v1',
+      content_item_id: 'ci_mock_reader_001',
+      version_number: 1,
+      cefr_level: 'B1',
+      word_count: 24,
+      sentence_count: 4,
+      is_published: true,
+      published_at: now,
+      created_at: now,
+      audio_metadata: {},
+      structured_payload: {
+        title: 'A Morning Coffee in Dublin',
+        paragraphs: [
+          {
+            id: 'p1',
+            order: 1,
+            sentences: [
+              { id: 's1', order: 1, text: 'The barista poured the velvety flat white.', tokens: [] },
+              { id: 's2', order: 2, text: 'Rain tapped gently against the glass.', tokens: [] },
+              { id: 's3', order: 3, text: 'The café smelled of roasted beans.', tokens: [] },
+              { id: 's4', order: 4, text: 'A quiet morning began in Dublin.', tokens: [] },
+            ],
+          },
+        ],
+        annotations: {},
+        grammar_points: [],
+      },
+    },
+    activities: [
+      {
+        id: 'act_mock_1',
+        content_version_id: 'cv_mock_reader_v1',
+        activity_type: 'reading_comprehension',
+        activity_title: 'Comprehension Check',
+        activity_order: 1,
+        estimated_minutes: 2,
+        created_at: now,
+        configuration: {
+          instructions: 'Choose the right answer.',
+          questions: [
+            {
+              id: 'q1',
+              type: 'multiple_choice',
+              stem: 'Where is the café?',
+              options: [
+                { id: 'a', text: 'Dublin' },
+                { id: 'b', text: 'Madrid' },
+              ],
+              correct_answer: 'a',
+              explanation: 'The story is set in Dublin.',
+            },
+          ],
+        },
+      },
+    ],
+  };
+};
+
 const renderReader = (userId = 'user_active_time') => {
-  const item = SEED_CONTENT_ITEMS[0];
+  const item = createMockReaderItem();
   const authSpy = vi.spyOn(authService, 'getState').mockReturnValue({
     user: { id: userId, email: `${userId}@example.com` } as any,
     role: 'user',
@@ -141,10 +224,33 @@ describe('Phase 8 Home page corrections', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    VocabularyService.clearDynamicCatalog();
     setVisibility('visible');
   });
 
   it("caps Today's Edition at three total items while keeping poetry and dialogue first", async () => {
+    vi.spyOn(dailyContentService, 'getDailyPoem').mockReturnValueOnce({
+      id: 'poem_mock_1',
+      language: 'pt',
+      target_language: 'pt',
+      title: 'Mar Português',
+      author: 'Fernando Pessoa',
+      content_lines: ['Ó mar salgado, quanto do teu sal'],
+      translations: { en: ['O salty sea, how much of your salt'] },
+      cefr_level: 'B1',
+      status: 'active',
+      created_at: new Date().toISOString(),
+    } as any);
+    vi.spyOn(dailyContentService, 'getDailyConversation').mockReturnValueOnce({
+      id: 'conv_mock_1',
+      target_language: 'pt',
+      title: 'No Café',
+      scenario_summary: 'Ordering coffee in Lisbon',
+      cefr_level: 'B1',
+      lines: [{ speaker: 'A', line: 'Bom dia!', translation: 'Good morning!' }],
+      status: 'active',
+      created_at: new Date().toISOString(),
+    } as any);
     vi.spyOn(contentCentredService, 'getContentItems').mockResolvedValueOnce([
       publishedItem({ id: 'story_a' }),
       publishedItem({ id: 'story_b' }),
@@ -272,7 +378,7 @@ describe('Phase 8 Home page corrections', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 0, 1, 23, 59, 50));
     vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
-    const mockItem = SEED_CONTENT_ITEMS[0];
+    const mockItem = createMockReaderItem();
     const userId = 'user_midnight_test';
     const authSpy = vi.spyOn(authService, 'getState').mockReturnValue({
       user: { id: userId, email: 'midnight@example.com' } as any,
@@ -448,7 +554,7 @@ describe('Phase 8 Home page corrections', () => {
   it('keeps local active time when remote synchronization fails (offline)', () => {
     vi.useFakeTimers();
     const userId = 'user_offline';
-    const item = SEED_CONTENT_ITEMS[0];
+    const item = createMockReaderItem();
     const authSpy = vi.spyOn(authService, 'getState').mockReturnValue({
       user: { id: userId, email: 'offline@example.com' } as any,
       role: 'user',
@@ -514,6 +620,27 @@ describe('Phase 8 Home page corrections', () => {
   // --------------------------------------------------------------------------
   it('falls back to the structured daily curriculum when no unfinished content exists', async () => {
     vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValueOnce([]);
+    VocabularyService.setDynamicCatalog([
+      {
+        id: 'dyn_pt_1',
+        lemma: 'saudade',
+        target_language: 'pt',
+        cefr_level: 'B1',
+        part_of_speech: 'noun',
+        topic: 'culture',
+        translations: { en: 'longing', pt: 'saudade', es: 'nostalgia' },
+        definitions: { en: 'Deep emotional state of nostalgia.', pt: 'Sentimento profundo de nostalgia.', es: 'Sentimiento de nostalgia.' },
+        example_sentence_target: 'Sinto saudade.',
+        example_sentence_translations: { en: 'I feel longing.', pt: 'Sinto saudade.', es: 'Siento nostalgia.' },
+        frequency_rank: 15,
+        attribution: {
+          source_name: 'Lexilume Content Engine',
+          source_url: 'https://lexilume.local',
+          license_type: 'Original-Curated',
+          attribution_text: 'Generated for test',
+        },
+      },
+    ]);
 
     const result = await resolveContinueLearning(sampleCourse, sampleCourse.user_id);
 

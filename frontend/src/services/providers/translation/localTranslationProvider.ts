@@ -7,15 +7,16 @@ import { BaseProvider } from '../baseProvider';
 import { ProviderMetadata, ValidationError } from '../types';
 import { normalizeTranslation } from '../../normalization/responseNormalizers';
 import { NormalizedTranslationResult } from '../../../integrations/external-apis/core/types';
-import { trilingualDictionary } from '../../../data/translationData';
+import { localDb } from '../../localDb';
+import { contentAccess } from '../../contentAccess';
 
 export class LocalTranslationProvider extends BaseProvider<{ text: string; sourceLang: string; targetLang: string }, NormalizedTranslationResult> {
   public readonly metadata: ProviderMetadata = {
     id: 'local_translation',
-    name: 'Local Offline Trilingual Dictionary',
-    description: 'Guaranteed offline fallback dictionary covering core curriculum vocabulary.',
+    name: 'Local Cached & Generated Translation Store',
+    description: 'Uses previously cached translations, saved phrasebook entries, and published AI Content Engine vocabulary offline.',
     category: 'translation',
-    attribution: 'Lexilume Offline Corpus — Public Domain & Creative Commons',
+    attribution: 'Lexilume Local Cache & Content Engine',
     license: 'CC-BY-SA 4.0',
     isPaid: false,
     requiresKey: false,
@@ -23,7 +24,7 @@ export class LocalTranslationProvider extends BaseProvider<{ text: string; sourc
 
   protected validateInput(input: { text: string; sourceLang: string; targetLang: string }): void {
     if (!input.text || input.text.trim().length === 0) {
-      throw new ValidationError(this.metadata.id, 'Texto para tradução não pode estar vazio.');
+      throw new ValidationError(this.metadata.id, 'Translation text cannot be empty.');
     }
   }
 
@@ -33,26 +34,51 @@ export class LocalTranslationProvider extends BaseProvider<{ text: string; sourc
 
   protected async fetchRaw(input: { text: string; sourceLang: string; targetLang: string }): Promise<unknown> {
     const term = input.text.trim().toLowerCase();
-    const match = trilingualDictionary.find(
-      d =>
-        d.portuguese?.toLowerCase() === term ||
-        d.spanish?.toLowerCase() === term ||
-        d.english?.toLowerCase() === term
-    );
 
-    if (!match) {
-      throw new Error(`Palavra "${input.text}" não encontrada no dicionário offline.`);
+    // 1. Check user saved phrasebook in IndexedDB
+    try {
+      const saved = await localDb.savedVocabulary.toArray();
+      const matchSaved = saved.find(
+        s =>
+          s.source_text.trim().toLowerCase() === term &&
+          s.source_lang === input.sourceLang &&
+          s.target_lang === input.targetLang
+      );
+      if (matchSaved) {
+        return {
+          translatedText: matchSaved.translated_text,
+          match: 1.0,
+          verified: matchSaved.is_verified ?? true,
+        };
+      }
+    } catch {
+      // IndexedDB unavailable in some environments
     }
 
-    let translated = match.english;
-    if (input.targetLang === 'pt') translated = match.portuguese;
-    else if (input.targetLang === 'es') translated = match.spanish;
+    // 2. Check published AI Content Engine vocabulary
+    try {
+      const generatedVocab = await contentAccess.getPublishedVocabularyEntries(
+        input.sourceLang,
+        input.targetLang
+      );
+      const matchGen = generatedVocab.find(v => v.lemma.trim().toLowerCase() === term);
+      if (matchGen) {
+        const translated =
+          matchGen.translations[input.targetLang as keyof typeof matchGen.translations] ||
+          matchGen.definitions[input.targetLang as keyof typeof matchGen.definitions];
+        if (translated) {
+          return {
+            translatedText: translated,
+            match: 1.0,
+            verified: true,
+          };
+        }
+      }
+    } catch {
+      // Ignore offline store error
+    }
 
-    return {
-      translatedText: translated,
-      match: 1.0,
-      verified: true,
-    };
+    throw new Error(`No cached or generated translation found offline for "${input.text}".`);
   }
 
   protected normalize(raw: any, input: { text: string; sourceLang: string; targetLang: string }): NormalizedTranslationResult {
@@ -62,10 +88,10 @@ export class LocalTranslationProvider extends BaseProvider<{ text: string; sourc
       input.targetLang,
       this.metadata.id,
       {
-        isVerified: true,
-        isApproximate: false,
-        matchConfidence: 1.0,
-        notes: 'Verificado pedagogicamente pelo corpus local.',
+        isVerified: Boolean(raw.verified),
+        isApproximate: !raw.verified,
+        matchConfidence: raw.match ?? 1.0,
+        notes: 'Resolved from cached or AI-generated vocabulary.',
       }
     );
   }

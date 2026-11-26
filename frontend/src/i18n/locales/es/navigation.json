@@ -43,5 +43,15 @@
   "admin_destination_content_import": "Importar Contenido",
   "admin_destination_processing_studio": "Estudio de Procesamiento",
   "admin_destination_review": "Revisión y Publicación",
-  "admin_destination_settings": "Configuración"
+  "admin_destination_settings": "Configuración",
+  "nav_notebooks": "Cuadernos",
+  "nav_words": "Mis Palabras",
+  "nav_mistakes": "Mis Errores",
+  "notebooks_header": "Cuadernos Personales",
+  "reading_room_title": "Sala de Lectura",
+  "reading_room_desc": "Textos auténticos, relatos y diálogos",
+  "tool_words_desc": "Vocabulario guardado y tarjetas SM-2",
+  "tool_mistakes_desc": "Revisión de errores y práctica guiada",
+  "account_preferences_header": "Cuenta y Preferencias",
+  "settings_sync_status": "Matriz de Idiomas, Metas y Preferencias"
 }

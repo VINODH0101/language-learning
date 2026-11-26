@@ -48,7 +48,35 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.getByText(/0 of 10 min \(0%\)/i)).toBeDefined();
   });
 
-  it('3. Renders Daily Masterpiece Learning (Poetry & Immersive Conversation)', () => {
+  const publishSampleDailyContent = async () => {
+    await dailyContentService.publishPoem({
+      title: 'Mar Português',
+      author: 'Fernando Pessoa',
+      learning_language: 'pt',
+      cefr_level: 'B2',
+      excerpt: 'Ó mar salgado, quanto do teu sal...',
+      full_text: 'Ó mar salgado, quanto do teu sal\nSão lágrimas de Portugal!',
+      cultural_context: 'Clássico da poesia lusófona.',
+      country_name: 'Portugal',
+      country_code: 'PT',
+    });
+    await dailyContentService.publishConversation({
+      title: 'Café da Manhã em Lisboa',
+      scenario: 'Pedindo um café com pastel de nata',
+      learning_language: 'pt',
+      cefr_level: 'A2',
+      cultural_context: 'Pastelaria tradicional em Lisboa.',
+      country_name: 'Portugal',
+      country_code: 'PT',
+      dialogue: [
+        { speaker: 'Cliente', line: 'Bom dia! Quero uma bica, por favor.', translation: 'Good morning! An espresso, please.' },
+        { speaker: 'Atendente', line: 'Com certeza, já vai sair.', translation: 'Certainly, coming right up.' },
+      ],
+    });
+  };
+
+  it('3. Renders Daily Masterpiece Learning (Poetry & Immersive Conversation)', async () => {
+    await publishSampleDailyContent();
     renderDashboard('en');
 
     // Section header
@@ -61,7 +89,8 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.getByText(/Practice Dialogue/i)).toBeDefined();
   });
 
-  it('4. Opens Daily Poetry Reader modal on click and renders full verses and audio button', () => {
+  it('4. Opens Daily Poetry Reader modal on click and renders full verses and audio button', async () => {
+    await publishSampleDailyContent();
     renderDashboard('en');
 
     const readPoemBtn = screen.getByText(/Read Poetry/i);
@@ -79,7 +108,8 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.queryByText(/Daily Masterpiece Poetry/i)).toBeNull();
   });
 
-  it('5. Opens Daily Conversation modal on click and renders interactive dialogue lines', () => {
+  it('5. Opens Daily Conversation modal on click and renders interactive dialogue lines', async () => {
+    await publishSampleDailyContent();
     renderDashboard('en');
 
     const practiceDialogueBtn = screen.getByText(/Practice Dialogue/i);
@@ -98,7 +128,8 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
   });
 
   it('6. Enforces replacement semantics in DailyContentService (new activates, old archives)', async () => {
-    const initial = await dailyContentService.getAllContent();
+    await publishSampleDailyContent();
+    await dailyContentService.getAllContent();
 
     // Publish new poem
     const newPoem = await dailyContentService.publishPoem({
@@ -130,7 +161,7 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     renderDashboard('en');
 
     expect(screen.getByText(/Vocabulary Summary/i)).toBeDefined();
-    expect(screen.getByText(/Due for Review Today/i)).toBeDefined();
+    expect(await screen.findByText(/Due for Review Today/i)).toBeDefined();
     expect(screen.getByText(/Saved in Past 7 Days/i)).toBeDefined();
 
     const myWordsBtn = screen.getByText(/My Words/i);

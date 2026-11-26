@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} de {{total}} unidades curriculares completadas",
   "vocab_terms_count": "{{count}} términos",
   "cefr_level": "CEFR",
-  "streak": "Racha"
+  "streak": "Racha",
+  "err_edition": "No se pudo cargar la Edición de Hoy",
+  "err_continue": "Error al cargar el progreso reciente",
+  "err_vocab": "Error al cargar métricas de vocabulario",
+  "err_recent": "Error al cargar actividades recientes",
+  "culture_preview_empty": "Aún no se han cargado artículos culturales. Abre Explorar Países para obtenerlos de Wikipedia y del Motor de Contenido IA."
 }

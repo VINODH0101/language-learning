@@ -7,9 +7,7 @@ import { FreeDictionaryAdapter } from '../integrations/external-apis/adapters/fr
 import { DicionarioAbertoAdapter } from '../integrations/external-apis/adapters/dicionario-aberto/DicionarioAbertoAdapter';
 import { DictionaryManager } from './providers/dictionary/dictionaryManager';
 import { NormalizedDictionaryEntry } from '../integrations/external-apis/core/types';
-import { esVocabulary } from '../data/seedData';
-import { trilingualDictionary } from '../data/translationData';
-
+import { contentAccess } from './contentAccess';
 import { Language } from '../types';
 
 const freeDictAdapter = new FreeDictionaryAdapter();
@@ -38,43 +36,29 @@ export class DictionaryService {
     }
 
     if (language === 'es') {
-      // Spanish Lookup: curated seed data + trilingual dictionary
       const q = cleanWord.toLowerCase();
-      const esMatch = esVocabulary.find(v => v.lemma.toLowerCase() === q);
-      if (esMatch) {
-        return {
-          word: esMatch.lemma,
-          language: 'es',
-          phonetic: esMatch.phonetic_ipa,
-          meanings: [
-            {
-              partOfSpeech: esMatch.part_of_speech,
-              definitions: [esMatch.definition_target, esMatch.definition_en].filter(Boolean),
-              examples: [esMatch.example_sentence_target].filter(Boolean),
-            },
-          ],
-          provider: 'curated_seed',
-        };
-      }
-
-      const triMatch = trilingualDictionary.find(d => d.spanish.toLowerCase() === q);
-      if (triMatch) {
-        return {
-          word: triMatch.spanish,
-          language: 'es',
-          phonetic: triMatch.phonetic_es,
-          meanings: [
-            {
-              partOfSpeech: triMatch.part_of_speech,
-              definitions: [
-                `Inglês: ${triMatch.english}`,
-                `Português: ${triMatch.portuguese}`,
-              ],
-              examples: [triMatch.example_es].filter(Boolean),
-            },
-          ],
-          provider: 'trilingual_dictionary',
-        };
+      try {
+        const aiEntries = await contentAccess.getPublishedVocabularyEntries('es', 'en');
+        const aiMatch = aiEntries.find(v => v.lemma.toLowerCase() === q);
+        if (aiMatch) {
+          return {
+            word: aiMatch.lemma,
+            language: 'es',
+            phonetic: aiMatch.phonetic_ipa,
+            meanings: [
+              {
+                partOfSpeech: aiMatch.part_of_speech,
+                definitions: [
+                  aiMatch.definitions.en || aiMatch.translations.en || aiMatch.lemma,
+                ].filter(Boolean),
+                examples: [aiMatch.example_sentence_target].filter(Boolean),
+              },
+            ],
+            provider: 'content_engine',
+          };
+        }
+      } catch {
+        // Fall through to Wiktionary/Kaikki live provider
       }
     }
 

@@ -28,6 +28,7 @@ import {
   UserSavedWord,
 } from '../../../types/contentCentred';
 import { contentCentredService } from '../../../services/contentCentredService';
+import { contentAccess, recordToReaderVersion } from '../../../services/contentAccess';
 import { StorageService } from '../../../services/storage';
 import { courseService } from '../../../services/courseService';
 import { ClientLessonGenerator } from '../../../services/lessonGenerator';
@@ -264,13 +265,20 @@ export const resolveContinueLearning = async (
     };
   }
 
-  // 2. Fallback to structured daily curriculum lesson
+  // 2. Fallback to structured daily curriculum lesson only when backed by live/generated content
   try {
     const lesson = ClientLessonGenerator.generateOrGetLesson(
       courseService.toCourseConfig(course),
       today
     );
-    if (lesson) {
+    const hasLiveLessonContent = Boolean(
+      lesson &&
+        (lesson.section_2_vocabulary?.length > 0 ||
+          Boolean(lesson.section_4_reading?.passage_target) ||
+          lesson.section_5_conversation?.dialogue?.length > 0 ||
+          lesson.section_9_exercises?.length > 0)
+    );
+    if (lesson && hasLiveLessonContent) {
       const progress = await getActiveProgress(course.target_language);
       const isTodayProgress = progress && progress.lesson_date === today ? progress : null;
       return {
@@ -290,10 +298,12 @@ export const resolveContinueLearning = async (
   // - Deterministic rotation per user/course/date
   // Invariant: Do NOT swallow backend/network errors into fake empty states;
   // let errors propagate so caller presents the error state with a retry action!
-  const published = await contentCentredService.getContentItems({
-    target_language: course.target_language,
-    status: 'published',
-  });
+  const published = contentAccess.hasHttpBackend()
+    ? await contentAccess.listPublishedContentItems({ targetLanguage: course.target_language })
+    : await contentCentredService.getContentItems({
+        target_language: course.target_language,
+        status: 'published',
+      });
 
   const completedIds = new Set(
     allProgress.filter(p => p.status === 'completed').map(p => p.content_item_id)
@@ -321,6 +331,14 @@ export const resolveContinueLearning = async (
   });
 
   const selected = sortedPool[0];
+  if (contentAccess.hasHttpBackend()) {
+    const record = (await contentAccess.getContent(selected.id)) as unknown as Record<string, any> | null;
+    return {
+      type: 'recommended',
+      item: selected,
+      version: recordToReaderVersion(selected, record),
+    };
+  }
   const full = await contentCentredService.getContentItemById(selected.id);
   return {
     type: 'recommended',
@@ -360,12 +378,34 @@ export const resolveTodaysEdition = async (
   );
 
   // Invariant: Do NOT silently swallow errors with empty array; propagate to let caller handle editionError!
-  const published = await contentCentredService.getContentItems({
-    target_language: course.target_language,
-    status: 'published',
-  });
+  const published = contentAccess.hasHttpBackend()
+    ? await contentAccess.listPublishedContentItems({ targetLanguage: course.target_language })
+    : await contentCentredService.getContentItems({
+        target_language: course.target_language,
+        status: 'published',
+      });
 
-  const nonExcluded = published.filter(item => item.id !== excludedItemId);
+  let effectivePoem = poem;
+  let effectiveConversation = conversation;
+  if (published.some(it => it.content_type === 'poetry')) {
+    const aiPoems = await contentAccess
+      .getPublishedPoetry(course.target_language, course.explanation_language)
+      .catch(() => []);
+    if (aiPoems.length > 0) effectivePoem = aiPoems[0];
+  }
+  if (published.some(it => it.content_type === 'conversation')) {
+    const aiConversations = await contentAccess
+      .getPublishedConversations(course.target_language, course.explanation_language)
+      .catch(() => []);
+    if (aiConversations.length > 0) effectiveConversation = aiConversations[0];
+  }
+
+  const storyPool = published.filter(
+    item => item.content_type !== 'poetry' && item.content_type !== 'conversation'
+  );
+  const nonExcluded = (storyPool.length > 0 ? storyPool : published).filter(
+    item => item.id !== excludedItemId
+  );
   const exactMatched = nonExcluded.filter(item => item.primary_cefr === course.cefr_level);
   const compatibleMatched = nonExcluded.filter(item => {
     if (item.primary_cefr && course.cefr_level) {
@@ -387,13 +427,13 @@ export const resolveTodaysEdition = async (
 
   // Curated edition is capped at three items in total. Poetry and dialogue are
   // included first; published stories fill any remaining slots only.
-  const availableSlots = 3 - (poem ? 1 : 0) - (conversation ? 1 : 0);
+  const availableSlots = 3 - (effectivePoem ? 1 : 0) - (effectiveConversation ? 1 : 0);
   stories = sorted.slice(0, Math.max(0, availableSlots));
 
   return {
     stories,
-    poem,
-    conversation,
+    poem: effectivePoem,
+    conversation: effectiveConversation,
   };
 };
 

@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "加载今日精选失败",
+  "err_continue": "加载继续学习进度失败",
+  "err_vocab": "加载词汇统计失败",
+  "err_recent": "加载最近活动失败",
+  "culture_preview_empty": "尚未加载文化文章。请打开“探索国家/地区”从维基百科和 AI 内容引擎获取实时内容。"
 }

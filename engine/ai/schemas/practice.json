@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/practice.json",
+  "title": "Practice exercise content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "skill": { "type": "string" },
+    "exercise_type": { "type": "string" },
+    "instructions": { "type": "string" },
+    "questions": { "type": "array", "items": { "type": "object" } },
+    "options": { "type": "array", "items": { "type": "array" } },
+    "correct_answers": { "type": "array" },
+    "explanations": { "type": "array", "items": { "type": "string" } },
+    "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+    "scoring": { "type": "object" }
+  },
+  "required": ["meta", "skill", "exercise_type", "instructions", "questions", "correct_answers"]
+}

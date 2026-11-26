@@ -12,8 +12,6 @@ import {
   ValidationError,
   ProviderUnavailableError,
 } from '../../core';
-import { enVocabulary } from '../../../../data/seedData';
-import { trilingualDictionary } from '../../../../data/translationData';
 
 interface RawPhonetic {
   text?: string;
@@ -149,65 +147,6 @@ export class FreeDictionaryAdapter extends BaseApiProvider<DictionaryInput, Norm
       meanings,
       provider: this.metadata.id,
       sourceUrl: first.sourceUrls?.[0] || `https://en.wiktionary.org/wiki/${encodeURIComponent(input.word)}`,
-    };
-  }
-
-  protected getFallback(input: DictionaryInput, _error: unknown): NormalizedDictionaryEntry {
-    const q = input.word.trim().toLowerCase();
-
-    // 1. Check enVocabulary
-    const vocMatch = enVocabulary.find(v => v.lemma.toLowerCase() === q);
-    if (vocMatch) {
-      return {
-        word: vocMatch.lemma,
-        language: 'en',
-        phonetic: vocMatch.phonetic_ipa,
-        meanings: [
-          {
-            partOfSpeech: vocMatch.part_of_speech,
-            definitions: [
-              vocMatch.definition_en,
-              vocMatch.definition_pt ? `PT: ${vocMatch.definition_pt}` : '',
-              vocMatch.definition_es ? `ES: ${vocMatch.definition_es}` : '',
-            ].filter(Boolean),
-            examples: [vocMatch.example_sentence_target],
-          },
-        ],
-        provider: 'offline-seed',
-      };
-    }
-
-    // 2. Check trilingualDictionary
-    const triMatch = trilingualDictionary.find(t => t.english.toLowerCase() === q);
-    if (triMatch) {
-      return {
-        word: triMatch.english,
-        language: 'en',
-        phonetic: triMatch.phonetic_en,
-        meanings: [
-          {
-            partOfSpeech: triMatch.part_of_speech,
-            definitions: [
-              `PT: ${triMatch.portuguese}`,
-              `ES: ${triMatch.spanish}`,
-            ],
-            examples: [triMatch.example_en],
-          },
-        ],
-        provider: 'offline-seed',
-      };
-    }
-
-    return {
-      word: input.word,
-      language: 'en',
-      meanings: [
-        {
-          partOfSpeech: 'termo',
-          definitions: ['Definição externa indisponível no momento. Modo offline ativo.'],
-        },
-      ],
-      provider: 'fallback',
     };
   }
 }

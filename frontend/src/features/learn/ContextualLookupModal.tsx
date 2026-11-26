@@ -18,6 +18,7 @@ import { Badge } from '../../components/common/Badge';
 import { SpeechService } from '../../services/speech';
 import { contentCentredService } from '../../services/contentCentredService';
 import { authService } from '../../services/auth';
+import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 export interface ContextualLookupData {
@@ -42,6 +43,7 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
   onClose,
   onSavedWord,
 }) => {
+  const { t } = useI18n();
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -73,14 +75,18 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
   const cefr = annotation?.cefr || 'B1';
   const contextualMeaning =
     annotation?.contextual_meaning ||
-    `Used here to convey: "${sentence.text.substring(0, 70)}..."`;
+    t('learning:lookup_contextual_fallback', 'Used here to convey: "{{excerpt}}..."', {
+      excerpt: sentence.text.substring(0, 70),
+    });
   const generalDefinition =
     annotation?.general_definition ||
-    `Standard lexical dictionary definition for "${lemma}".`;
+    t('learning:lookup_general_fallback', 'Standard lexical dictionary definition for "{{lemma}}".', {
+      lemma,
+    });
   const contextTranslation =
     annotation?.context_translation?.[explanationLanguage] ||
     sentence.translations?.[explanationLanguage] ||
-    `Tradução de "${term}"`;
+    t('learning:lookup_translation_fallback', 'Translation of "{{term}}"', { term });
 
   const handlePlayAudio = async () => {
     setIsPlayingAudio(true);
@@ -115,10 +121,12 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
       });
 
       setIsSaved(true);
-      toast.success(`Saved "${term}" to your personal vocabulary.`);
+      toast.success(
+        t('learning:lookup_saved_toast', 'Saved "{{term}}" to your personal vocabulary.', { term })
+      );
       if (onSavedWord) onSavedWord();
     } catch (err: any) {
-      toast.error(err.message || 'Could not save word');
+      toast.error(err.message || t('learning:lookup_save_error', 'Could not save word'));
     } finally {
       setIsSaving(false);
     }
@@ -146,8 +154,8 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
                 onClick={handlePlayAudio}
                 disabled={isPlayingAudio}
                 className="p-1 rounded-full text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
-                title="Listen to pronunciation"
-                aria-label="Listen to pronunciation"
+                title={t('learning:lookup_listen_pronunciation', 'Listen to pronunciation')}
+                aria-label={t('learning:lookup_listen_pronunciation', 'Listen to pronunciation')}
               >
                 <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-stone-900' : ''}`} />
               </button>
@@ -167,7 +175,7 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
-            aria-label="Close modal"
+            aria-label={t('learning:lookup_close_aria', 'Close modal')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -177,7 +185,7 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
         <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-1">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-900 uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-amber-800" />
-            <span>Contextual Meaning in this Sentence</span>
+            <span>{t('learning:lookup_contextual_heading', 'Contextual Meaning in this Sentence')}</span>
           </div>
           <p className="text-sm font-medium text-stone-900 leading-snug">
             {contextualMeaning}
@@ -187,7 +195,9 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
         {/* 2. Translation & General Definition */}
         <div className="space-y-2 text-xs">
           <div>
-            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">Translation</span>
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">
+              {t('learning:lookup_translation_heading', 'Translation')}
+            </span>
             <p className="text-sm font-serif font-semibold text-stone-800 mt-0.5">
               {contextTranslation}
             </p>
@@ -195,7 +205,9 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
 
           {generalDefinition && (
             <div>
-              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">Dictionary Definition</span>
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">
+                {t('learning:lookup_definition_heading', 'Dictionary Definition')}
+              </span>
               <p className="text-xs text-stone-600 mt-0.5 leading-relaxed">
                 {generalDefinition}
               </p>
@@ -203,7 +215,9 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
           )}
 
           <div>
-            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">Context</span>
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">
+              {t('learning:lookup_context_heading', 'Context')}
+            </span>
             <p className="text-xs italic font-serif text-stone-600 mt-0.5 border-l-2 border-stone-300 pl-2 py-0.5">
               "{sentence.text}"
             </p>
@@ -220,7 +234,11 @@ export const ContextualLookupModal: React.FC<ContextualLookupModalProps> = ({
             disabled={isSaving || isSaved}
             className="w-full justify-center"
           >
-            {isSaved ? 'Saved to My Words' : isSaving ? 'Saving...' : 'Save to My Words'}
+            {isSaved
+              ? t('learning:lookup_saved_btn', 'Saved to My Words')
+              : isSaving
+              ? t('learning:lookup_saving_btn', 'Saving...')
+              : t('learning:lookup_save_btn', 'Save to My Words')}
           </Button>
         </div>
       </div>

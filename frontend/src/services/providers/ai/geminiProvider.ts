@@ -44,23 +44,29 @@ export class GeminiProvider extends BaseProvider<GeminiDialogueInput, DialogueSc
   }
 
   protected async fetchRaw(input: GeminiDialogueInput, signal: AbortSignal): Promise<unknown> {
-    const apiKey =
-      (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('user_gemini_api_key'));
+    // ADR-002: Never read or transmit provider API keys in client bundles or localStorage.
+    // Browser calls optionally proxy through the server-side Content API; otherwise
+    // BaseProvider invokes getFallback() deterministically.
+    const apiBase =
+      typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CONTENT_API_BASE
+        ? String((import.meta as any).env.VITE_CONTENT_API_BASE).replace(/\/+$/, '')
+        : '';
 
-    if (!apiKey) {
-      throw new ProviderUnavailableError(this.metadata.id, 401, 'Chave Gemini não configurada.');
+    if (!apiBase) {
+      throw new ProviderUnavailableError(
+        this.metadata.id,
+        503,
+        'Síntese Gemini disponível apenas no backend; usando fallback determinístico local.'
+      );
     }
 
-    const prompt = `Gere um diálogo em formato JSON no idioma ${input.language} nível CEFR ${input.cefrLevel} sobre "${input.topic}". Responda EXCLUSIVAMENTE em formato JSON com chaves: title, context, turns (array de objetos com speaker, line, translation), pragmatic_tips (array de strings).`;
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-    const response = await fetch(url, {
+    const response = await fetch(`${apiBase}/ai/dialogue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        topic: input.topic,
+        targetLanguage: input.language,
+        cefrLevel: input.cefrLevel,
       }),
       signal,
     });
@@ -69,7 +75,7 @@ export class GeminiProvider extends BaseProvider<GeminiDialogueInput, DialogueSc
       throw new ProviderUnavailableError(
         this.metadata.id,
         response.status,
-        `Gemini API HTTP ${response.status}: ${response.statusText}`
+        `Backend AI Proxy HTTP ${response.status}: ${response.statusText}`
       );
     }
 

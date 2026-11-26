@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "오늘의 에디션을 불러오지 못했습니다",
+  "err_continue": "학습 진행 상황을 불러오지 못했습니다",
+  "err_vocab": "어휘 지표를 불러오지 못했습니다",
+  "err_recent": "최근 활동을 불러오지 못했습니다",
+  "culture_preview_empty": "아직 불러온 문화 기사가 없습니다. 국가 탐색을 열어 Wikipedia 및 AI 콘텐츠 엔진에서 가져오세요."
 }

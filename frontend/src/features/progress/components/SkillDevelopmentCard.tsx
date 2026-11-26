@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Headphones, PenTool, Mic, BookMarked, Layers, AlertCircle } from 'lucide-react';
+import { BookOpen, Headphones, PenTool, Mic, BookMarked, Layers } from 'lucide-react';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
 import { ProgressBar } from '../../../components/common/ProgressBar';
@@ -22,6 +22,7 @@ interface SkillItem {
   icon: React.ReactNode;
   count: number;
   description: string;
+  iconWrapClass: string;
 }
 
 export const SkillDevelopmentCard: React.FC<SkillDevelopmentCardProps> = ({
@@ -32,110 +33,113 @@ export const SkillDevelopmentCard: React.FC<SkillDevelopmentCardProps> = ({
   const skills: SkillItem[] = [
     {
       id: 'reading',
-      name: t('progress:skill_reading', 'Reading Comprehension'),
-      icon: <BookOpen className="w-4 h-4 text-sky-400" />,
+      name: t('progress:skill_reading', 'Reading'),
+      icon: <BookOpen className="w-4 h-4 text-sky-700" />,
+      iconWrapClass: 'bg-sky-50 border-sky-200',
       count: skillActivityCounts.reading,
-      description: t('progress:skill_reading_desc', 'Literary poems, curated articles, reading questions'),
+      description: t('progress:skill_reading_desc', 'Literature & Articles'),
     },
     {
       id: 'listening',
-      name: t('progress:skill_listening', 'Listening & Audio'),
-      icon: <Headphones className="w-4 h-4 text-indigo-400" />,
+      name: t('progress:skill_listening', 'Listening'),
+      icon: <Headphones className="w-4 h-4 text-amber-700" />,
+      iconWrapClass: 'bg-amber-50 border-amber-200',
       count: skillActivityCounts.listening,
-      description: t('progress:skill_listening_desc', 'Full verses audio, authentic dialogues, comprehension tasks'),
+      description: t('progress:skill_listening_desc', 'Audio & Conversations'),
     },
     {
       id: 'grammar',
-      name: t('progress:skill_grammar', 'Grammar Competency'),
-      icon: <Layers className="w-4 h-4 text-emerald-400" />,
+      name: t('progress:skill_grammar', 'Grammar'),
+      icon: <Layers className="w-4 h-4 text-emerald-700" />,
+      iconWrapClass: 'bg-emerald-50 border-emerald-200',
       count: skillActivityCounts.grammar,
-      description: t('progress:skill_grammar_desc', 'Structural formulas, reordering, conjugation exercises'),
+      description: t('progress:skill_grammar_desc', 'Structural Syntax'),
     },
     {
       id: 'vocabulary',
-      name: t('progress:skill_vocabulary', 'Vocabulary Breadth'),
-      icon: <BookMarked className="w-4 h-4 text-amber-400" />,
+      name: t('progress:skill_vocabulary', 'Vocabulary'),
+      icon: <BookMarked className="w-4 h-4 text-stone-700" />,
+      iconWrapClass: 'bg-stone-100 border-stone-200',
       count: skillActivityCounts.vocabulary,
-      description: t('progress:skill_vocabulary_desc', 'SM-2 spaced repetitions, cloze tasks, phrasebook entries'),
+      description: t('progress:skill_vocabulary_desc', 'Lexical Acquisition'),
     },
     {
       id: 'speaking',
-      name: t('progress:skill_speaking', 'Speaking & Oral Practice'),
-      icon: <Mic className="w-4 h-4 text-rose-400" />,
+      name: t('progress:skill_speaking', 'Speaking'),
+      icon: <Mic className="w-4 h-4 text-rose-700" />,
+      iconWrapClass: 'bg-rose-50 border-rose-200',
       count: skillActivityCounts.speaking,
-      description: t('progress:skill_speaking_desc', 'Dialogue turns completed, pronunciation practice'),
+      description: t('progress:skill_speaking_desc', 'Pronunciation & Fluency'),
     },
     {
       id: 'writing',
-      name: t('progress:skill_writing', 'Writing Practice'),
-      icon: <PenTool className="w-4 h-4 text-purple-400" />,
+      name: t('progress:skill_writing', 'Writing'),
+      icon: <PenTool className="w-4 h-4 text-stone-700" />,
+      iconWrapClass: 'bg-stone-100 border-stone-200',
       count: skillActivityCounts.writing,
-      description: t('progress:skill_writing_desc', 'Free response tasks, genre registers, grammar corrections'),
+      description: t('progress:skill_writing_desc', 'Composition & Spelling'),
     },
   ];
 
   return (
     <Card
-      title={t('progress:skills_title', 'Communicative Skill Development')}
+      title={t('progress:skills_title', 'Four-Skill Competency Matrix')}
       subtitle={t(
         'progress:skills_subtitle',
-        'Verified activity across core CEFR linguistic competencies (distinguishing practice activity from formal mastery)'
+        'Recorded study activity across core linguistic competencies'
       )}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {skills.map(skill => {
           const hasData = skill.count > 0;
 
           return (
             <div
               key={skill.id}
-              className={`p-4 rounded-2xl border transition-all ${
-                hasData
-                  ? 'bg-slate-950/60 border-slate-800'
-                  : 'bg-slate-950/30 border-slate-850 opacity-70'
+              className={`p-4 rounded-xl border transition-all ${
+                hasData ? 'bg-white border-stone-200' : 'bg-[#FAF9F6] border-stone-200/80'
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-800">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`p-1.5 rounded-lg border shrink-0 ${skill.iconWrapClass}`}>
                     {skill.icon}
                   </div>
-                  <span className="text-xs font-bold text-slate-200">{skill.name}</span>
+                  <span className="text-xs font-bold text-stone-900 truncate">{skill.name}</span>
                 </div>
 
                 {hasData ? (
-                  <Badge variant="indigo" size="sm">
-                    {skill.count} {t('progress:activities', 'events')}
+                  <Badge variant="amber" size="sm">
+                    {skill.count} {t('progress:activities', 'Activities')}
                   </Badge>
                 ) : (
-                  <Badge variant="slate" size="sm">
-                    {t('progress:insufficient_data', 'No data')}
-                  </Badge>
+                  <span className="text-[11px] font-medium text-stone-400 shrink-0">0</span>
                 )}
               </div>
 
-              <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
-                {skill.description}
-              </p>
+              <p className="text-xs text-stone-500 leading-relaxed mb-3">{skill.description}</p>
 
               {hasData ? (
                 <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] text-slate-400">
+                  <div className="flex justify-between text-[11px] text-stone-500">
                     <span>{t('progress:practice_volume', 'Practice Volume')}</span>
-                    <span className="font-mono text-slate-200">
-                      {skill.count >= 20 ? t('progress:level_high', 'Robust') : skill.count >= 5 ? t('progress:level_moderate', 'Developing') : t('progress:level_starter', 'Initial')}
+                    <span className="font-mono font-semibold text-stone-700">
+                      {skill.count >= 20
+                        ? t('progress:level_high', 'High')
+                        : skill.count >= 5
+                        ? t('progress:level_moderate', 'Developing')
+                        : t('progress:level_starter', 'Starter')}
                     </span>
                   </div>
                   <ProgressBar
                     progress={Math.min(100, skill.count * 5)}
-                    variant={skill.count >= 20 ? 'emerald' : 'indigo'}
+                    variant={skill.count >= 20 ? 'emerald' : 'bronze'}
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 italic">
-                  <AlertCircle className="w-3 h-3 text-slate-500 shrink-0" />
-                  <span>{t('progress:insufficient_data_note', 'Complete related activities to record evidence')}</span>
-                </div>
+                <p className="text-[11px] text-stone-400">
+                  {t('progress:insufficient_data_note', 'Complete related activities to record evidence.')}
+                </p>
               )}
             </div>
           );

@@ -137,6 +137,7 @@ export interface ContentItem {
   source_language?: string;
   summary?: string;
   genre: ContentGenre;
+  content_type?: string;
   primary_cefr: CEFRLevel;
   estimated_read_minutes: number;
   status: ContentStatus;

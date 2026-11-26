@@ -42,12 +42,13 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { PendingContentItem, FailedJobItem } from '../../types';
+import { ContentItem } from '../../types/contentCentred';
 import {
   adminService,
-  INITIAL_REVIEW_ITEMS,
-  INITIAL_FAILED_JOBS,
 } from '../../services/adminService';
 import { ProviderHealthRecord } from '../../services/monitoring/providerHealth';
+import { contentCentredService } from '../../services/contentCentredService';
+import { computeLiveCefrAudit, getLiveSourceInventory } from './adminMetricsHelper';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { AdminOverview } from './AdminOverview';
@@ -83,7 +84,7 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
   };
 
   // 1. Content Review State
-  const [reviewItems, setReviewItems] = useState<PendingContentItem[]>(() => INITIAL_REVIEW_ITEMS);
+  const [reviewItems, setReviewItems] = useState<PendingContentItem[]>([]);
   // 2. Language Enablement State
   const [enabledLanguages, setEnabledLanguages] = useState<Record<string, boolean>>({
     en: true,
@@ -105,15 +106,19 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
     adminService.getProviderHealthStatuses()
   );
   // 4. Failed Generation Jobs State
-  const [failedJobs, setFailedJobs] = useState<FailedJobItem[]>(() => INITIAL_FAILED_JOBS);
+  const [failedJobs, setFailedJobs] = useState<FailedJobItem[]>([]);
+  const [publishedItems, setPublishedItems] = useState<ContentItem[]>([]);
 
   const loadData = async () => {
     try {
-      const items = await adminService.getContentReviewQueue();
+      const [items, jobs, pubItems] = await Promise.all([
+        adminService.getContentReviewQueue(),
+        adminService.getBackgroundJobs(),
+        contentCentredService.getContentItems({ status: 'published' }).catch(() => []),
+      ]);
       setReviewItems(items);
-
-      const jobs = await adminService.getBackgroundJobs();
       setFailedJobs(jobs);
+      setPublishedItems(pubItems);
 
       const providers = adminService.getProviderHealthStatuses();
       setHealthRecords(providers);
@@ -133,9 +138,9 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
     );
     try {
       await adminService.approveContentItem(id);
-      toast.success(t('admin:toast_content_approved', 'Conteúdo aprovado e disponibilizado para estudo.'));
+      toast.success(t('admin:toast_content_approved', 'Pedagogical content approved successfully!'));
     } catch {
-      toast.error(t('admin:toast_action_failed', 'Erro ao aprovar conteúdo.'));
+      toast.error(t('admin:toast_action_failed', 'Action failed.'));
     }
   };
 
@@ -144,22 +149,27 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
       prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item))
     );
     try {
-      await adminService.rejectContentItem(id, 'Rejeitado por moderação editorial');
-      toast.info(t('admin:toast_content_rejected', 'Conteúdo marcado como rejeitado.'));
+      await adminService.rejectContentItem(
+        id,
+        t('admin:review_reject_default_reason', 'Pedagogical non-conformity')
+      );
+      toast.info(t('admin:toast_content_rejected', 'Item rejected and removed from distribution catalog.'));
     } catch {
-      toast.error(t('admin:toast_action_failed', 'Erro ao rejeitar conteúdo.'));
+      toast.error(t('admin:toast_action_failed', 'Action failed.'));
     }
   };
 
   // Handler for Toggling Language
   const handleToggleLanguage = (lang: string) => {
     if (lang === 'hi') {
-      toast.error(t('admin:hindi_forbidden_message', 'Invariante do Sistema: O idioma Hindi (hi) está expressamente excluído da plataforma.'));
+      toast.error(
+        t('admin:hindi_forbidden_message', 'Hindi language (hi) is strictly excluded from Lexilume.')
+      );
       return;
     }
     setEnabledLanguages(prev => {
       const next = !prev[lang];
-      toast.info(t('admin:toast_lang_toggled', `Idioma ${lang.toUpperCase()} ${next ? 'habilitado' : 'desabilitado'} no catálogo.`));
+      toast.info(t('admin:toast_lang_toggled', 'Language status updated in catalog.'));
       return { ...prev, [lang]: next };
     });
   };
@@ -168,30 +178,30 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
   const handleRetryJob = (jobId: string) => {
     setFailedJobs(prev => prev.filter(j => j.id !== jobId));
     adminService.retryBackgroundJob(jobId).catch(console.error);
-    toast.success(t('admin:toast_job_retried', `Tarefa ${jobId} reenfileirada com sucesso para a fila de processamento!`));
+    toast.success(t('admin:toast_job_retried', 'Task requeued successfully!'));
   };
 
   type WorkbenchTabDef = { id: AdminWorkbenchTab; label: string; count?: number };
 
   const primaryWorkbenchTabs: WorkbenchTabDef[] = [
-    { id: 'overview', label: t('admin:tab_overview', 'Overview & Health') },
+    { id: 'overview', label: t('admin:tab_overview', 'Overview') },
     { id: 'content_studio', label: t('admin:tab_content_studio', 'Content Library') },
     { id: 'content_import', label: t('admin:tab_content_import', 'Import Content') },
     { id: 'processing_studio', label: t('admin:tab_processing_studio', 'Processing Studio') },
-    { id: 'review', label: t('admin:tab_review', 'Content Review Queue'), count: reviewItems.filter(i => i.status === 'pending').length },
+    { id: 'review', label: t('admin:tab_review', 'Moderation Queue'), count: reviewItems.filter(i => i.status === 'pending').length },
     { id: 'settings', label: t('admin:tab_settings', 'Settings') },
   ];
 
   const operationsWorkbenchTabs: WorkbenchTabDef[] = [
-    { id: 'users', label: t('admin:tab_users', 'Gestão de Usuários') },
-    { id: 'languages', label: t('admin:tab_languages', 'Matriz de Idiomas (3)'), count: 3 },
-    { id: 'cefr_audit', label: t('admin:tab_cefr_audit', 'Auditoria CEFR A1–C1') },
-    { id: 'providers', label: t('admin:tab_providers', 'Saúde de Provedores'), count: healthRecords.length },
-    { id: 'jobs', label: t('admin:tab_jobs', 'Fila de Falhas & Retentativas'), count: failedJobs.length },
-    { id: 'duplicates', label: t('admin:tab_duplicates', 'Detector de Duplicatas') },
-    { id: 'datasets', label: t('admin:tab_datasets', 'Versões dos Datasets') },
-    { id: 'daily_content', label: t('admin:tab_daily_content', 'Estúdio Diário') },
-    { id: 'audit', label: t('admin:tab_audit', 'Trilha de Auditoria') },
+    { id: 'users', label: t('admin:tab_users', 'User Management') },
+    { id: 'languages', label: t('admin:tab_languages', 'Language Enablement'), count: 3 },
+    { id: 'cefr_audit', label: t('admin:tab_cefr_audit', 'CEFR Audit') },
+    { id: 'providers', label: t('admin:tab_providers', 'Provider Health'), count: healthRecords.length },
+    { id: 'jobs', label: t('admin:tab_jobs', 'Failed Jobs Queue'), count: failedJobs.length },
+    { id: 'duplicates', label: t('admin:tab_duplicates', 'Duplicate Scanner') },
+    { id: 'datasets', label: t('admin:tab_datasets', 'Open Datasets') },
+    { id: 'daily_content', label: t('admin:tab_daily_content', 'Daily Studio') },
+    { id: 'audit', label: t('admin:tab_audit', 'Audit Trail') },
   ];
 
   const renderWorkbenchTab = (tab: WorkbenchTabDef, tone: 'ink' | 'gold' = 'ink') => {
@@ -399,9 +409,9 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { code: 'pt', name: 'Português (BR / PT)', status: 'Habilitado' },
-              { code: 'es', name: 'Español (ES / MX)', status: 'Habilitado' },
-              { code: 'en', name: 'English (US / GB)', status: 'Habilitado' },
+              { code: 'pt', name: 'Português (BR / PT)' },
+              { code: 'es', name: 'Español (ES / MX)' },
+              { code: 'en', name: 'English (US / GB)' },
             ].map(lang => (
               <div
                 key={lang.code}
@@ -464,20 +474,16 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-            {[
-              { level: 'A1', vocab: 520, passages: 15, exercises: 85, status: t('admin:cefr_status_ok', 'Compliant') },
-              { level: 'A2', vocab: 740, passages: 22, exercises: 120, status: t('admin:cefr_status_ok', 'Compliant') },
-              { level: 'B1', vocab: 1250, passages: 34, exercises: 210, status: t('admin:cefr_status_ok', 'Compliant') },
-              { level: 'B2', vocab: 1800, passages: 45, exercises: 290, status: t('admin:cefr_status_ok', 'Compliant') },
-              { level: 'C1', vocab: 3400, passages: 72, exercises: 450, status: t('admin:cefr_status_excellent', 'Excellent') },
-            ].map(lvl => (
+            {computeLiveCefrAudit(publishedItems).map(lvl => (
               <div
                 key={lvl.level}
                 className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <Badge variant="emerald">{lvl.level}</Badge>
-                  <span className="text-[10px] text-emerald-700 font-bold uppercase">{lvl.status}</span>
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase">
+                    {t(lvl.statusKey, lvl.statusFallback)}
+                  </span>
                 </div>
                 <div className="space-y-1 text-xs text-stone-700">
                   <div className="flex justify-between">
@@ -671,25 +677,23 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {[
-              { name: 'Kaikki / Wiktionary Lexical Dumps', version: '2026.04-stable', license: 'CC BY-SA 3.0', count: '1.4M vocábulos' },
-              { name: 'Tatoeba Multilingual Sentence Corpus', version: 'Release 2026-Q2', license: 'CC BY 2.0 FR', count: '12M frases' },
-              { name: 'OPUS Parallel Corpus Alignments', version: 'v4.1 OpenSubtitles', license: 'Open Domain', count: '85M alinhamentos' },
-              { name: 'wordfreq Multi-corpus Prioritization', version: 'v3.2.0 (MIT)', license: 'MIT License', count: t('admin:overview_languages_badge', '3 Languages') },
-              { name: 'Project Gutenberg Catalog (Gutendex)', version: 'Index 2026.3', license: 'Public Domain', count: '70k Livros' },
-              { name: 'LanguageTool Rule Repository', version: 'v6.4-community', license: 'LGPL 2.1', count: '6.5k Regras' },
-            ].map(ds => (
+            {getLiveSourceInventory(healthRecords).map(ds => (
               <div
-                key={ds.name}
+                key={ds.id}
                 className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 flex items-center justify-between gap-3"
               >
                 <div>
                   <div className="text-xs font-bold text-stone-900">{ds.name}</div>
                   <div className="text-[11px] text-stone-500 mt-0.5 font-mono">
-                    {t('admin:dataset_version_label', 'Version:')} {ds.version} • {ds.count}
+                    {ds.attribution} •{' '}
+                    {t('admin:dataset_requests_count', '{{count}} requests', {
+                      count: ds.totalRequests,
+                    })}
                   </div>
                 </div>
-                <Badge variant="indigo" size="sm">{ds.license}</Badge>
+                <Badge variant={ds.status === 'healthy' || ds.status === 'ready' ? 'emerald' : 'indigo'} size="sm">
+                  {ds.category}
+                </Badge>
               </div>
             ))}
           </div>

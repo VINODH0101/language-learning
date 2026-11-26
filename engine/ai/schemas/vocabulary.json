@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/vocabulary.json",
+  "title": "Vocabulary content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "lemma": { "type": "string" },
+    "part_of_speech": { "type": "string" },
+    "definition": { "type": "string" },
+    "translations": { "type": "object" },
+    "cefr_level": { "type": "string" },
+    "frequency": { "type": "object" },
+    "example_sentences": { "type": "array", "items": { "type": "string" } },
+    "collocations": { "type": "array", "items": { "type": "string" } },
+    "synonyms": { "type": "array", "items": { "type": "string" } },
+    "antonyms": { "type": "array", "items": { "type": "string" } },
+    "pronunciation": { "type": "object" }
+  },
+  "required": ["meta", "lemma", "part_of_speech", "definition"]
+}

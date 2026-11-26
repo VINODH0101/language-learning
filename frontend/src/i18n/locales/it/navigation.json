@@ -43,5 +43,15 @@
   "admin_destination_content_import": "Import Content",
   "admin_destination_processing_studio": "Processing Studio",
   "admin_destination_review": "Review & Publish",
-  "admin_destination_settings": "Settings"
+  "admin_destination_settings": "Settings",
+  "nav_notebooks": "Quaderni",
+  "nav_words": "Le Mie Parole",
+  "nav_mistakes": "I Miei Errori",
+  "notebooks_header": "Quaderni personali",
+  "reading_room_title": "Sala di lettura",
+  "reading_room_desc": "Testi autentici, racconti e dialoghi",
+  "tool_words_desc": "Vocabolario salvato e schede SM-2",
+  "tool_mistakes_desc": "Revisione errori ed esercizi mirati",
+  "account_preferences_header": "Account e preferenze",
+  "settings_sync_status": "Lingue, obiettivi e preferenze"
 }

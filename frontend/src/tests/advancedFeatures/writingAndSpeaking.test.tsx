@@ -2,13 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { WritingCoach } from '../../features/writing/WritingCoach';
-import { SpeakingCoach } from '../../features/speaking/SpeakingCoach';
+import { SpeakingCoach, SpeakingChallenge } from '../../features/speaking/SpeakingCoach';
 import { SpeechService } from '../../services/speech';
 import { ProofreadingService } from '../../services/proofreadingService';
+import { contentAccess } from '../../services/contentAccess';
+import { dailyContentService } from '../../services/dailyContentService';
+
+const MOCK_SPEAKING_CHALLENGE: SpeakingChallenge = {
+  id: 'speak-pt-env-c1',
+  prompt: 'Discuta a importância da preservação ambiental nas cidades contemporâneas.',
+  targetResponse: 'A preservação ambiental nas cidades garante a qualidade do ar',
+  targetIpa: '/ɐ pɾɨzɨɾvɐˈsɐ̃w̃ ɐ̃bjẽˈtaw nɐs siˈdadɨʃ/',
+  keyVocabulary: ['preservação', 'ambiental', 'qualidade'],
+  grammarNotes: 'Concordância nominal e uso de preposição contrata (em + as = nas).',
+};
 
 describe('Step 8: Advanced Learning Features — Writing Coach & Speaking Coach', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(contentAccess, 'getPublishedVocabularyEntries').mockResolvedValue([]);
+    vi.spyOn(contentAccess, 'getPublishedConversations').mockResolvedValue([]);
+    vi.spyOn(dailyContentService, 'getActivePoetry').mockResolvedValue(null);
   });
 
   describe('3. Writing Coach', () => {
@@ -63,8 +77,14 @@ describe('Step 8: Advanced Learning Features — Writing Coach & Speaking Coach'
   });
 
   describe('4. Speaking Practice', () => {
+    it('renders honest empty state when no live speaking prompts are loaded', async () => {
+      render(<SpeakingCoach language="pt" />);
+      await waitFor(() => {
+        expect(screen.getByText(/No speaking prompts loaded yet for PT/i)).toBeDefined();
+      });
+    });
+
     it('renders speaking challenge and clearly distinguishes transcription accuracy from pronunciation assessment', async () => {
-      // Mock recognition
       vi.spyOn(SpeechService, 'isRecognitionSupported').mockReturnValue(true);
       vi.spyOn(SpeechService, 'startRecognition').mockImplementation((lang, variety, onResult) => {
         onResult('A preservação ambiental nas cidades garante a qualidade do ar');
@@ -72,7 +92,7 @@ describe('Step 8: Advanced Learning Features — Writing Coach & Speaking Coach'
       });
 
       render(
-        <SpeakingCoach language="pt" />
+        <SpeakingCoach language="pt" challenges={[MOCK_SPEAKING_CHALLENGE]} />
       );
 
       // Challenge prompt and target response

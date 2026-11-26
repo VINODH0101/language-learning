@@ -8,9 +8,11 @@ import { I18nProvider } from '../i18n/i18nContext';
 import { authService } from '../services/auth';
 import { courseService } from '../services/courseService';
 import { StorageService } from '../services/storage';
-import { contentCentredService, SEED_CONTENT_ITEMS } from '../services/contentCentredService';
+import { contentCentredService } from '../services/contentCentredService';
 import { dailyContentService } from '../services/dailyContentService';
 import { ClientLessonGenerator } from '../services/lessonGenerator';
+import { VocabularyService } from '../services/vocabularyService';
+import type { ContentItem, ContentVersion, LearningActivity } from '../types/contentCentred';
 import {
   resolveContinueLearning,
   resolveTodaysEdition,
@@ -23,15 +25,104 @@ import {
 } from '../features/dashboard/services/homeOrchestrator';
 import { Course } from '../types';
 
+function createMockDublinItem(): ContentItem & {
+  version: ContentVersion;
+  activities: LearningActivity[];
+} {
+  const now = new Date().toISOString();
+  return {
+    id: 'ci_coffee_dublin_001',
+    title: 'A Morning Coffee in Dublin',
+    slug: 'morning-coffee-dublin',
+    target_language: 'en',
+    explanation_language: 'pt',
+    source_language: 'en',
+    summary: 'Ordering a flat white in Dublin.',
+    genre: 'short_story',
+    content_type: 'story',
+    primary_cefr: 'B1',
+    estimated_read_minutes: 4,
+    status: 'published',
+    current_version_id: 'cv_coffee_dublin_v1',
+    rights_status: 'public_domain',
+    created_at: now,
+    updated_at: now,
+    version: {
+      id: 'cv_coffee_dublin_v1',
+      content_item_id: 'ci_coffee_dublin_001',
+      version_number: 1,
+      cefr_level: 'B1',
+      word_count: 24,
+      sentence_count: 4,
+      is_published: true,
+      published_at: now,
+      created_at: now,
+      audio_metadata: {},
+      structured_payload: {
+        title: 'A Morning Coffee in Dublin',
+        paragraphs: [
+          {
+            id: 'p1',
+            order: 1,
+            sentences: [
+              { id: 's1', order: 1, text: 'The barista poured the velvety flat white.', tokens: [] },
+              { id: 's2', order: 2, text: 'Rain tapped gently against the glass.', tokens: [] },
+              { id: 's3', order: 3, text: 'Steam rose from the ceramic cup.', tokens: [] },
+              { id: 's4', order: 4, text: 'Dublin slowly woke up outside.', tokens: [] },
+            ],
+          },
+        ],
+        annotations: {},
+        grammar_points: [],
+      },
+    },
+    activities: [
+      {
+        id: 'act_dublin_home_1',
+        content_version_id: 'cv_coffee_dublin_v1',
+        activity_type: 'reading_comprehension',
+        activity_title: 'Dublin Café Question',
+        activity_order: 1,
+        estimated_minutes: 2,
+        created_at: now,
+        configuration: {
+          instructions: 'Answer based on the text.',
+          questions: [
+            {
+              id: 'q1',
+              type: 'multiple_choice',
+              stem: 'What was poured?',
+              options: [
+                { id: 'a', text: 'Flat white' },
+                { id: 'b', text: 'Green tea' },
+              ],
+              correct_answer: 'a',
+              explanation: 'The text mentions the velvety flat white.',
+            },
+          ],
+        },
+      },
+    ],
+  };
+}
+
 describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
   const mockNavigateTab = vi.fn();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     localStorage.clear();
+    VocabularyService.clearDynamicCatalog();
+    contentCentredService.clearLocalRegistries();
     Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true });
     document.dispatchEvent(new Event('visibilitychange'));
+
+    const dublin = createMockDublinItem();
+    await contentCentredService.saveContentItem(dublin, { systemBypass: true });
+    await contentCentredService.saveContentVersion(dublin.version, { systemBypass: true });
+    await contentCentredService.publishContentVersion(dublin.id, dublin.version.id, { systemBypass: true });
+    await contentCentredService.saveLearningActivity(dublin.activities[0], { systemBypass: true });
   });
 
   const renderHome = (initialLang: 'en' | 'pt' | 'es' = 'en') => {
@@ -128,6 +219,26 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
   it('5. Section 2 (Continue Learning) falls back to structured daily curriculum lesson when no unfinished story exists', async () => {
     const userId = 'user_curriculum_fallback';
     vi.spyOn(contentCentredService, 'getAllLearnerProgress').mockResolvedValueOnce([]);
+    VocabularyService.setDynamicCatalog([
+      {
+        id: 'dyn_pt_home_1',
+        lemma: 'amanhecer',
+        target_language: 'pt',
+        part_of_speech: 'noun',
+        cefr_level: 'B1',
+        translations: { en: 'dawn', pt: 'amanhecer', es: 'amanecer' },
+        definitions: { en: 'The break of day.', pt: 'O nascer do dia.', es: 'El alba.' },
+        example_sentence_target: 'O amanhecer em Lisboa foi lindo.',
+        example_sentence_translations: { en: 'Dawn in Lisbon was beautiful.' },
+        topic: 'daily_life',
+        attribution: {
+          source_name: 'Lexilume Content Engine',
+          source_url: 'https://lexilume.local',
+          license_type: 'Original-Curated',
+          attribution_text: 'Generated for test',
+        },
+      },
+    ]);
 
     const resolved = await resolveContinueLearning(sampleCourse, userId);
 
@@ -139,6 +250,28 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
   });
 
   it('6. Section 3 (Today\'s Edition) curates mixed authentic literature, dialogues, and stories', async () => {
+    await dailyContentService.publishPoem({
+      title: 'Ondas do Tejo',
+      author: 'Autor Teste',
+      learning_language: 'pt',
+      cefr_level: 'B1',
+      excerpt: 'Brilha o rio ao entardecer...',
+      full_text: 'Brilha o rio ao entardecer.',
+      cultural_context: 'Lisboa.',
+      country_name: 'Portugal',
+      country_code: 'PT',
+    });
+    await dailyContentService.publishConversation({
+      title: 'Encontro na Praça',
+      scenario: 'Combinando um café com amigos',
+      learning_language: 'pt',
+      cefr_level: 'B1',
+      cultural_context: 'Praça central.',
+      country_name: 'Brasil',
+      country_code: 'BR',
+      dialogue: [{ speaker: 'Ana', line: 'Vamos tomar um café?', translation: 'Shall we have coffee?' }],
+    });
+
     const edition = await resolveTodaysEdition(sampleCourse);
 
     expect(edition.poem).toBeDefined();
@@ -650,7 +783,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
 
   it('23. Sentence click updates reading position without fabricating study time (sends time_spent_seconds: 0)', async () => {
     const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
-    const mockItem = SEED_CONTENT_ITEMS[0];
+    const mockItem = createMockDublinItem();
 
     render(
       <ReaderView
@@ -678,7 +811,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
   it('24. Active reading session does not count time before interaction, tracks on active interaction, and flushes on unmount', async () => {
     vi.useFakeTimers();
     const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
-    const mockItem = SEED_CONTENT_ITEMS[0];
+    const mockItem = createMockDublinItem();
 
     const { unmount } = render(
       <ReaderView
@@ -724,7 +857,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
   it('25. Multiple Reader sessions accumulate active seconds into daily minutes without reset or duplication', async () => {
     vi.useFakeTimers();
     vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
-    const mockItem = SEED_CONTENT_ITEMS[0];
+    const mockItem = createMockDublinItem();
     const userId = 'user_multi_session_test';
     const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
       user: { id: userId, email: 'test@example.com' } as any,
@@ -796,7 +929,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
   it('26. Active reading timer pauses on 60s idle timeout and flushes on tab hidden, remaining paused when tab restored until interaction', async () => {
     vi.useFakeTimers();
     const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
-    const mockItem = SEED_CONTENT_ITEMS[0];
+    const mockItem = createMockDublinItem();
     const userId = 'user_idle_tab_test';
     const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
       user: { id: userId, email: 'test@example.com' } as any,
@@ -1032,7 +1165,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
 
   it('30. Sentence clicks update reading position without completing content when required activities exist', async () => {
     const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
-    const mockItem = SEED_CONTENT_ITEMS[0]; // has activities
+    const mockItem = createMockDublinItem(); // has activities
 
     render(
       <ReaderView
@@ -1117,7 +1250,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
     vi.useFakeTimers();
     // Simulate remote network failure
     vi.spyOn(contentCentredService, 'updateLearnerProgress').mockRejectedValue(new Error('Network offline'));
-    const mockItem = SEED_CONTENT_ITEMS[0];
+    const mockItem = createMockDublinItem();
     const userId = 'user_offline_sync_test';
     const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
       user: { id: userId, email: 'offline@example.com' } as any,
@@ -1159,7 +1292,7 @@ describe('Home Page Redesign — Editorial Architecture & Six Sections', () => {
 
   it('33. Full reading and activity lifecycle: preserves reading position when activities are completed', async () => {
     const updateSpy = vi.spyOn(contentCentredService, 'updateLearnerProgress').mockResolvedValue({} as any);
-    const mockItem = SEED_CONTENT_ITEMS[0];
+    const mockItem = createMockDublinItem();
     const userId = 'user_lifecycle_test';
     const authStateSpy = vi.spyOn(authService, 'getState').mockReturnValue({
       user: { id: userId, email: 'lifecycle@example.com' } as any,

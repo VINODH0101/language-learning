@@ -28,6 +28,9 @@ import {
 import { Language } from '../../types';
 import { ReadingManager } from '../../services/providers/reading/readingManager';
 import { NormalizedBook } from '../../services/normalization/responseNormalizers';
+import { contentAccess } from '../../services/contentAccess';
+import { dailyContentService } from '../../services/dailyContentService';
+import { VocabularyService } from '../../services/vocabularyService';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 
@@ -42,81 +45,26 @@ export interface ThematicCluster {
   terms: string[];
 }
 
-const THEMATIC_CLUSTERS: ThematicCluster[] = [
-  {
-    id: 'theme-pt-1',
-    title: 'Gastronomia e Doçaria Conventual Portuguesa',
-    description: 'Pastéis de Belém, queijadas de Sintra e terminologia culinária das regiões de Portugal.',
-    cefrLevel: 'B1',
-    language: 'pt',
-    terms: ['doçaria', 'conventual', 'gemas', 'caldo verde', 'bacalhau à gomes de sá'],
-  },
-  {
-    id: 'theme-pt-2',
-    title: 'Discurso Acadêmico & Ensaística Contemporânea',
-    description: 'Conectivos frásicos de nível C1, transições argumentativas e rigor ensaístico.',
-    cefrLevel: 'C1',
-    language: 'pt',
-    terms: ['outrossim', 'concomitantemente', 'epistemologia', 'paradigma', 'dialética'],
-  },
-  {
-    id: 'theme-es-1',
-    title: 'Rutas Gastronómicas e Identidad Culinaria Ibérica',
-    description: 'Tapas andaluzas, jamón ibérico y vocabulario culinario esencial de España y América.',
-    cefrLevel: 'B1',
-    language: 'es',
-    terms: ['sobremesa', 'maridaje', 'tapeo', 'guiso', 'denominación de origen'],
-  },
-  {
-    id: 'theme-es-2',
-    title: 'Retórica Jurídica y Filosofía Política Hispánica',
-    description: 'Términos de debate formal, argumentación C1 y precisión institucional.',
-    cefrLevel: 'C1',
-    language: 'es',
-    terms: ['jurisprudencia', 'vindicación', 'prerrogativa', 'inalienable', 'arbitraje'],
-  },
-  {
-    id: 'theme-en-1',
-    title: 'Cognitive Computing & Algorithmic Ethics',
-    description: 'High-level vocabulary for artificial intelligence, neural networks, and digital ethics.',
-    cefrLevel: 'C1',
-    language: 'en',
-    terms: ['heuristic', 'gradient descent', 'stochastic', 'alignment', 'interpretability'],
-  },
-];
-
-const DISCOVERY_SCENARIOS = [
-  {
-    id: 'scen-pt-1',
-    title: 'Negociação na Feira da Ladra',
-    description: 'Comunicação informal, regateio amigável e expressões castiças lisboetas.',
-    cefrLevel: 'B2',
-    language: 'pt',
-  },
-  {
-    id: 'scen-pt-2',
-    title: 'Defesa de Tese Universitária em Coimbra',
-    description: 'Defesa oral de hipóteses e réplica a perguntas da banca avaliadora.',
-    cefrLevel: 'C1',
-    language: 'pt',
-  },
-  {
-    id: 'scen-es-1',
-    title: 'Entrevista de Prensa y Rueda Cultural',
-    description: 'Preguntas incisivas sobre literatura, cine y actualidad sociopolítica.',
-    cefrLevel: 'C1',
-    language: 'es',
-  },
-];
+export interface DiscoveryScenarioSummary {
+  id: string;
+  title: string;
+  description: string;
+  cefrLevel: string;
+  language: Language;
+}
 
 export interface DiscoverHubProps {
   initialLanguage?: Language;
   onNavigateToPractice?: (mode: string) => void;
+  themes?: ThematicCluster[];
+  scenarios?: DiscoveryScenarioSummary[];
 }
 
 export const DiscoverHub: React.FC<DiscoverHubProps> = ({
   initialLanguage = 'pt',
   onNavigateToPractice,
+  themes,
+  scenarios,
 }) => {
   const [selectedLang, setSelectedLang] = useState<Language>(initialLanguage);
   const [selectedCefr, setSelectedCefr] = useState<string>('all');
@@ -126,6 +74,8 @@ export const DiscoverHub: React.FC<DiscoverHubProps> = ({
   // Gutendex books
   const [books, setBooks] = useState<NormalizedBook[]>([]);
   const [loadingBooks, setLoadingBooks] = useState(false);
+  const [liveThemes, setLiveThemes] = useState<ThematicCluster[]>(themes || []);
+  const [liveScenarios, setLiveScenarios] = useState<DiscoveryScenarioSummary[]>(scenarios || []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -140,25 +90,74 @@ export const DiscoverHub: React.FC<DiscoverHubProps> = ({
         if (!isCancelled) {
           setBooks(res);
         }
-      } catch (e) {
+      } catch {
         if (!isCancelled) setBooks([]);
       } finally {
         if (!isCancelled) setLoadingBooks(false);
       }
     };
 
-    fetchBooks();
-    return () => { isCancelled = true; };
-  }, [selectedLang, searchQuery]);
+    const fetchDynamicDiscovery = async () => {
+      if (!themes) {
+        try {
+          await VocabularyService.loadLiveCatalog(selectedLang).catch(() => {});
+          const vocab = await contentAccess.getPublishedVocabularyEntries(selectedLang).catch(() => []);
+          const byCefr = new Map<string, string[]>();
+          for (const v of vocab) {
+            const arr = byCefr.get(v.cefr_level) || [];
+            if (arr.length < 6) arr.push(v.lemma);
+            byCefr.set(v.cefr_level, arr);
+          }
+          const clusters: ThematicCluster[] = Array.from(byCefr.entries()).map(([lvl, terms]) => ({
+            id: `theme-${selectedLang}-${lvl}`,
+            title: `${selectedLang.toUpperCase()} ${lvl} Vocabulary Cluster`,
+            description: 'Live published terms from AI Content Engine & Open Dictionary APIs.',
+            cefrLevel: (['A1', 'A2', 'B1', 'B2', 'C1'].includes(lvl) ? lvl : 'B1') as ThematicCluster['cefrLevel'],
+            language: selectedLang,
+            terms,
+          }));
+          if (!isCancelled) setLiveThemes(clusters);
+        } catch {
+          if (!isCancelled) setLiveThemes([]);
+        }
+      }
+      if (!scenarios) {
+        try {
+          const [daily, aiConvos] = await Promise.all([
+            dailyContentService.getAllContent(),
+            contentAccess.getPublishedConversations(selectedLang).catch(() => []),
+          ]);
+          const combined = [
+            ...aiConvos,
+            ...daily.activeConversations.filter(c => c.learning_language === selectedLang),
+          ];
+          const mapped: DiscoveryScenarioSummary[] = combined.map(c => ({
+            id: c.id,
+            title: c.title,
+            description: c.scenario || c.cultural_context,
+            cefrLevel: c.cefr_level,
+            language: c.learning_language,
+          }));
+          if (!isCancelled) setLiveScenarios(mapped);
+        } catch {
+          if (!isCancelled) setLiveScenarios([]);
+        }
+      }
+    };
 
-  const filteredThemes = THEMATIC_CLUSTERS.filter(t => {
+    fetchBooks();
+    fetchDynamicDiscovery();
+    return () => { isCancelled = true; };
+  }, [selectedLang, searchQuery, themes, scenarios]);
+
+  const filteredThemes = liveThemes.filter(t => {
     if (t.language !== selectedLang) return false;
     if (selectedCefr !== 'all' && t.cefrLevel !== selectedCefr) return false;
     if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
-  const filteredScenarios = DISCOVERY_SCENARIOS.filter(s => {
+  const filteredScenarios = liveScenarios.filter(s => {
     if (s.language !== selectedLang) return false;
     if (selectedCefr !== 'all' && s.cefrLevel !== selectedCefr) return false;
     if (searchQuery && !s.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;

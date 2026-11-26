@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { Language } from '../../types';
 import { AiManager } from '../../services/providers/ai/aiManager';
+import { dailyContentService } from '../../services/dailyContentService';
+import { contentAccess } from '../../services/contentAccess';
 import { SpeechService } from '../../services/speech';
 import { savePhrasebookWord } from '../../services/localDb';
 import { ContextualWordPopover } from '../../components/common/ContextualWordPopover';
@@ -59,94 +61,14 @@ export interface ScenarioPreset {
   usefulVocab: { word: string; meaning: string }[];
 }
 
-const PRESET_SCENARIOS: Record<string, ScenarioPreset[]> = {
-  pt: [
-    {
-      id: 'pt-scen-1',
-      title: 'Check-in e Reservas em Hotel Boutique',
-      category: 'Viagens & Turismo',
-      cefrLevel: 'B1',
-      initialPrompt: 'Boa tarde! Bem-vindo ao Hotel Miradouro de Lisboa. Tem reserva connosco para esta noite?',
-      initialPromptTranslation: 'Good afternoon! Welcome to Hotel Miradouro de Lisboa. Do you have a reservation with us for tonight?',
-      candidateResponses: [
-        'Boa tarde. Sim, tenho uma reserva em meu nome por duas noites.',
-        'Olá! Fiz a reserva pela internet, aqui está o comprovativo.',
-        'Boa tarde! Gostaria de saber se têm quartos disponíveis com vista para o rio.',
-      ],
-      usefulVocab: [
-        { word: 'reserva', meaning: 'reservation / booking' },
-        { word: 'comprovativo', meaning: 'proof of reservation / voucher' },
-        { word: 'miradouro', meaning: 'scenic viewpoint' },
-      ],
-    },
-    {
-      id: 'pt-scen-2',
-      title: 'Entrevista de Emprego Técnica',
-      category: 'Carreira & Profissional',
-      cefrLevel: 'C1',
-      initialPrompt: 'Poderia detalhar a sua experiência prévia na otimização de arquiteturas de sistemas distribuídos e redução de latência?',
-      initialPromptTranslation: 'Could you detail your prior experience optimizing distributed systems architectures and reducing latency?',
-      candidateResponses: [
-        'Com certeza. Lideramos a migração para microsserviços orientados a eventos, reduzindo a latência média em quarenta por cento.',
-        'Nos últimos três anos, trabalhei extensivamente com replicação de dados e estratégias de cache resiliente.',
-        'Implementei políticas de particionamento e monitorização contínua com métricas de observabilidade em tempo real.',
-      ],
-      usefulVocab: [
-        { word: 'sistemas distribuídos', meaning: 'distributed systems' },
-        { word: 'resiliente', meaning: 'resilient / fault-tolerant' },
-        { word: 'particionamento', meaning: 'partitioning / sharding' },
-      ],
-    },
-  ],
-  es: [
-    {
-      id: 'es-scen-1',
-      title: 'Café Literario y Recomendación Cultural',
-      category: 'Cultura & Vida Diaria',
-      cefrLevel: 'B1',
-      initialPrompt: '¡Hola! Bienvenido al Café del Espejo. ¿Qué te gustaría tomar hoy mientras disfrutas de tu lectura?',
-      initialPromptTranslation: 'Hello! Welcome to Café del Espejo. What would you like to have today while enjoying your reading?',
-      candidateResponses: [
-        'Un café con leche de avena y una porción de tarta de manzana, por favor.',
-        'Buenas tardes. ¿Qué infusión me recomienda para una tarde tranquila?',
-        'Solo un café solo doble, muchas gracias.',
-      ],
-      usefulVocab: [
-        { word: 'leche de avena', meaning: 'oat milk' },
-        { word: 'infusión', meaning: 'herbal tea' },
-        { word: 'porción', meaning: 'slice / portion' },
-      ],
-    },
-  ],
-  en: [
-    {
-      id: 'en-scen-1',
-      title: 'University Research Collaboration',
-      category: 'Academia & Science',
-      cefrLevel: 'B2',
-      initialPrompt: 'Good morning! In our upcoming research grant proposal, which empirical methodology do you suggest we adopt?',
-      initialPromptTranslation: 'Bom dia! Na nossa próxima proposta de bolsa de investigação, qual metodologia empírica você sugere que adotemos?',
-      candidateResponses: [
-        'I propose a longitudinal mixed-methods approach combining qualitative interviews with regression analysis.',
-        'We should conduct a double-blind controlled pilot study before scaling to larger demographic samples.',
-        'A comprehensive meta-analysis of peer-reviewed literature would establish our theoretical baseline.',
-      ],
-      usefulVocab: [
-        { word: 'longitudinal', meaning: 'extended over time' },
-        { word: 'meta-analysis', meaning: 'systematic review of studies' },
-        { word: 'peer-reviewed', meaning: 'evaluated by fellow academics' },
-      ],
-    },
-  ],
-};
-
 export interface ConversationStudioProps {
   language: Language;
+  scenarios?: ScenarioPreset[];
 }
 
-export const ConversationStudio: React.FC<ConversationStudioProps> = ({ language }) => {
-  const presets = PRESET_SCENARIOS[language] || PRESET_SCENARIOS.pt;
-  const [selectedScenario, setSelectedScenario] = useState<ScenarioPreset>(presets[0]);
+export const ConversationStudio: React.FC<ConversationStudioProps> = ({ language, scenarios }) => {
+  const [presets, setPresets] = useState<ScenarioPreset[]>(scenarios || []);
+  const [selectedScenario, setSelectedScenario] = useState<ScenarioPreset | null>(scenarios?.[0] || null);
   const [turns, setTurns] = useState<ConversationTurn[]>([]);
   const [customInput, setCustomInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
@@ -158,13 +80,91 @@ export const ConversationStudio: React.FC<ConversationStudioProps> = ({ language
   const [activeLookupWord, setActiveLookupWord] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | undefined>();
 
-  // Initialize conversation with the scenario's first turn
   useEffect(() => {
-    const list = PRESET_SCENARIOS[language] || PRESET_SCENARIOS.pt;
-    const initial = list[0];
-    setSelectedScenario(initial);
-    resetConversation(initial);
-  }, [language]);
+    if (scenarios) {
+      setPresets(scenarios);
+      const first = scenarios[0] || null;
+      setSelectedScenario(first);
+      if (first) resetConversation(first);
+      return;
+    }
+    let cancelled = false;
+    const loadLiveScenarios = async () => {
+      try {
+        const [daily, aiConvos] = await Promise.all([
+          dailyContentService.getAllContent(),
+          contentAccess.getPublishedConversations(language).catch(() => []),
+        ]);
+        const merged = [
+          ...aiConvos,
+          ...daily.activeConversations.filter(c => c.learning_language === language),
+          ...daily.archivedConversations.filter(c => c.learning_language === language),
+        ];
+        const unique = new Map<string, ScenarioPreset>();
+        for (const c of merged) {
+          if (unique.has(c.id)) continue;
+          const firstTurn = c.dialogue[0];
+          const followTurns = c.dialogue.slice(1).map(t => t.line);
+          unique.set(c.id, {
+            id: c.id,
+            title: c.title,
+            category: 'Conversation',
+            cefrLevel: (c.cefr_level as ScenarioPreset['cefrLevel']) || 'B1',
+            initialPrompt: firstTurn?.line || c.scenario,
+            initialPromptTranslation: firstTurn?.translation || c.cultural_context,
+            candidateResponses: followTurns,
+            usefulVocab: [],
+          });
+        }
+        const list = Array.from(unique.values());
+        if (!cancelled) {
+          setPresets(list);
+          const first = list[0] || null;
+          setSelectedScenario(first);
+          if (first) resetConversation(first);
+          else setTurns([]);
+        }
+      } catch {
+        if (!cancelled) {
+          setPresets([]);
+          setSelectedScenario(null);
+          setTurns([]);
+        }
+      }
+    };
+    loadLiveScenarios();
+    return () => {
+      cancelled = true;
+    };
+  }, [language, scenarios]);
+
+  const handleGenerateDynamicScenario = async () => {
+    setIsAiResponding(true);
+    try {
+      const generated = await AiManager.getInstance().generateDialogue({
+        topic: `${language.toUpperCase()} Conversation`,
+        language,
+        cefrLevel: 'B1',
+      });
+      const scenario: ScenarioPreset = {
+        id: generated.id,
+        title: generated.title,
+        category: generated.category || 'AI Dialogue',
+        cefrLevel: (generated.cefr_level as ScenarioPreset['cefrLevel']) || 'B1',
+        initialPrompt: generated.turns[0]?.line || generated.context,
+        initialPromptTranslation: generated.turns[0]?.translation || '',
+        candidateResponses: generated.turns.slice(1).map(t => t.line),
+        usefulVocab: generated.vocabulary.map(v => ({ word: v.term, meaning: v.meaning })),
+      };
+      setPresets(prev => [scenario, ...prev]);
+      setSelectedScenario(scenario);
+      resetConversation(scenario);
+    } catch {
+      toast.error('Unable to generate dialogue scenario.');
+    } finally {
+      setIsAiResponding(false);
+    }
+  };
 
   const resetConversation = (scenario: ScenarioPreset) => {
     SpeechService.stop();
@@ -210,9 +210,9 @@ export const ConversationStudio: React.FC<ConversationStudioProps> = ({ language
       // 2. Fetch AI dialogue continuation via AiManager
       const aiManager = AiManager.getInstance();
       const dialogueResult = await aiManager.generateDialogue({
-        topic: selectedScenario.title,
+        topic: selectedScenario?.title || `${language.toUpperCase()} Conversation`,
         language,
-        cefrLevel: selectedScenario.cefrLevel,
+        cefrLevel: selectedScenario?.cefrLevel || 'B1',
       });
 
       const nextInterlocutorTurn = dialogueResult.turns?.[dialogueResult.turns.length - 1];
@@ -262,6 +262,28 @@ export const ConversationStudio: React.FC<ConversationStudioProps> = ({ language
     });
     toast.success(`"${vocab.word}" salvo no seu caderno de vocabulário!`);
   };
+
+  if (!selectedScenario) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-sm">
+        <MessageSquare className="w-9 h-9 text-purple-400 mx-auto" />
+        <h3 className="text-base font-bold text-slate-100">Conversation Studio & Roleplay</h3>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          No published conversation scenarios loaded for {language.toUpperCase()} yet. Generate a live roleplay scenario or publish daily conversations via Admin Content Studio.
+        </p>
+        <Button
+          onClick={handleGenerateDynamicScenario}
+          disabled={isAiResponding}
+          variant="primary"
+          size="sm"
+          icon={<Sparkles className="w-3.5 h-3.5" />}
+          className="cursor-pointer bg-purple-600 hover:bg-purple-700"
+        >
+          {isAiResponding ? 'Generating...' : 'Generate Live Scenario'}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

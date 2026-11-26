@@ -1,117 +1,110 @@
 import React from 'react';
-import { Target, Sparkles, BookOpen, ArrowRight, CheckCircle2, Flame } from 'lucide-react';
-import { Language } from '../../../types';
-import { getLanguageName } from '../../../lib/languages/languageMatrix';
+import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 import { Badge } from '../../../components/common/Badge';
 import { ProgressBar } from '../../../components/common/ProgressBar';
 import { useI18n } from '../../../i18n/i18nContext';
-import { PracticeCategory, PracticeSubMode } from '../types';
 
 interface PracticeDashboardSummaryProps {
-  language: Language;
   cefrLevel: string;
   dueCount: number;
   newCount: number;
   todayReviewed: number;
   dailyTarget: number;
   onQuickStart: () => void;
-  onSelectCategory: (cat: PracticeCategory, subMode?: PracticeSubMode) => void;
 }
 
+/**
+ * A deliberately small "today" card.
+ *
+ * It answers one question — what should I do right now? — with a single
+ * number and a single primary action. Everything else is supporting detail.
+ */
 export const PracticeDashboardSummary: React.FC<PracticeDashboardSummaryProps> = ({
-  language,
   cefrLevel,
   dueCount,
   newCount,
   todayReviewed,
   dailyTarget,
   onQuickStart,
-  onSelectCategory,
 }) => {
-  const { t, interfaceLanguage } = useI18n();
-  const progressPct = Math.min(100, Math.round((todayReviewed / dailyTarget) * 100));
+  const { t } = useI18n();
+  const safeTarget = Math.max(1, dailyTarget);
+  const progressPct = Math.min(100, Math.round((todayReviewed / safeTarget) * 100));
+  const hasDue = dueCount > 0;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        {/* Track & CEFR Status */}
-        <div className="p-3.5 bg-slate-850/70 border border-slate-800/80 rounded-xl space-y-1">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            {t('practice:summary_track_label', 'Trilha Ativa')}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold text-slate-100">
-              {getLanguageName(language, (interfaceLanguage as any) || 'en')}
+    <section
+      aria-label={t('practice:today_aria', "Today's practice")}
+      className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-7 shadow-xs"
+    >
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-stone-500">
+              {t('practice:today_kicker', "Today's recall")}
             </span>
-            <Badge variant="indigo" size="sm">
+            <Badge variant="slate" size="sm">
               CEFR {cefrLevel}
             </Badge>
+            {!hasDue && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                {t('practice:today_none', 'All caught up')}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+            <div className="flex items-baseline gap-2">
+              <span
+                className={`font-serif text-4xl sm:text-5xl font-bold leading-none tracking-tight ${
+                  hasDue ? 'text-stone-900' : 'text-emerald-700'
+                }`}
+              >
+                {dueCount}
+              </span>
+              <span className="text-sm text-stone-600">
+                {dueCount === 1
+                  ? t('practice:today_due_one', 'word due for review')
+                  : t('practice:today_due_many', 'words due for review')}
+              </span>
+            </div>
+
+            <p className="text-xs text-stone-500 pb-1">
+              <span className="font-semibold text-stone-800">{newCount}</span>{' '}
+              {t('practice:today_new_label', 'new words')}
+              <span className="text-stone-300 mx-1.5">•</span>
+              <span className="font-semibold text-stone-800">
+                {todayReviewed}/{safeTarget}
+              </span>{' '}
+              {t('practice:today_reviews_label', 'reviews today')}
+            </p>
+          </div>
+
+          <div className="max-w-sm">
+            <div className="flex items-center justify-between text-[11px] text-stone-500 mb-1.5">
+              <span>{t('practice:today_goal_label', 'Daily goal')}</span>
+              <span className="font-medium text-stone-700">{progressPct}%</span>
+            </div>
+            <ProgressBar progress={progressPct} variant="bronze" />
           </div>
         </div>
 
-        {/* Due Cards */}
-        <div className="p-3.5 bg-slate-850/70 border border-slate-800/80 rounded-xl space-y-1">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            {t('practice:summary_due_label', 'Recordação Pendente')}
-          </span>
-          <div className="flex items-center justify-between">
-            <span className={`text-2xl font-black ${dueCount > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {dueCount}
-            </span>
-            <Badge variant={dueCount > 0 ? 'rose' : 'emerald'} size="sm">
-              {dueCount > 0 ? t('practice:due_items', 'Para Hoje') : t('practice:all_clear', 'Em Dia')}
-            </Badge>
-          </div>
-        </div>
-
-        {/* New Vocabulary */}
-        <div className="p-3.5 bg-slate-850/70 border border-slate-800/80 rounded-xl space-y-1">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            {t('practice:summary_new_label', 'Novos Vocábulos')}
-          </span>
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-black text-sky-400">
-              {newCount}
-            </span>
-            <button
-              onClick={() => onSelectCategory('vocabulary', 'srs')}
-              className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold cursor-pointer underline"
-            >
-              {t('practice:explore_vocab', 'Aprender Novos')}
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Start Action */}
-        <div className="flex flex-col justify-center">
+        <div className="w-full lg:w-56 shrink-0">
           <Button
-            variant={dueCount > 0 ? 'primary' : 'outline'}
-            size="md"
-            icon={<ArrowRight className="w-4 h-4" />}
+            variant="primary"
+            size="lg"
+            icon={hasDue ? <Sparkles className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
             onClick={onQuickStart}
-            className="w-full justify-center text-xs font-bold cursor-pointer min-h-[44px]"
+            className="w-full justify-center min-h-[44px]"
           >
-            {dueCount > 0
-              ? `${t('practice:review_now', 'Revisar')} (${dueCount})`
-              : t('practice:start_free_practice', 'Praticar Vocabulário')}
+            {hasDue
+              ? t('practice:review_due', 'Review {{count}} due', { count: dueCount })
+              : t('practice:start_review', 'Start reviewing')}
           </Button>
         </div>
       </div>
-
-      {/* Daily Review Goal Progress */}
-      <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-slate-300 font-semibold">
-          <Target className="w-4 h-4 text-indigo-400" />
-          <span>{t('practice:daily_goal_label', 'Meta Diária de Revisões SM-2:')}</span>
-          <span className="font-mono text-indigo-300 font-bold">
-            {todayReviewed} / {dailyTarget} ({progressPct}%)
-          </span>
-        </div>
-        <div className="w-full sm:w-64">
-          <ProgressBar progress={progressPct} variant="indigo" />
-        </div>
-      </div>
-    </div>
+    </section>
   );
 };

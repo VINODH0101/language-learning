@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { Language } from '../../types';
 import { ReadingManager } from '../../services/providers/reading/readingManager';
+import { contentAccess } from '../../services/contentAccess';
+import { CultureService } from '../../services/cultureService';
 import { ContextualWordPopover } from '../../components/common/ContextualWordPopover';
 import { SpeechService } from '../../services/speech';
 import { logReadingSession, getReadingHistory, ReadingHistoryRecord } from '../../services/localDb';
@@ -52,103 +54,16 @@ export interface ReadingItem {
   }[];
 }
 
-const DEFAULT_READING_ITEMS: Record<string, ReadingItem[]> = {
-  pt: [
-    {
-      id: 'pt-read-c1-1',
-      title: 'A Influência do Barroco na Arquitetura do Norte de Portugal',
-      cefrLevel: 'C1',
-      source: 'curated',
-      authorOrAttribution: 'Lexilume Curated Portuguese Studies',
-      summary: 'Uma análise da opulência estética das igrejas de Braga e Porto sob o prisma do barroco joanino.',
-      content: 'A arquitetura barroca em Portugal manifestou-se com singular exuberância durante o reinado de D. João V. No norte do país, especialmente nas cidades de Braga e Porto, a talha dourada e o granito local fundiram-se numa simbiose estética inconfundível. Artistas como Nicolau Nasoni transformaram a paisagem urbana, erigindo monumentos vertiginosos como a Torre dos Clérigos. Essa linguagem visual traduzia não apenas poder eclesiástico, mas também o afluxo de riquezas minerais provenientes do Brasil colonial, refletindo contradições profundas na estrutura socioeconómica do império.',
-      comprehensionQuestions: [
-        {
-          id: 'q1',
-          question: 'Qual arquiteto é explicitamente citado como responsável pela transformação urbana no norte?',
-          options: ['Aleijadinho', 'Nicolau Nasoni', 'Afonso Domingues', 'Mateus Vicente'],
-          correctIndex: 1,
-          explanation: 'O texto cita nominalmente "Artistas como Nicolau Nasoni transformaram a paisagem urbana, erigindo monumentos vertiginosos como a Torre dos Clérigos".',
-        },
-        {
-          id: 'q2',
-          question: 'De acordo com o texto, qual fator material possibilitou a exuberância barroca joanina?',
-          options: ['A rota da seda asiática', 'O afluxo de riquezas minerais do Brasil colonial', 'As manufaturas têxteis do Alentejo', 'O comércio exclusivo de especiarias'],
-          correctIndex: 1,
-          explanation: 'O texto aponta diretamente o "afluxo de riquezas minerais provenientes do Brasil colonial".',
-        },
-      ],
-    },
-    {
-      id: 'pt-read-b1-1',
-      title: 'O Fado e a Tradição dos Bairros Típicos de Lisboa',
-      cefrLevel: 'B1',
-      source: 'curated',
-      authorOrAttribution: 'Lexilume Cultural Corpus',
-      summary: 'Descubra a história das tabernas de Alfama e a emoção da guitarra portuguesa.',
-      content: 'O fado nasceu no coração dos bairros populares de Lisboa, como Alfama e Mouraria, durante o século dezanove. Inicialmente cantado por marinheiros e pessoas humildes, o fado transmite temas de saudade, amor e destino. Acompanhado pela guitarra portuguesa e pela viola de fado, este estilo musical conquistou palcos internacionais e foi classificado pela UNESCO como Património Cultural Imaterial da Humanidade.',
-      comprehensionQuestions: [
-        {
-          id: 'q1',
-          question: 'Em que século o fado surgiu nos bairros populares de Lisboa?',
-          options: ['Século quinze', 'Século dezassete', 'Século dezanove', 'Século vinte'],
-          correctIndex: 2,
-          explanation: 'O texto afirma com clareza: "durante o século dezanove".',
-        },
-      ],
-    },
-  ],
-  es: [
-    {
-      id: 'es-read-c1-1',
-      title: 'El Realismo Mágico y la Desarticulación Cronológica en la Narrativa Hispánica',
-      cefrLevel: 'C1',
-      source: 'curated',
-      authorOrAttribution: 'Estudios Literarios Hispanoamericanos',
-      summary: 'Reflexión crítica sobre la coexistencia entre la cotidianeidad tangible y lo prodigioso insólito.',
-      content: 'El realismo mágico no constituye una simple evasión de la realidad objetiva, sino una decantación poética de las contradicciones históricas de América Latina. En las obras de Gabriel García Márquez y Juan Rulfo, los límites entre la vigilia y el espectro se difuminan deliberadamente. La cronología lineal se fragmenta para reflejar una concepción mítica y circular del tiempo, donde la memoria colectiva prevalece sobre el archivo documental.',
-      comprehensionQuestions: [
-        {
-          id: 'q1',
-          question: '¿Cómo concibe el texto el tiempo en el realismo mágico?',
-          options: ['Estrictamente cronológico y acumulativo', 'Mítico y circular', 'Acelerado por la industrialización', 'Completamente inexistente'],
-          correctIndex: 1,
-          explanation: 'El texto señala que "La cronología lineal se fragmenta para reflejar una concepción mítica y circular del tiempo".',
-        },
-      ],
-    },
-  ],
-  en: [
-    {
-      id: 'en-read-c1-1',
-      title: 'Algorithmic Epistemology: Data Curation in Modern Science',
-      cefrLevel: 'C1',
-      source: 'curated',
-      authorOrAttribution: 'Lexilume Academic Inquiry',
-      summary: 'An investigation into how automated data heuristics alter the boundaries of empirical validation.',
-      content: 'The proliferation of high-throughput data pipelines has transformed scientific inquiry from deductive hypothesis testing into exploratory pattern discovery. While computational models extract correlations across multi-dimensional parameter spaces, they inevitably introduce heuristic biases. Disentangling statistical artifacts from genuine physical phenomena remains the preeminent methodological challenge of computational science.',
-      comprehensionQuestions: [
-        {
-          id: 'q1',
-          question: 'What is described as the preeminent challenge of computational science?',
-          options: ['Hardware cooling constraints', 'Disentangling statistical artifacts from genuine physical phenomena', 'Lack of open datasets', 'Translating code into English'],
-          correctIndex: 1,
-          explanation: 'The passage explicitly states that "Disentangling statistical artifacts from genuine physical phenomena remains the preeminent methodological challenge".',
-        },
-      ],
-    },
-  ],
-};
-
 export interface ReadingStudioProps {
   language: Language;
+  items?: ReadingItem[];
 }
 
-export const ReadingStudio: React.FC<ReadingStudioProps> = ({ language }) => {
+export const ReadingStudio: React.FC<ReadingStudioProps> = ({ language, items: providedItems }) => {
   const [selectedCefr, setSelectedCefr] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [readingList, setReadingList] = useState<ReadingItem[]>(DEFAULT_READING_ITEMS[language] || DEFAULT_READING_ITEMS.pt);
-  const [activeItem, setActiveItem] = useState<ReadingItem>(readingList[0]);
+  const [readingList, setReadingList] = useState<ReadingItem[]>(providedItems || []);
+  const [activeItem, setActiveItem] = useState<ReadingItem | null>(providedItems?.[0] || null);
   
   // Reading state
   const [readingHistory, setReadingHistory] = useState<ReadingHistoryRecord[]>([]);
@@ -166,17 +81,83 @@ export const ReadingStudio: React.FC<ReadingStudioProps> = ({ language }) => {
     getReadingHistory().then(setReadingHistory);
   }, []);
 
-  // Update reading list when language changes
+  // Load live reading passages from AI Content Engine & Wikipedia when language changes
   useEffect(() => {
-    const list = DEFAULT_READING_ITEMS[language] || DEFAULT_READING_ITEMS.pt;
-    setReadingList(list);
-    setActiveItem(list[0]);
+    if (providedItems) {
+      setReadingList(providedItems);
+      setActiveItem(providedItems[0] || null);
+      return;
+    }
+    let cancelled = false;
+    SpeechService.stop();
+    setIsReadingAloud(false);
     setAnswers({});
     setSubmitted(false);
     setCompleted(false);
-    SpeechService.stop();
-    setIsReadingAloud(false);
-  }, [language]);
+
+    const loadLiveReadings = async () => {
+      try {
+        const [publishedStories, wikiArticles] = await Promise.all([
+          contentAccess.listPublishedContentItems({ targetLanguage: language }).catch(() => []),
+          CultureService.loadLiveArticles(language).catch(() => []),
+        ]);
+
+        const built: ReadingItem[] = [];
+        for (const item of publishedStories.filter(i => i.content_type === 'story' || i.content_type === 'cultural_article' || i.content_type === 'academic_essay')) {
+          const detail = (await contentAccess.getContent(item.id).catch(() => null)) as any;
+          const body = detail?.body || detail?.version?.structured_payload || {};
+          const text =
+            typeof body.narrative === 'string'
+              ? body.narrative
+              : typeof body.article_body === 'string'
+              ? body.article_body
+              : Array.isArray(body.paragraphs)
+              ? body.paragraphs.map((p: any) => p.sentences?.map((s: any) => s.text).join(' ')).join('\n\n')
+              : item.summary;
+          if (!text) continue;
+          built.push({
+            id: item.id,
+            title: item.title,
+            cefrLevel: (['A1', 'A2', 'B1', 'B2', 'C1'].includes(item.primary_cefr) ? item.primary_cefr : 'B1') as ReadingItem['cefrLevel'],
+            source: 'curated',
+            authorOrAttribution: item.attribution_notice || 'Lexilume AI Content Engine',
+            summary: item.summary || '',
+            content: text,
+            comprehensionQuestions: [],
+          });
+        }
+
+        for (const w of wikiArticles) {
+          if (!w.content_paragraphs?.length) continue;
+          built.push({
+            id: w.id,
+            title: w.title,
+            cefrLevel: (['A1', 'A2', 'B1', 'B2', 'C1'].includes(w.cefr_level) ? w.cefr_level : 'B2') as ReadingItem['cefrLevel'],
+            source: 'wikipedia',
+            authorOrAttribution: w.attribution_text || 'Wikipedia — CC-BY-SA 4.0',
+            summary: w.summary,
+            content: w.content_paragraphs.join('\n\n'),
+            comprehensionQuestions: [],
+          });
+        }
+
+        if (!cancelled) {
+          setReadingList(built);
+          setActiveItem(built[0] || null);
+        }
+      } catch {
+        if (!cancelled) {
+          setReadingList([]);
+          setActiveItem(null);
+        }
+      }
+    };
+
+    loadLiveReadings();
+    return () => {
+      cancelled = true;
+    };
+  }, [language, providedItems]);
 
   const filteredItems = readingList.filter(item => {
     if (selectedCefr !== 'all' && item.cefrLevel !== selectedCefr) return false;
@@ -194,6 +175,7 @@ export const ReadingStudio: React.FC<ReadingStudioProps> = ({ language }) => {
   };
 
   const handleToggleReadAloud = async () => {
+    if (!activeItem) return;
     if (isReadingAloud) {
       SpeechService.stop();
       setIsReadingAloud(false);
@@ -206,6 +188,7 @@ export const ReadingStudio: React.FC<ReadingStudioProps> = ({ language }) => {
   };
 
   const handleMarkCompleted = async () => {
+    if (!activeItem) return;
     const record = await logReadingSession({
       user_id: 'guest',
       article_id: activeItem.id,
@@ -218,6 +201,18 @@ export const ReadingStudio: React.FC<ReadingStudioProps> = ({ language }) => {
     setReadingHistory(prev => [record, ...prev]);
     toast.success('Leitura concluída e registrada no seu histórico de estudos!');
   };
+
+  if (!activeItem) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3 shadow-sm">
+        <BookOpen className="w-8 h-8 text-emerald-400 mx-auto" />
+        <h3 className="text-base font-bold text-slate-100">Reading Studio & Text Comprehension</h3>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          No reading articles loaded yet for {language.toUpperCase()}. Publish articles via Admin Content Studio or fetch from Wikipedia.
+        </p>
+      </div>
+    );
+  }
 
   // Tokenize paragraphs & words for contextual click-to-lookup
   const paragraphs = activeItem.content.split('\n\n');

@@ -8,8 +8,6 @@ import { FreeDictionaryAdapter } from '../../../integrations/external-apis/adapt
 import { DicionarioAbertoAdapter } from '../../../integrations/external-apis/adapters/dicionario-aberto/DicionarioAbertoAdapter';
 import { DictionaryIndex } from './dictionaryIndex';
 import { NormalizedDictionaryEntry } from '../../../integrations/external-apis/core/types';
-import { esVocabulary } from '../../../data/seedData';
-import { trilingualDictionary } from '../../../data/translationData';
 
 export class DictionaryManager {
   private static instance: DictionaryManager;
@@ -46,47 +44,27 @@ export class DictionaryManager {
         console.warn('[DictionaryManager] Dicionário Aberto failed, falling back to Wiktionary...', err);
         result = await this.kaikki.execute({ word, language: 'pt' });
       }
-    } else if (lang === 'es') {
-      // Spanish fast seed path
-      const esMatch = esVocabulary.find(v => v.lemma.toLowerCase() === q);
-      if (esMatch) {
-        result = {
-          word: esMatch.lemma,
-          language: 'es',
-          phonetic: esMatch.phonetic_ipa,
-          meanings: [
-            {
-              partOfSpeech: esMatch.part_of_speech,
-              definitions: [esMatch.definition_target, esMatch.definition_en].filter(Boolean),
-              examples: [esMatch.example_sentence_target].filter(Boolean),
-            },
-          ],
-          provider: 'curated_seed',
-        };
-      } else {
-        try {
-          result = await this.kaikki.execute({ word, language: 'es' });
-        } catch {
-          const triMatch = trilingualDictionary.find(d => d.spanish?.toLowerCase() === q);
-          if (triMatch) {
-            result = {
-              word: triMatch.spanish,
-              language: 'es',
-              phonetic: triMatch.phonetic_es,
-              meanings: [
-                {
-                  partOfSpeech: triMatch.part_of_speech,
-                  definitions: [triMatch.definition_es, triMatch.definition_en].filter(Boolean),
-                  examples: [triMatch.example_es].filter(Boolean),
-                },
-              ],
-              provider: 'trilingual_seed',
-            };
-          }
-        }
-      }
     } else {
       result = await this.kaikki.execute({ word, language: lang });
+    }
+
+    if (!result) {
+      const indexed = this.index.search(q, lang);
+      if (indexed.length > 0) {
+        const hit = indexed[0];
+        result = {
+          word: hit.word,
+          language: hit.language,
+          meanings: [
+            {
+              partOfSpeech: hit.partOfSpeech,
+              definitions: [hit.definition],
+              examples: [],
+            },
+          ],
+          provider: 'dictionary_index',
+        };
+      }
     }
 
     if (result) {
@@ -94,7 +72,7 @@ export class DictionaryManager {
       return result;
     }
 
-    throw new Error(`Palavra "${word}" não encontrada para o idioma "${language}".`);
+    throw new Error(`Word "${word}" not found for language "${language}".`);
   }
 
   public searchIndexed(query: string, language?: string) {

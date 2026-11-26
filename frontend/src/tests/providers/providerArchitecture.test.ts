@@ -31,6 +31,8 @@ import {
 } from '../../services/providers';
 import { ProviderCache } from '../../services/cache/providerCache';
 import { ProviderHealthTracker, sanitizeLog } from '../../services/monitoring/providerHealth';
+import { contentAccess } from '../../services/contentAccess';
+import { VocabularyEntry } from '../../types/vocabulary';
 
 describe('Lexilume Provider Integration Layer', () => {
   beforeEach(async () => {
@@ -50,21 +52,64 @@ describe('Lexilume Provider Integration Layer', () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it('MyMemoryProvider falls back to local dictionary when network fails', async () => {
+    it('MyMemoryProvider fails fast with ProviderUnavailableError when offline and uncached, then hits cache offline after online success', async () => {
       const provider = new MyMemoryProvider();
       vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Network offline'));
 
-      const result = await provider.execute({
+      await expect(
+        provider.execute({
+          text: 'prerrogativa',
+          sourceLang: 'pt',
+          targetLang: 'en',
+        })
+      ).rejects.toThrow(ProviderUnavailableError);
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          responseData: { translatedText: 'prerogative', match: 0.98 },
+        }),
+      } as Response);
+
+      const online = await provider.execute({
         text: 'prerrogativa',
         sourceLang: 'pt',
         targetLang: 'en',
       });
+      expect(online.translatedText).toBe('prerogative');
 
-      expect(result.translatedText.toLowerCase()).toContain('prerogative');
-      expect(result.isVerified).toBe(true);
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Network offline'));
+      const cached = await provider.execute({
+        text: 'prerrogativa',
+        sourceLang: 'pt',
+        targetLang: 'en',
+      });
+      expect(cached.translatedText).toBe('prerogative');
     });
 
-    it('LocalTranslationProvider provides deterministic offline translations', async () => {
+    it('LocalTranslationProvider resolves translations from Content Engine / saved store and throws offline when absent', async () => {
+      const mockPublishedVocab: VocabularyEntry[] = [
+        {
+          id: 'voc-pt-prerrogativa',
+          lemma: 'prerrogativa',
+          target_language: 'pt',
+          part_of_speech: 'noun',
+          cefr_level: 'C1',
+          translations: { en: 'prerogative', es: 'prerrogativa' },
+          definitions: { en: 'An exclusive right or privilege.', pt: 'Privilégio exclusivo.', es: 'Privilegio exclusivo.' },
+          example_sentence_target: 'É uma prerrogativa constitucional.',
+          example_sentence_translations: { en: 'It is a constitutional prerogative.' },
+          topic: 'social',
+          attribution: {
+            source_name: 'Lexilume Content Engine',
+            source_url: 'https://www.wiktionary.org',
+            license_type: 'CC-BY-SA-4.0',
+            attribution_text: 'Published AI Content Engine entry.',
+          },
+        },
+      ];
+      vi.spyOn(contentAccess, 'getPublishedVocabularyEntries').mockResolvedValue(mockPublishedVocab);
+
       const local = new LocalTranslationProvider();
       const result = await local.execute({
         text: 'prerrogativa',
@@ -72,17 +117,37 @@ describe('Lexilume Provider Integration Layer', () => {
         targetLang: 'en',
       });
 
-      expect(result.translatedText).toBeDefined();
+      expect(result.translatedText).toBe('prerogative');
       expect(result.isVerified).toBe(true);
       expect(result.matchConfidence).toBe(1.0);
     });
 
-    it('TranslationManager cascades to local translation on remote failure', async () => {
+    it('TranslationManager cascades to LocalTranslationProvider when remote APIs fail and saved/generated entry exists', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('All networks down'));
-      const manager = TranslationManager.getInstance();
+      vi.spyOn(contentAccess, 'getPublishedVocabularyEntries').mockResolvedValue([
+        {
+          id: 'voc-pt-prerrogativa',
+          lemma: 'prerrogativa',
+          target_language: 'pt',
+          part_of_speech: 'noun',
+          cefr_level: 'C1',
+          translations: { en: 'prerogative' },
+          definitions: { en: 'Exclusive privilege.' },
+          example_sentence_target: 'Tem essa prerrogativa legal.',
+          example_sentence_translations: { en: 'Has this legal prerogative.' },
+          topic: 'social',
+          attribution: {
+            source_name: 'Lexilume Content Engine',
+            source_url: 'https://www.wiktionary.org',
+            license_type: 'CC-BY-SA-4.0',
+            attribution_text: 'Published entry.',
+          },
+        },
+      ]);
 
+      const manager = TranslationManager.getInstance();
       const result = await manager.translate('prerrogativa', 'pt', 'en');
-      expect(result.translatedText).toBeDefined();
+      expect(result.translatedText).toBe('prerogative');
       expect(result.isVerified).toBe(true);
     });
   });
@@ -121,7 +186,24 @@ describe('Lexilume Provider Integration Layer', () => {
       expect(fuzzyResults[0].word).toBe('serendipity');
     });
 
-    it('DictionaryManager handles Portuguese and Spanish lookups with seed fallbacks', async () => {
+    it('DictionaryManager resolves live Wiktionary/Kaikki lookups without static seed fallbacks', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          es: [
+            {
+              partOfSpeech: 'adjective',
+              definitions: [
+                {
+                  definition: 'Of singular and extraordinary quality or beauty.',
+                  examples: ['Un plato absolutamente exquisito.'],
+                },
+              ],
+            },
+          ],
+        }),
+      } as Response);
+
       const manager = DictionaryManager.getInstance();
       const result = await manager.lookup('exquisito', 'es');
       expect(result.word).toBe('exquisito');

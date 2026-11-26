@@ -12,11 +12,9 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AdminPage } from '../pages/AdminPage';
-import { AdminWorkbench } from '../features/admin/AdminWorkbench';
-import { AdminDailyContentStudio } from '../features/admin/AdminDailyContentStudio';
 import { adminService } from '../services/adminService';
 import { authService } from '../services/auth';
 import { dailyContentService } from '../services/dailyContentService';
@@ -67,13 +65,13 @@ describe('Lexilume Admin Workbench & Production Operations Suite', () => {
     );
 
     expect(screen.queryByText(/Access Restricted|Acesso Restrito/i)).toBeNull();
-    expect(screen.getByText(/Visão Geral da Plataforma Lexilume/i)).toBeDefined();
-    expect(screen.getAllByRole('button', { name: /Visão Geral/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole('button', { name: /Gestão de Usuários/i })).toBeDefined();
-    expect(screen.getAllByRole('button', { name: /Fila de Moderação/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Estúdio Diário/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Operações & Saúde|Saúde & Tarefas/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole('button', { name: /Trilha de Auditoria/i })).toBeDefined();
+    expect(screen.getByText(/(Visão Geral da Plataforma Lexilume|Lexilume Platform Overview)/i)).toBeDefined();
+    expect(screen.getAllByRole('button', { name: /(Visão Geral|Overview)/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /(Gestão de Usuários|User Management)/i })).toBeDefined();
+    expect(screen.getAllByRole('button', { name: /(Fila de Moderação|Moderation Queue)/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /(Estúdio Diário|Daily Studio)/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /(Operações & Saúde|Saúde & Tarefas|Provider Health|Saúde de Provedores)/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /(Trilha de Auditoria|Audit Trail)/i })).toBeDefined();
   });
 
   // --------------------------------------------------------------------------
@@ -81,6 +79,28 @@ describe('Lexilume Admin Workbench & Production Operations Suite', () => {
   // --------------------------------------------------------------------------
   it('calculates dynamic platform overview metrics based on real database/storage records', async () => {
     await authService.signIn('admin@polyglot.dev', 'AdminPass123!');
+
+    await dailyContentService.publishPoem({
+      title: 'Cântico Inicial',
+      author: 'Autor Teste',
+      learning_language: 'pt',
+      cefr_level: 'B1',
+      excerpt: 'Um verso breve...',
+      full_text: 'Um verso breve sobre o mar.',
+      cultural_context: 'Contexto literário de teste.',
+      country_name: 'Portugal',
+      country_code: 'PT',
+    });
+    await dailyContentService.publishConversation({
+      title: 'Na Livraria',
+      scenario: 'Pedir um livro',
+      learning_language: 'pt',
+      cefr_level: 'B1',
+      cultural_context: 'Diálogo cotidiano.',
+      country_name: 'Brasil',
+      country_code: 'BR',
+      dialogue: [{ speaker: 'Cliente', line: 'Olá!', translation: 'Hello!' }],
+    });
 
     const metrics = await adminService.getPlatformOverviewMetrics();
     expect(metrics.totalUsers).toBeGreaterThan(0);
@@ -96,6 +116,21 @@ describe('Lexilume Admin Workbench & Production Operations Suite', () => {
   // --------------------------------------------------------------------------
   it('approves and rejects items in the content review queue with audit logging', async () => {
     await authService.signIn('admin@polyglot.dev', 'AdminPass123!');
+
+    await adminService.addReviewItem({
+      titleOrTerm: 'Subjuntivo em Contexto',
+      type: 'grammar',
+      language: 'pt',
+      cefrLevel: 'B2',
+      source: 'Lexilume Content Engine',
+    });
+    await adminService.addReviewItem({
+      titleOrTerm: 'termo ambíguo',
+      type: 'vocabulary',
+      language: 'pt',
+      cefrLevel: 'C1',
+      source: 'Kaikki / Wiktionary',
+    });
 
     const queueBefore = await adminService.getContentReviewQueue();
     expect(queueBefore.length).toBeGreaterThan(0);
@@ -147,6 +182,18 @@ describe('Lexilume Admin Workbench & Production Operations Suite', () => {
   // --------------------------------------------------------------------------
   it('publishes a new daily poem and archives previously active poem for that language without deletion', async () => {
     await authService.signIn('admin@polyglot.dev', 'AdminPass123!');
+
+    await dailyContentService.publishPoem({
+      title: 'Verso Anterior',
+      author: 'Fernando Pessoa',
+      learning_language: 'pt',
+      cefr_level: 'B1',
+      excerpt: 'Poema inicial publicado...',
+      full_text: 'Poema inicial publicado para arquivamento.',
+      cultural_context: 'Poesia portuguesa.',
+      country_name: 'Portugal',
+      country_code: 'PT',
+    });
 
     const stateBefore = await dailyContentService.getAllContent();
     const activePtPoemBefore = stateBefore.activePoetry.find(p => p.learning_language === 'pt');
@@ -219,6 +266,24 @@ describe('Lexilume Admin Workbench & Production Operations Suite', () => {
   it('manages background jobs queue and enforces bounded retry attempts (cap at maxRetries)', async () => {
     await authService.signIn('admin@polyglot.dev', 'AdminPass123!');
 
+    localStorage.setItem(
+      'lexilume_admin_background_jobs_v1',
+      JSON.stringify([
+        {
+          id: 'job_test_failed_1',
+          jobType: 'Content Synthesis Pipeline',
+          language: 'pt',
+          cefrLevel: 'B1',
+          status: 'failed',
+          errorReason: 'Upstream rate limit reached',
+          retryCount: 0,
+          maxRetries: 3,
+          lastRunAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        },
+      ])
+    );
+
     const jobs = await adminService.getBackgroundJobs();
     expect(jobs.length).toBeGreaterThan(0);
 
@@ -240,7 +305,7 @@ describe('Lexilume Admin Workbench & Production Operations Suite', () => {
 
     const capRes = await adminService.retryBackgroundJob(failedJob!.id);
     expect(capRes.success).toBe(false);
-    expect(capRes.message).toContain('Limite de 3 tentativas excedido');
+    expect(capRes.message).toMatch(/Limite de 3 tentativas excedido|Retry limit of 3 attempts exceeded/i);
   });
 
   // --------------------------------------------------------------------------

@@ -240,8 +240,8 @@ describe('Lexilume Practice Suite Redesign & Engine Verification', () => {
     expect(options).toContain('en');
     expect(options).toContain('pt');
     expect(options).toContain('es');
-    expect(options).toContain('fr');
-    expect(options).toContain('ja');
+    expect(options).not.toContain('fr');
+    expect(options).not.toContain('ja');
     expect(options).not.toContain('hi');
 
     // Switch to English using the quick toggle button

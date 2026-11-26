@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} de {{total}} unidades curriculares concluídas",
   "vocab_terms_count": "{{count}} termos",
   "cefr_level": "CEFR",
-  "streak": "Ofensiva"
+  "streak": "Ofensiva",
+  "err_edition": "Falha ao carregar a Edição de Hoje",
+  "err_continue": "Falha ao carregar progresso de leitura",
+  "err_vocab": "Falha ao carregar métricas de vocabulário",
+  "err_recent": "Falha ao carregar atividades recentes",
+  "culture_preview_empty": "Ainda não existem artigos culturais carregados. Abra Explorar Países para obter na Wikipédia e no Motor de Conteúdo de IA."
 }

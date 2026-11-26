@@ -3,6 +3,9 @@
  */
 
 export type AppRoute =
+  | 'learn'
+  | 'words'
+  | 'mistakes'
   | 'dashboard'
   | 'vocabulary'
   | 'explore'
@@ -24,6 +27,9 @@ export interface RouteConfig {
 }
 
 export const APP_ROUTES: Record<AppRoute, RouteConfig> = {
+  learn: { id: 'learn', path: '/learn', labelKey: 'nav_learn' },
+  words: { id: 'words', path: '/words', labelKey: 'nav_words' },
+  mistakes: { id: 'mistakes', path: '/mistakes', labelKey: 'nav_mistakes' },
   dashboard: { id: 'dashboard', path: '/', labelKey: 'nav_dashboard' },
   vocabulary: { id: 'vocabulary', path: '/vocabulary', labelKey: 'nav_vocabulary' },
   explore: { id: 'explore', path: '/culture', labelKey: 'nav_culture' },

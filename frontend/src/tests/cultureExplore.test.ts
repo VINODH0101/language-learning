@@ -1,17 +1,174 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { CultureService } from '../services/cultureService';
 import { clearAllLocalLearningData } from '../services/localDb';
 import { translations } from '../i18n/translations';
 import { CulturalArticle } from '../types/culture';
 
+const LIVE_CULTURE_ARTICLES: CulturalArticle[] = [
+  {
+    id: 'art_jp_pt_hanami',
+    title: 'Hanami: A Contemplação das Flores de Cerejeira no Japão',
+    summary: 'Como a primavera e a efemeridade da natureza inspiram a cultura japonesa.',
+    content_paragraphs: [
+      'A chegada da primavera traz o florescimento das árvores de sakura em todo o arquipélago japonês.',
+    ],
+    content_language: 'pt',
+    target_learning_language: 'pt',
+    origin_country: 'Japan',
+    origin_region: 'Asia',
+    topic: 'festivals',
+    content_type: 'cultural_guide',
+    cefr_level: 'B1',
+    read_time_minutes: 4,
+    tags: ['hanami', 'sakura', 'japao'],
+    source_url: 'https://pt.wikipedia.org/wiki/Hanami',
+    publisher: 'Wikimedia Foundation',
+    published_at: '2026-10-01',
+    license: 'CC-BY-SA-4.0',
+    attribution_text: 'Wikipedia CC-BY-SA-4.0',
+    glossary: { efemeridade: 'transience / fleetingness' },
+  },
+  {
+    id: 'art_in_es_diwali',
+    title: 'Diwali: El Festival de las Luces en la India',
+    summary: 'Tradiciones luminosas, gastronomía y simbolismo cultural de Diwali.',
+    content_paragraphs: [
+      'Diwali celebra el triunfo simbólico de la luz sobre la oscuridad en comunidades de toda la India.',
+    ],
+    content_language: 'es',
+    target_learning_language: 'es',
+    origin_country: 'India',
+    origin_region: 'Asia',
+    topic: 'festivals',
+    content_type: 'cultural_guide',
+    cefr_level: 'C1',
+    read_time_minutes: 5,
+    tags: ['diwali', 'india', 'luces'],
+    source_url: 'https://es.wikipedia.org/wiki/Diwali',
+    publisher: 'Wikimedia Foundation',
+    published_at: '2026-10-02',
+    license: 'CC-BY-SA-4.0',
+    attribution_text: 'Wikipedia CC-BY-SA-4.0',
+    comprehension_questions: [
+      {
+        question: '¿Qué simboliza principalmente el festival de Diwali?',
+        options: ['El triunfo de la luz', 'La llegada del invierno'],
+        correct_index: 0,
+        explanation: 'Representa la victoria simbólica de la luz.',
+      },
+      {
+        question: '¿Dónde se celebra tradicionalmente?',
+        options: ['En toda la India', 'Solo en las montañas'],
+        correct_index: 0,
+        explanation: 'Se celebra en todo el país.',
+      },
+    ],
+  },
+  {
+    id: 'art_br_en_capoeira',
+    title: 'Capoeira and Afro-Brazilian Cultural Heritage in Salvador',
+    summary: 'Afro-Brazilian martial art blending rhythm, history, and music with berimbau.',
+    content_paragraphs: [
+      'Guided by the berimbau, practitioners turn movement and song into living historical memory.',
+    ],
+    content_language: 'en',
+    target_learning_language: 'en',
+    origin_country: 'Brazil',
+    origin_region: 'Americas',
+    topic: 'music',
+    content_type: 'cultural_guide',
+    cefr_level: 'A2',
+    read_time_minutes: 3,
+    tags: ['capoeira', 'berimbau', 'brazil'],
+    source_url: 'https://en.wikipedia.org/wiki/Capoeira',
+    publisher: 'Wikimedia Foundation',
+    published_at: '2026-10-03',
+    license: 'CC-BY-SA-4.0',
+    attribution_text: 'Wikipedia CC-BY-SA-4.0',
+  },
+  {
+    id: 'art_ng_en_yoruba',
+    title: 'Yoruba Oral Storytelling and Musical Proverbs in Nigeria',
+    summary: 'How talking drums preserve community memory across generations.',
+    content_paragraphs: [
+      'Across western Nigeria, Yoruba poetry weaves tone, proverb, and rhythm together.',
+    ],
+    content_language: 'en',
+    target_learning_language: 'en',
+    origin_country: 'Nigeria',
+    origin_region: 'Africa',
+    topic: 'literature',
+    content_type: 'cultural_guide',
+    cefr_level: 'B1',
+    read_time_minutes: 4,
+    tags: ['yoruba', 'nigeria', 'music'],
+    source_url: 'https://en.wikipedia.org/wiki/Yoruba_music',
+    publisher: 'Wikimedia Foundation',
+    published_at: '2026-10-04',
+    license: 'CC-BY-SA-4.0',
+    attribution_text: 'Wikipedia CC-BY-SA-4.0',
+  },
+  {
+    id: 'art_pt_pt_azulejos',
+    title: 'A Arte dos Azulejos Portugueses em Lisboa',
+    summary: 'Fachadas históricas e narrativa visual em cerâmica.',
+    content_paragraphs: ['Os azulejos decoram igrejas e estações em Portugal desde o século XVI.'],
+    content_language: 'pt',
+    target_learning_language: 'pt',
+    origin_country: 'Portugal',
+    origin_region: 'Europe',
+    topic: 'art',
+    content_type: 'cultural_guide',
+    cefr_level: 'A2',
+    read_time_minutes: 3,
+    tags: ['azulejos', 'lisboa'],
+    source_url: 'https://pt.wikipedia.org/wiki/Azulejo',
+    publisher: 'Wikimedia Foundation',
+    published_at: '2026-10-05',
+    license: 'CC-BY-SA-4.0',
+    attribution_text: 'Wikipedia CC-BY-SA-4.0',
+  },
+  {
+    id: 'art_mx_es_gastronomia',
+    title: 'Patrimonio Culinario y Mercados de México',
+    summary: 'Sabores ancestrales y biodiversidad agrícola mesoamericana.',
+    content_paragraphs: ['El maíz, el cacao y los chiles forman la base de la cocina mexicana.'],
+    content_language: 'es',
+    target_learning_language: 'es',
+    origin_country: 'Mexico',
+    origin_region: 'Americas',
+    topic: 'food',
+    content_type: 'cultural_guide',
+    cefr_level: 'C1',
+    read_time_minutes: 5,
+    tags: ['mexico', 'gastronomia'],
+    source_url: 'https://es.wikipedia.org/wiki/Gastronom%C3%ADa_de_M%C3%A9xico',
+    publisher: 'Wikimedia Foundation',
+    published_at: '2026-10-06',
+    license: 'CC-BY-SA-4.0',
+    attribution_text: 'Wikipedia CC-BY-SA-4.0',
+  },
+];
+
 describe('Worldwide Culture Discovery & Filtering Engine (cultureService.ts)', () => {
   beforeEach(async () => {
     await clearAllLocalLearningData();
+    CultureService.setDynamicArticles(LIVE_CULTURE_ARTICLES);
   });
 
-  it('retrieves authentic cultural catalog entries covering multiple continents', () => {
+  afterEach(() => {
+    CultureService.clearDynamicArticles();
+  });
+
+  it('starts strictly empty before live articles are fetched (zero static seeds)', () => {
+    CultureService.clearDynamicArticles();
+    expect(CultureService.getAllArticles()).toHaveLength(0);
+    expect(CultureService.getAvailableCountries()).toHaveLength(0);
+  });
+
+  it('retrieves live cultural catalog entries covering multiple continents', () => {
     const all = CultureService.getAllArticles();
-    expect(all.length).toBeGreaterThanOrEqual(10);
+    expect(all.length).toBeGreaterThanOrEqual(6);
 
     const countries = CultureService.getAvailableCountries();
     expect(countries).toContain('Japan');
@@ -34,8 +191,6 @@ describe('Worldwide Culture Discovery & Filtering Engine (cultureService.ts)', (
     expect(article.content_language).toBe('pt');
     expect(article.title).toContain('Hanami');
     expect(article.content_paragraphs[0]).toContain('sakura');
-    // Verify it includes authentic glossary terms
-    expect(article.glossary).toBeDefined();
     expect(article.glossary?.['efemeridade']).toBeDefined();
   });
 
@@ -68,14 +223,11 @@ describe('Worldwide Culture Discovery & Filtering Engine (cultureService.ts)', (
   });
 
   it('CRITICAL: NEVER silently substitutes unrelated English when a filter yields no results', () => {
-    // Search for a non-existent combination: e.g. Japan in a non-existent topic or impossible query
     const results = CultureService.filterArticles({
       origin_country: 'Japan',
       topic: 'food',
       search_query: 'non_existent_unmatched_term_xyz_123',
     });
-
-    // Must return an empty array, strictly NOT falling back to default English articles!
     expect(results).toHaveLength(0);
   });
 
@@ -108,27 +260,16 @@ describe('Worldwide Culture Discovery & Filtering Engine (cultureService.ts)', (
     const all = CultureService.getAllArticles();
     const article = all[0];
 
-    // 1. Initial state: not bookmarked
-    const initialSaved = await CultureService.isBookmarked(userId, article.id);
-    expect(initialSaved).toBe(false);
-
-    // 2. Toggle bookmark -> now saved
-    const isNowSaved = await CultureService.toggleBookmark(userId, article);
-    expect(isNowSaved).toBe(true);
-
-    const checkSaved = await CultureService.isBookmarked(userId, article.id);
-    expect(checkSaved).toBe(true);
+    expect(await CultureService.isBookmarked(userId, article.id)).toBe(false);
+    expect(await CultureService.toggleBookmark(userId, article)).toBe(true);
+    expect(await CultureService.isBookmarked(userId, article.id)).toBe(true);
 
     const bookmarks = await CultureService.getUserBookmarks(userId);
     expect(bookmarks.length).toBe(1);
     expect(bookmarks[0].article_id).toBe(article.id);
 
-    // 3. Toggle again -> removed
-    const isRemoved = await CultureService.toggleBookmark(userId, article);
-    expect(isRemoved).toBe(false);
-
-    const checkAfterRemove = await CultureService.isBookmarked(userId, article.id);
-    expect(checkAfterRemove).toBe(false);
+    expect(await CultureService.toggleBookmark(userId, article)).toBe(false);
+    expect(await CultureService.isBookmarked(userId, article.id)).toBe(false);
   });
 
   it('verifies that all internationalization keys for cultural discovery exist across en, pt, es', () => {

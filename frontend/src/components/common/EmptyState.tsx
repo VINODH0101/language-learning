@@ -19,26 +19,27 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto shadow-sm animate-fadeIn ${className}`}>
+    <div className={`bg-white border border-dashed border-stone-300 rounded-2xl p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto shadow-xs animate-fadeIn ${className}`}>
       {icon && (
-        <div className="w-14 h-14 rounded-2xl bg-indigo-950/80 border border-indigo-800/60 flex items-center justify-center text-indigo-400 mx-auto">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 mx-auto">
           {icon}
         </div>
       )}
 
       <div className="space-y-1.5">
-        <h3 className="text-base sm:text-lg font-bold text-slate-100">
+        <h3 className="font-serif text-lg font-bold text-stone-900">
           {title}
         </h3>
-        <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+        <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
           {description}
         </p>
       </div>
 
       {actionLabel && onAction && (
         <button
+          type="button"
           onClick={onAction}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-md transition min-h-[44px] cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition min-h-[44px] cursor-pointer"
         >
           <RotateCcw className="w-4 h-4" />
           <span>{actionLabel}</span>

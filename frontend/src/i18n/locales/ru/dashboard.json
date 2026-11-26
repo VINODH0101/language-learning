@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "Не удалось загрузить сегодняшний выпуск",
+  "err_continue": "Не удалось загрузить прогресс обучения",
+  "err_vocab": "Не удалось загрузить показатели словаря",
+  "err_recent": "Не удалось загрузить недавние действия",
+  "culture_preview_empty": "Культурные статьи ещё не загружены. Откройте «Обзор стран», чтобы загрузить данные из Википедии и ИИ-движка."
 }

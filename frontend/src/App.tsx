@@ -1,26 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { NavTab } from './components/common/Navigation';
 import { AppProviders } from './app/providers/AppProviders';
 import { AppLayout } from './app/layouts/AppLayout';
 import { useAppRouter } from './app/router/useAppRouter';
 import { DashboardPage } from './pages/DashboardPage';
-import { PortuguesePage } from './pages/PortuguesePage';
-import { SpanishPage } from './pages/SpanishPage';
-import { EnglishPage } from './pages/EnglishPage';
-import { TranslatePage } from './pages/TranslatePage';
-import { PracticePage } from './pages/PracticePage';
-import { ProgressPage } from './pages/ProgressPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { AdminPage } from './pages/AdminPage';
-import { CultureExplorePage } from './pages/CultureExplorePage';
-import { VocabularyPage } from './pages/VocabularyPage';
+import { LearnPage } from './pages/LearnPage';
+import { MyWordsPage } from './pages/MyWordsPage';
+import { MyMistakesPage } from './pages/MyMistakesPage';
 import { StorageService } from './services/storage';
 import { courseService } from './services/courseService';
 import { Course } from './types';
 import { initializeExternalApiRegistry } from './integrations/external-apis';
 
+// Route-level code splitting: lazy load secondary and administrative pages
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const CultureExplorePage = lazy(() => import('./pages/CultureExplorePage').then(m => ({ default: m.CultureExplorePage })));
+const VocabularyPage = lazy(() => import('./pages/VocabularyPage').then(m => ({ default: m.VocabularyPage })));
+const PortuguesePage = lazy(() => import('./pages/PortuguesePage').then(m => ({ default: m.PortuguesePage })));
+const SpanishPage = lazy(() => import('./pages/SpanishPage').then(m => ({ default: m.SpanishPage })));
+const EnglishPage = lazy(() => import('./pages/EnglishPage').then(m => ({ default: m.EnglishPage })));
+const TranslatePage = lazy(() => import('./pages/TranslatePage').then(m => ({ default: m.TranslatePage })));
+const PracticePage = lazy(() => import('./pages/PracticePage').then(m => ({ default: m.PracticePage })));
+const ProgressPage = lazy(() => import('./pages/ProgressPage').then(m => ({ default: m.ProgressPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+
+const RouteLoadingFallback: React.FC = () => (
+  <div className="flex items-center justify-center py-24" role="status" aria-label="Loading page">
+    <div className="w-8 h-8 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+  </div>
+);
+
 export const AppContent: React.FC = () => {
-  const { currentRoute, navigate } = useAppRouter('dashboard');
+  const { currentRoute, adminTab, navigate, navigateAdmin } = useAppRouter('dashboard');
   const [streakDays, setStreakDays] = useState(1);
 
   // One-time initialization on mount (prevents repeated initialization on route changes)
@@ -71,19 +82,32 @@ export const AppContent: React.FC = () => {
     <AppLayout
       activeTab={currentRoute}
       onSelectTab={handleSelectTab}
+      adminTab={adminTab}
+      onSelectAdminTab={navigateAdmin}
       streakDays={streakDays}
     >
-      {currentRoute === 'dashboard' && <DashboardPage onNavigateTab={handleSelectTab} />}
-      {currentRoute === 'vocabulary' && <VocabularyPage />}
-      {currentRoute === 'explore' && <CultureExplorePage />}
-      {currentRoute === 'portuguese' && <PortuguesePage />}
-      {currentRoute === 'spanish' && <SpanishPage />}
-      {currentRoute === 'english' && <EnglishPage />}
-      {currentRoute === 'translate' && <TranslatePage />}
-      {currentRoute === 'practice' && <PracticePage />}
-      {currentRoute === 'progress' && <ProgressPage />}
-      {currentRoute === 'settings' && <SettingsPage />}
-      {currentRoute === 'admin' && <AdminPage onNavigateTab={handleSelectTab} />}
+      <Suspense fallback={<RouteLoadingFallback />}>
+        {currentRoute === 'learn' && <LearnPage />}
+        {currentRoute === 'words' && <MyWordsPage />}
+        {currentRoute === 'mistakes' && <MyMistakesPage />}
+        {currentRoute === 'dashboard' && <DashboardPage onNavigateTab={handleSelectTab} />}
+        {currentRoute === 'vocabulary' && <VocabularyPage />}
+        {currentRoute === 'explore' && <CultureExplorePage />}
+        {currentRoute === 'portuguese' && <PortuguesePage />}
+        {currentRoute === 'spanish' && <SpanishPage />}
+        {currentRoute === 'english' && <EnglishPage />}
+        {currentRoute === 'translate' && <TranslatePage />}
+        {currentRoute === 'practice' && <PracticePage />}
+        {currentRoute === 'progress' && <ProgressPage onNavigateTab={handleSelectTab} />}
+        {currentRoute === 'settings' && <SettingsPage />}
+        {currentRoute === 'admin' && (
+          <AdminPage
+            onNavigateTab={handleSelectTab}
+            activeAdminTab={adminTab}
+            onSelectAdminTab={navigateAdmin}
+          />
+        )}
+      </Suspense>
     </AppLayout>
   );
 };

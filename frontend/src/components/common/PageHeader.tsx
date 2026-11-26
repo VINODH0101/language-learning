@@ -1,7 +1,9 @@
 import React from 'react';
 import { Breadcrumbs, BreadcrumbItem } from './Breadcrumbs';
 import { Language } from '../../types';
-import { Globe, BookOpen, Layers } from 'lucide-react';
+import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
+import { Badge } from './Badge';
 
 interface ActionConfig {
   label: string;
@@ -32,68 +34,65 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   explanationLanguage,
   cefrLevel,
   itemCount,
-  itemCountLabel = 'Itens',
+  itemCountLabel = 'Items',
   primaryAction,
   secondaryAction,
   className = '',
 }) => {
-  const getLangName = (lang: string) => {
-    if (lang === 'pt') return 'Português';
-    if (lang === 'es') return 'Español';
-    return 'English';
-  };
+  const { t, interfaceLanguage } = useI18n();
+  const getLangName = (lang: string) =>
+    getLanguageName(lang as any, interfaceLanguage as any);
 
   return (
-    <div className={`space-y-4 border-b border-slate-800 pb-5 ${className}`}>
+    <header className={`bg-white border border-stone-200 rounded-2xl p-5 sm:p-8 shadow-xs space-y-4 ${className}`}>
       {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
 
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        {/* Title, Description & Metadata */}
-        <div className="space-y-2 max-w-3xl">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
+        <div className="space-y-2.5 max-w-3xl min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-100 tracking-tight">
-              {title}
-            </h1>
-
             {targetLanguage && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 uppercase">
+              <span className="text-xs font-semibold uppercase tracking-widest text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200/80">
                 {getLangName(targetLanguage)}
               </span>
             )}
 
             {cefrLevel && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-950/80 text-amber-300 border border-amber-700/60">
+              <Badge variant="slate" size="sm">
                 {cefrLevel}
-              </span>
+              </Badge>
             )}
 
             {explanationLanguage && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                <span>Explicações:</span>
-                <strong className="text-slate-100 font-semibold">{getLangName(explanationLanguage)}</strong>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-600 border border-stone-200">
+                <span>{t('dashboard:explanations_in', 'Explanations in')}:</span>
+                <strong className="text-stone-900 font-semibold">{getLangName(explanationLanguage)}</strong>
               </span>
             )}
 
             {typeof itemCount === 'number' && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-800/60">
+              <Badge variant="emerald" size="sm">
                 {itemCount} {itemCountLabel}
-              </span>
+              </Badge>
             )}
           </div>
 
-          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+          <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-stone-900 tracking-tight leading-tight">
+            {title}
+          </h1>
+
+          <p className="text-sm text-stone-600 leading-relaxed">
             {description}
           </p>
         </div>
 
-        {/* Action Buttons with Touch-Friendly Heights */}
         {(primaryAction || secondaryAction) && (
           <div className="flex items-center gap-2.5 flex-wrap shrink-0">
             {secondaryAction && (
               <button
+                type="button"
                 onClick={secondaryAction.onClick}
                 disabled={secondaryAction.disabled}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition min-h-[44px] cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-800 text-xs sm:text-sm font-semibold transition min-h-[44px] cursor-pointer disabled:opacity-50"
               >
                 {secondaryAction.icon}
                 <span>{secondaryAction.label}</span>
@@ -102,9 +101,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
             {primaryAction && (
               <button
+                type="button"
                 onClick={primaryAction.onClick}
                 disabled={primaryAction.disabled}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-md transition min-h-[44px] cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition min-h-[44px] cursor-pointer disabled:opacity-50"
               >
                 {primaryAction.icon}
                 <span>{primaryAction.label}</span>
@@ -113,6 +113,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </header>
   );
 };

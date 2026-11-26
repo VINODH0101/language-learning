@@ -20,13 +20,17 @@ import { ProviderHealthRecord } from '../../services/monitoring/providerHealth';
 import { FailedJobItem } from '../../types';
 import { adminService } from '../../services/adminService';
 import { isSupabaseConfigured } from '../../services/supabaseClient';
+import { getPendingSyncActions } from '../../services/localDb';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
+import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 export const AdminSystemOperations: React.FC = () => {
+  const { t } = useI18n();
   const [healthRecords, setHealthRecords] = useState<ProviderHealthRecord[]>([]);
   const [jobs, setJobs] = useState<FailedJobItem[]>([]);
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   const loadOperationsData = async () => {
@@ -35,8 +39,12 @@ export const AdminSystemOperations: React.FC = () => {
       const records = adminService.getProviderHealthStatuses();
       setHealthRecords(records);
 
-      const jobList = await adminService.getBackgroundJobs();
+      const [jobList, pendingSync] = await Promise.all([
+        adminService.getBackgroundJobs(),
+        getPendingSyncActions().catch(() => []),
+      ]);
       setJobs(jobList);
+      setPendingSyncCount(pendingSync.length);
     } catch (err) {
       console.error('Failed to load operational telemetry', err);
     } finally {
@@ -60,7 +68,7 @@ export const AdminSystemOperations: React.FC = () => {
         toast.error(res.message);
       }
     } catch {
-      toast.error('Erro ao retentar execução da tarefa.');
+      toast.error(t('admin:ops_jobs_retry_error', 'Error retrying background task.'));
     }
   };
 
@@ -74,15 +82,22 @@ export const AdminSystemOperations: React.FC = () => {
               <Server className="w-4 h-4" />
             </span>
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-              Operações de Produção & Telemetria
+              {t('admin:ops_kicker', 'Production Operations & Telemetry')}
             </span>
             <Badge variant={isSupabaseConfigured ? 'emerald' : 'amber'} size="sm">
-              {isSupabaseConfigured ? 'Supabase Conectado' : 'Modo Offline / Local-First'}
+              {isSupabaseConfigured
+                ? t('admin:ops_supabase_connected', 'Supabase Connected')
+                : t('admin:ops_offline_mode', 'Offline / Local-First Mode')}
             </Badge>
           </div>
-          <h2 className="text-xl font-bold text-slate-100">Saúde de Provedores & Tarefas em Segundo Plano</h2>
+          <h2 className="text-xl font-bold text-slate-100">
+            {t('admin:ops_title', 'Provider Health & Background Jobs')}
+          </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Telemetria em tempo real derivada de chamadas autênticas dos provedores livres, sem registros sintéticos e com sanitização estrita de segredos.
+            {t(
+              'admin:ops_desc',
+              'Real-time telemetry derived from live open provider calls with zero synthetic records and strict secret redaction.'
+            )}
           </p>
         </div>
 
@@ -94,7 +109,7 @@ export const AdminSystemOperations: React.FC = () => {
             onClick={loadOperationsData}
             className="cursor-pointer"
           >
-            Atualizar Telemetria
+            {t('admin:ops_refresh', 'Refresh Telemetry')}
           </Button>
         </div>
       </div>
@@ -105,13 +120,18 @@ export const AdminSystemOperations: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-400" />
-              Provedores Educacionais Abertos ({healthRecords.length})
+              {t('admin:ops_providers_heading', 'Open Educational Providers ({{count}})', {
+                count: healthRecords.length,
+              })}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Latência média, contagem de requisições e taxa de falhas dos adaptadores em tempo de execução.
+              {t(
+                'admin:ops_providers_desc',
+                'Runtime average latency, request totals, and failure rates across registered adapters.'
+              )}
             </p>
           </div>
-          <Badge variant="emerald">Auditado & Scrubbed</Badge>
+          <Badge variant="emerald">{t('admin:ops_providers_audited', 'Audited & Scrubbed')}</Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -138,19 +158,25 @@ export const AdminSystemOperations: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-1.5 text-center text-xs pt-1 border-t border-slate-800/60">
                 <div className="p-1.5 bg-slate-900/60 rounded-lg">
-                  <div className="text-[10px] text-slate-500 font-bold uppercase">Latência</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">
+                    {t('admin:providers_latency', 'Latency')}
+                  </div>
                   <div className="text-slate-200 font-mono font-bold mt-0.5">
                     {rec.averageLatencyMs}ms
                   </div>
                 </div>
                 <div className="p-1.5 bg-slate-900/60 rounded-lg">
-                  <div className="text-[10px] text-slate-500 font-bold uppercase">Sucessos</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">
+                    {t('admin:ops_successes', 'Successes')}
+                  </div>
                   <div className="text-emerald-400 font-mono font-bold mt-0.5">
                     {rec.successfulRequests}
                   </div>
                 </div>
                 <div className="p-1.5 bg-slate-900/60 rounded-lg">
-                  <div className="text-[10px] text-slate-500 font-bold uppercase">Falhas</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">
+                    {t('admin:providers_failures', 'Failures')}
+                  </div>
                   <div className="text-rose-400 font-mono font-bold mt-0.5">
                     {rec.failedRequests}
                   </div>
@@ -159,7 +185,7 @@ export const AdminSystemOperations: React.FC = () => {
 
               {rec.lastErrorMessage && (
                 <div className="text-[10px] font-mono text-rose-400 bg-rose-950/20 p-2 rounded-lg truncate">
-                  Erro: {rec.lastErrorMessage}
+                  {t('admin:ops_error_prefix', 'Error:')} {rec.lastErrorMessage}
                 </div>
               )}
             </div>
@@ -173,20 +199,24 @@ export const AdminSystemOperations: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-rose-400" />
-              Tarefas em Segundo Plano & Retentativas Bounded ({jobs.length})
+              {t('admin:ops_jobs_heading', 'Background Tasks & Bounded Retries ({{count}})', {
+                count: jobs.length,
+              })}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Tarefas em lote resilientes com histórico de retentativas limitadas a 3 tentativas.
+              {t('admin:ops_jobs_desc', 'Resilient batch jobs with retry history capped at 3 attempts.')}
             </p>
           </div>
           <Badge variant={jobs.some(j => j.status === 'failed') ? 'rose' : 'emerald'}>
-            {jobs.filter(j => j.status === 'failed').length} Falhas Ativas
+            {t('admin:ops_jobs_active_failures', '{{count}} Active Failures', {
+              count: jobs.filter(j => j.status === 'failed').length,
+            })}
           </Badge>
         </div>
 
         {jobs.length === 0 ? (
           <div className="p-8 text-center text-xs text-slate-500">
-            Nenhuma tarefa pendente na esteira de processamento.
+            {t('admin:ops_jobs_empty', 'No pending tasks in the processing pipeline.')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -210,10 +240,16 @@ export const AdminSystemOperations: React.FC = () => {
                   <div className="text-rose-400 font-mono text-[11px]">{job.errorReason}</div>
                   <div className="text-slate-500 text-[10px] flex items-center gap-2">
                     <Clock className="w-3 h-3" />
-                    <span>Última execução: {new Date(job.lastRunAt).toLocaleTimeString()}</span>
+                    <span>
+                      {t('admin:ops_jobs_last_run', 'Last run: {{time}}', {
+                        time: new Date(job.lastRunAt).toLocaleTimeString(),
+                      })}
+                    </span>
                     <span>•</span>
                     <span>
-                      Tentativas: {job.retryCount}/{job.maxRetries}
+                      {t('admin:jobs_attempts', 'Attempts: {{count}}', {
+                        count: `${job.retryCount}/${job.maxRetries}`,
+                      })}
                     </span>
                   </div>
                 </div>
@@ -228,7 +264,9 @@ export const AdminSystemOperations: React.FC = () => {
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>
-                      {job.retryCount >= job.maxRetries ? 'Limite Atingido' : 'Retentar Tarefa'}
+                      {job.retryCount >= job.maxRetries
+                        ? t('admin:ops_jobs_limit_reached', 'Limit Reached')
+                        : t('admin:ops_jobs_retry_btn', 'Retry Task')}
                     </span>
                   </Button>
                 )}
@@ -243,30 +281,41 @@ export const AdminSystemOperations: React.FC = () => {
         <div className="border-b border-slate-800 pb-3">
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
             <Database className="w-4 h-4 text-sky-400" />
-            Integridade do Armazenamento Local-First (Dexie / IndexedDB)
+            {t('admin:ops_storage_heading', 'Local-First Storage Integrity (Dexie / IndexedDB)')}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Garantia de que a plataforma opera offline sem vazamento de dados de outros usuários.
+            {t(
+              'admin:ops_storage_desc',
+              'Guarantees offline operation without cross-user data leakage.'
+            )}
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-bold">Isolamento Multi-Tenant</span>
+            <span className="text-[10px] text-slate-400 uppercase font-bold">
+              {t('admin:ops_isolation_label', 'Multi-Tenant Isolation')}
+            </span>
             <div className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4" /> Chaves Escopadas por User ID
+              <ShieldCheck className="w-4 h-4" />{' '}
+              {t('admin:ops_isolation_value', 'User ID Scoped Keys')}
             </div>
           </div>
           <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-bold">Fila de Mutação Offline</span>
+            <span className="text-[10px] text-slate-400 uppercase font-bold">
+              {t('admin:ops_sync_label', 'Offline Mutation Queue')}
+            </span>
             <div className="text-xs font-semibold text-slate-200">
-              0 itens pendentes de sincronização
+              {t('admin:ops_sync_pending', '{{count}} items pending sync', { count: pendingSyncCount })}
             </div>
           </div>
           <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-bold">Mandato Zero-Paid AI</span>
+            <span className="text-[10px] text-slate-400 uppercase font-bold">
+              {t('admin:ops_zero_ai_label', 'Zero-Paid AI Mandate')}
+            </span>
             <div className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" /> 100% Fallbacks Determinísticos
+              <CheckCircle2 className="w-4 h-4" />{' '}
+              {t('admin:ops_zero_ai_value', '100% Deterministic Fallbacks')}
             </div>
           </div>
         </div>

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/academic_essay.json",
+  "title": "Academic essay content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "topic": { "type": "string" },
+    "thesis": { "type": "string" },
+    "introduction": { "type": "string" },
+    "arguments": { "type": "array", "items": { "type": "object" } },
+    "evidence": { "type": "array", "items": { "type": "object" } },
+    "conclusion": { "type": "string" },
+    "academic_vocabulary": { "type": "array" },
+    "writing_structure": { "type": "object" },
+    "discussion_questions": { "type": "array", "items": { "type": "string" } },
+    "writing_exercise": { "type": "string" }
+  },
+  "required": ["meta", "topic", "thesis", "introduction", "arguments", "conclusion"]
+}

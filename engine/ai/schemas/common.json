@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/common.json",
+  "title": "Common content metadata",
+  "type": "object",
+  "$defs": {
+    "languages": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["en", "pt", "es"] },
+      "minItems": 1
+    },
+    "cefr": { "type": "string", "enum": ["A1", "A2", "B1", "B2", "C1", "C2"] },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "source_name": { "type": "string" },
+        "source_url": { "type": "string" },
+        "license_name": { "type": "string" },
+        "license_url": { "type": "string" },
+        "attribution": { "type": "string" }
+      },
+      "required": ["source_name", "license_name", "attribution"]
+    },
+    "vocabularyItem": {
+      "type": "object",
+      "properties": {
+        "lemma": { "type": "string" },
+        "pos": { "type": "string" },
+        "definition": { "type": "string" },
+        "translations": { "type": "object" },
+        "cefr_level": { "$ref": "#/$defs/cefr" },
+        "example_sentence": { "type": "string" }
+      },
+      "required": ["lemma", "definition"]
+    },
+    "grammarReference": {
+      "type": "object",
+      "properties": {
+        "topic": { "type": "string" },
+        "explanation": { "type": "string" },
+        "examples": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["topic", "explanation"]
+    },
+    "activity": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "instruction": { "type": "string" },
+        "questions": { "type": "array" },
+        "answer_key": { "type": "array" }
+      },
+      "required": ["type", "instruction"]
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "content_type": { "type": "string" },
+        "target_language": { "type": "string", "enum": ["en", "pt", "es"] },
+        "explanation_language": { "type": "string", "enum": ["en", "pt", "es"] },
+        "cefr_level": { "$ref": "#/$defs/cefr" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "topic": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "estimated_read_minutes": { "type": "integer", "minimum": 1 },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "vocabulary": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/vocabularyItem" }
+        },
+        "grammar_references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/grammarReference" }
+        },
+        "activities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/activity" }
+        },
+        "validation": { "type": "object" }
+      },
+      "required": [
+        "content_type",
+        "target_language",
+        "explanation_language",
+        "cefr_level",
+        "title",
+        "summary"
+      ]
+    }
+  }
+}

@@ -2,6 +2,8 @@ export { WelcomeHeader } from './WelcomeHeader';
 export { DailyLearningGoal } from './DailyLearningGoal';
 export { ContinueLearningCard } from './ContinueLearningCard';
 export { DailyContentPreview } from './DailyContentPreview';
+export { VocabularySummary } from './VocabularySummary';
+export { RecentLearning } from './RecentLearning';
 export { DailyPoetryReaderModal } from './DailyPoetryReaderModal';
 export { DailyConversationModal } from './DailyConversationModal';
 export { GlobalCountryDiscovery } from './GlobalCountryDiscovery';

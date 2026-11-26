@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/poetry.json",
+  "title": "Poetry content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "lines": { "type": "array", "items": { "type": "string" } },
+    "stanzas": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "string" } }
+    },
+    "literary_devices": { "type": "array", "items": { "type": "object" } },
+    "vocabulary": { "type": "array" },
+    "interpretation": { "type": "string" },
+    "cultural_context": { "type": "string" },
+    "copyright": { "type": "string" }
+  },
+  "required": ["meta", "lines", "interpretation", "copyright"]
+}

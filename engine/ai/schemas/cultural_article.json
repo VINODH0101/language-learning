@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/cultural_article.json",
+  "title": "Cultural article content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "region": { "type": "string" },
+    "country": { "type": "string" },
+    "topic": { "type": "string" },
+    "article_body": { "type": "string" },
+    "cultural_notes": { "type": "array", "items": { "type": "string" } },
+    "historical_context": { "type": "string" },
+    "vocabulary": { "type": "array" },
+    "source_references": { "type": "array", "items": { "type": "object" } },
+    "comprehension_questions": { "type": "array", "items": { "type": "object" } }
+  },
+  "required": ["meta", "article_body", "source_references"]
+}

@@ -106,5 +106,15 @@
   "rest_countries_data": "Dados do REST Countries & Open-Meteo",
   "curriculum_curating_title": "Status Curricular",
   "decoupling_advisory_title": "Aviso de Desacoplamento Quádruplo",
-  "no_exercises_in_track": "Nenhum exercício encontrado nesta trilha."
+  "no_exercises_in_track": "Nenhum exercício encontrado nesta trilha.",
+  "overview_title": "Seu progresso até agora",
+  "section_focus": "Foco agora",
+  "section_path": "Trilha de aprendizagem",
+  "section_insights": "Insights",
+  "section_placement": "Nivelamento",
+  "tab_path_vocab": "Percurso e Memória",
+  "tab_diagnostics_skills": "Foco e Competências",
+  "tab_immersion_placement": "Imersão e Nivelamento",
+  "progress_view_aria": "Vistas de progresso",
+  "methodology_toggle": "Como é calculado"
 }

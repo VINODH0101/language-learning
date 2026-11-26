@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/grammar.json",
+  "title": "Grammar lesson content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "grammar_topic": { "type": "string" },
+    "explanation": { "type": "string" },
+    "rules": { "type": "array", "items": { "type": "string" } },
+    "usage": { "type": "array", "items": { "type": "string" } },
+    "examples": { "type": "array", "items": { "type": "object" } },
+    "exceptions": { "type": "array", "items": { "type": "string" } },
+    "common_mistakes": { "type": "array", "items": { "type": "string" } },
+    "exercises": { "type": "array", "items": { "type": "object" } },
+    "answer_key": { "type": "array" },
+    "explanation_language_support": { "type": "object" }
+  },
+  "required": ["meta", "grammar_topic", "explanation", "examples"]
+}

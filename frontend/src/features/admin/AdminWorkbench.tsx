@@ -39,49 +39,52 @@ import {
   Sparkles,
   FileText,
   Lock,
+  BookOpen,
 } from 'lucide-react';
 import { PendingContentItem, FailedJobItem } from '../../types';
+import { ContentItem } from '../../types/contentCentred';
 import {
   adminService,
-  INITIAL_REVIEW_ITEMS,
-  INITIAL_FAILED_JOBS,
 } from '../../services/adminService';
 import { ProviderHealthRecord } from '../../services/monitoring/providerHealth';
+import { contentCentredService } from '../../services/contentCentredService';
+import { computeLiveCefrAudit, getLiveSourceInventory } from './adminMetricsHelper';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { AdminOverview } from './AdminOverview';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminDailyContentStudio } from './AdminDailyContentStudio';
 import { AdminAuditLogs } from './AdminAuditLogs';
+import { AdminContentStudio } from './content-studio/AdminContentStudio';
 import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
+import type { AdminWorkbenchTab } from './adminNavigation';
 
-export type AdminWorkbenchTab =
-  | 'overview'
-  | 'users'
-  | 'review'
-  | 'languages'
-  | 'cefr_audit'
-  | 'providers'
-  | 'jobs'
-  | 'duplicates'
-  | 'datasets'
-  | 'daily_content'
-  | 'audit';
+export type { AdminWorkbenchTab } from './adminNavigation';
 
 interface AdminWorkbenchProps {
   initialTab?: AdminWorkbenchTab;
+  activeTab?: AdminWorkbenchTab;
+  onSelectTab?: (tab: AdminWorkbenchTab) => void;
   onNavigateTab?: (tab: any) => void;
 }
 
 export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
   initialTab = 'review',
+  activeTab: controlledTab,
+  onSelectTab,
 }) => {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<AdminWorkbenchTab>(initialTab);
+  const [internalTab, setInternalTab] = useState<AdminWorkbenchTab>(initialTab);
+  const activeTab = controlledTab ?? internalTab;
+
+  const selectTab = (tab: AdminWorkbenchTab) => {
+    if (controlledTab === undefined) setInternalTab(tab);
+    onSelectTab?.(tab);
+  };
 
   // 1. Content Review State
-  const [reviewItems, setReviewItems] = useState<PendingContentItem[]>(() => INITIAL_REVIEW_ITEMS);
+  const [reviewItems, setReviewItems] = useState<PendingContentItem[]>([]);
   // 2. Language Enablement State
   const [enabledLanguages, setEnabledLanguages] = useState<Record<string, boolean>>({
     en: true,
@@ -103,55 +106,70 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
     adminService.getProviderHealthStatuses()
   );
   // 4. Failed Generation Jobs State
-  const [failedJobs, setFailedJobs] = useState<FailedJobItem[]>(() => INITIAL_FAILED_JOBS);
+  const [failedJobs, setFailedJobs] = useState<FailedJobItem[]>([]);
+  const [publishedItems, setPublishedItems] = useState<ContentItem[]>([]);
 
   const loadData = async () => {
     try {
-      const items = await adminService.getContentReviewQueue();
+      const [items, jobs, pubItems] = await Promise.all([
+        adminService.getContentReviewQueue(),
+        adminService.getBackgroundJobs(),
+        contentCentredService.getContentItems({ status: 'published' }).catch(() => []),
+      ]);
       setReviewItems(items);
-
-      const jobs = await adminService.getBackgroundJobs();
       setFailedJobs(jobs);
+      setPublishedItems(pubItems);
 
       const providers = adminService.getProviderHealthStatuses();
       setHealthRecords(providers);
     } catch (err) {
-      console.error('Failed to load AdminWorkbench state', err);
+      console.warn('Could not load dynamic admin data, using initial seed states:', err);
     }
   };
 
   useEffect(() => {
     loadData();
-    const unsub = adminService.subscribe(loadData);
-    return unsub;
   }, []);
 
-  // Handlers for Content Review
-  const handleApproveContent = (id: string) => {
+  // Handlers for Content Review Actions
+  const handleApproveContent = async (id: string) => {
     setReviewItems(prev =>
       prev.map(item => (item.id === id ? { ...item, status: 'approved' } : item))
     );
-    adminService.approveContentItem(id).catch(console.error);
-    toast.success(t('admin:toast_content_approved', 'Conteúdo pedagógico aprovado com sucesso!'));
+    try {
+      await adminService.approveContentItem(id);
+      toast.success(t('admin:toast_content_approved', 'Pedagogical content approved successfully!'));
+    } catch {
+      toast.error(t('admin:toast_action_failed', 'Action failed.'));
+    }
   };
 
-  const handleRejectContent = (id: string) => {
+  const handleRejectContent = async (id: string) => {
     setReviewItems(prev =>
       prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item))
     );
-    adminService.rejectContentItem(id, 'Inconformidade pedagógica').catch(console.error);
-    toast.error(t('admin:toast_content_rejected', 'Item reprovado e removido do catálogo de distribuição.'));
+    try {
+      await adminService.rejectContentItem(
+        id,
+        t('admin:review_reject_default_reason', 'Pedagogical non-conformity')
+      );
+      toast.info(t('admin:toast_content_rejected', 'Item rejected and removed from distribution catalog.'));
+    } catch {
+      toast.error(t('admin:toast_action_failed', 'Action failed.'));
+    }
   };
 
-  // Handlers for Language Matrix
+  // Handler for Toggling Language
   const handleToggleLanguage = (lang: string) => {
     if (lang === 'hi') {
-      toast.error(t('admin:hindi_forbidden_message', 'Invariante do Sistema: O idioma Hindi (hi) está expressamente excluído da plataforma.'));
+      toast.error(
+        t('admin:hindi_forbidden_message', 'Hindi language (hi) is strictly excluded from Lexilume.')
+      );
       return;
     }
     setEnabledLanguages(prev => {
       const next = !prev[lang];
-      toast.info(t('admin:toast_lang_toggled', `Idioma ${lang.toUpperCase()} ${next ? 'habilitado' : 'desabilitado'} no catálogo.`));
+      toast.info(t('admin:toast_lang_toggled', 'Language status updated in catalog.'));
       return { ...prev, [lang]: next };
     });
   };
@@ -160,70 +178,126 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
   const handleRetryJob = (jobId: string) => {
     setFailedJobs(prev => prev.filter(j => j.id !== jobId));
     adminService.retryBackgroundJob(jobId).catch(console.error);
-    toast.success(t('admin:toast_job_retried', `Tarefa ${jobId} reenfileirada com sucesso para a fila de processamento!`));
+    toast.success(t('admin:toast_job_retried', 'Task requeued successfully!'));
+  };
+
+  type WorkbenchTabDef = { id: AdminWorkbenchTab; label: string; count?: number };
+
+  const primaryWorkbenchTabs: WorkbenchTabDef[] = [
+    { id: 'overview', label: t('admin:tab_overview', 'Overview') },
+    { id: 'content_studio', label: t('admin:tab_content_studio', 'Content Library') },
+    { id: 'content_import', label: t('admin:tab_content_import', 'Import Content') },
+    { id: 'processing_studio', label: t('admin:tab_processing_studio', 'Processing Studio') },
+    { id: 'review', label: t('admin:tab_review', 'Moderation Queue'), count: reviewItems.filter(i => i.status === 'pending').length },
+    { id: 'settings', label: t('admin:tab_settings', 'Settings') },
+  ];
+
+  const operationsWorkbenchTabs: WorkbenchTabDef[] = [
+    { id: 'users', label: t('admin:tab_users', 'User Management') },
+    { id: 'languages', label: t('admin:tab_languages', 'Language Enablement'), count: 3 },
+    { id: 'cefr_audit', label: t('admin:tab_cefr_audit', 'CEFR Audit') },
+    { id: 'providers', label: t('admin:tab_providers', 'Provider Health'), count: healthRecords.length },
+    { id: 'jobs', label: t('admin:tab_jobs', 'Failed Jobs Queue'), count: failedJobs.length },
+    { id: 'duplicates', label: t('admin:tab_duplicates', 'Duplicate Scanner') },
+    { id: 'datasets', label: t('admin:tab_datasets', 'Open Datasets') },
+    { id: 'daily_content', label: t('admin:tab_daily_content', 'Daily Studio') },
+    { id: 'audit', label: t('admin:tab_audit', 'Audit Trail') },
+  ];
+
+  const renderWorkbenchTab = (tab: WorkbenchTabDef, tone: 'ink' | 'gold' = 'ink') => {
+    const isActive = activeTab === tab.id;
+    const activeClass =
+      tone === 'gold'
+        ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
+        : 'bg-stone-900 border-stone-900 text-white shadow-xs';
+
+    return (
+      <button
+        key={tab.id}
+        onClick={() => selectTab(tab.id)}
+        aria-current={isActive ? 'page' : undefined}
+        className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold border transition min-h-[40px] cursor-pointer ${
+          isActive
+            ? activeClass
+            : 'bg-white text-stone-600 border-stone-200 hover:text-stone-900 hover:border-amber-300 hover:bg-amber-50/50'
+        }`}
+      >
+        <span className="whitespace-nowrap">{tab.label}</span>
+        {tab.count !== undefined && (
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              isActive ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
+            }`}
+          >
+            {tab.count}
+          </span>
+        )}
+      </button>
+    );
   };
 
   return (
     <div className="space-y-6">
       {/* Workbench Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-stone-200 pb-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400">
-              <Shield className="w-6 h-6" />
+            <div className="p-2.5 bg-stone-100 border border-stone-200 rounded-xl text-stone-700">
+              <Shield className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-100">
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
                   {t('admin:workbench_title', 'Painel de Administração e Qualidade')}
                 </h2>
-                <Badge variant="rose" size="sm">{t('admin:workbench_badge', 'Admin Workbench')}</Badge>
+                <Badge variant="slate" size="sm">{t('admin:workbench_badge', 'Admin Desk')}</Badge>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {t('admin:workbench_subtitle', 'Revisão de conteúdo, matriz de 13 idiomas, auditoria CEFR, integridade de provedores e telemetria.')}
+              <p className="text-xs text-stone-600 mt-1">
+                {t('admin:workbench_subtitle', 'Editorial content ingestion, deterministic pipeline validation, CEFR alignment, and publishing governance.')}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Workbench Tab Navigation */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar border-b border-slate-800">
-          {[
-            { id: 'overview', label: t('admin:tab_overview', 'Visão Geral') },
-            { id: 'users', label: t('admin:tab_users', 'Gestão de Usuários') },
-            { id: 'review', label: t('admin:tab_review', 'Fila de Moderação'), count: reviewItems.filter(i => i.status === 'pending').length },
-            { id: 'languages', label: t('admin:tab_languages', 'Matriz de Idiomas (13)'), count: 13 },
-            { id: 'cefr_audit', label: t('admin:tab_cefr_audit', 'Auditoria CEFR A1–C1') },
-            { id: 'providers', label: t('admin:tab_providers', 'Saúde de Provedores'), count: healthRecords.length },
-            { id: 'jobs', label: t('admin:tab_jobs', 'Fila de Falhas & Retentativas'), count: failedJobs.length },
-            { id: 'duplicates', label: t('admin:tab_duplicates', 'Detector de Duplicatas') },
-            { id: 'datasets', label: t('admin:tab_datasets', 'Versões dos Datasets') },
-            { id: 'daily_content', label: t('admin:tab_daily_content', 'Estúdio Diário') },
-            { id: 'audit', label: t('admin:tab_audit', 'Trilha de Auditoria') },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as AdminWorkbenchTab)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition ${
-                activeTab === tab.id
-                  ? 'bg-rose-600 text-white shadow-sm'
-                  : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
-              }`}
-            >
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span className={`ml-2 px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Tab groups: primary workflow, then governance & operations. */}
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-900" aria-hidden="true" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-stone-500">
+                {t('admin:primary_tabs_header', 'Primary Workflow')}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {primaryWorkbenchTabs.map(tab => renderWorkbenchTab(tab, 'ink'))}
+            </div>
+          </div>
+          <div className="pt-4 border-t border-stone-200">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600" aria-hidden="true" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-stone-500">
+                {t('admin:operations_header', 'Operations & Governance')}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {operationsWorkbenchTabs.map(tab => renderWorkbenchTab(tab, 'gold'))}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Content Library (Phase 7) */}
+      {activeTab === 'content_studio' && <AdminContentStudio initialView="list" />}
+
+      {/* Import Content (Phase 7) */}
+      {activeTab === 'content_import' && <AdminContentStudio initialView="import" />}
+
+      {/* Processing Studio (Phase 7) */}
+      {activeTab === 'processing_studio' && <AdminContentStudio initialView="monitor" />}
+
       {/* 0. Overview Tab */}
       {activeTab === 'overview' && (
-        <AdminOverview onNavigateTab={tab => setActiveTab(tab as AdminWorkbenchTab)} />
+        <AdminOverview onNavigateTab={tab => selectTab((tab === 'operations' ? 'providers' : tab) as AdminWorkbenchTab)} />
       )}
 
       {/* 0.1 Users Tab */}
@@ -231,45 +305,57 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 1. Content Review Tab */}
       {activeTab === 'review' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4 text-rose-400" />
-                Fila de Moderação e Validação de Conteúdo
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-stone-600" />
+                {t('admin:review_queue_title', 'Pedagogical Content Review Queue')}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Avalie materiais sintéticos e de corpora abertos antes de liberá-los para os alunos.
+              <p className="text-xs text-stone-500 mt-0.5">
+                {t(
+                  'admin:review_queue_desc',
+                  'Review and approve generated sentences, dialogues, and vocabulary terms before publishing.'
+                )}
               </p>
             </div>
-            <Badge variant="indigo">{reviewItems.filter(i => i.status === 'pending').length} Pendentes</Badge>
+            <Badge variant="indigo">
+              {t('admin:review_pending', '{{count}} Pending', {
+                count: reviewItems.filter(i => i.status === 'pending').length,
+              })}
+            </Badge>
           </div>
 
           <div className="space-y-3">
             {reviewItems.map(item => (
               <div
                 key={item.id}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-slate-200 text-sm">{item.titleOrTerm}</span>
+                    <span className="font-serif font-bold text-stone-900 text-sm">{item.titleOrTerm}</span>
                     <Badge variant="indigo" size="sm">{item.type.toUpperCase()}</Badge>
                     <Badge variant="emerald" size="sm">{item.cefrLevel}</Badge>
                     <Badge variant="slate" size="sm">{item.language.toUpperCase()}</Badge>
                     {item.status === 'approved' && (
-                      <span className="text-xs font-bold text-emerald-400">✓ Aprovado</span>
+                      <span className="text-xs font-bold text-emerald-600">
+                        ✓ {t('admin:review_approved', 'Approved')}
+                      </span>
                     )}
                     {item.status === 'rejected' && (
-                      <span className="text-xs font-bold text-rose-400">✗ Rejeitado</span>
+                      <span className="text-xs font-bold text-rose-600">
+                        ✗ {t('admin:review_rejected', 'Rejected')}
+                      </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400">
-                    <span className="text-slate-500">Fonte:</span> {item.source}
+                  <div className="text-xs text-stone-500">
+                    <span className="text-stone-700 font-semibold">{t('admin:review_source', 'Source:')}</span>{' '}
+                    {item.source}
                   </div>
                   {item.reasonFlagged && (
-                    <div className="text-[11px] text-amber-400/90 font-mono">
-                      Motivo: {item.reasonFlagged}
+                    <div className="text-[11px] text-amber-800 font-mono">
+                      {t('admin:review_reason', 'Reason:')} {item.reasonFlagged}
                     </div>
                   )}
                 </div>
@@ -280,19 +366,19 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
                       onClick={() => handleApproveContent(item.id)}
                       variant="primary"
                       size="sm"
-                      className="gap-1 cursor-pointer bg-emerald-600 hover:bg-emerald-500"
+                      className="gap-1 cursor-pointer bg-emerald-700 hover:bg-emerald-800"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Aprovar</span>
+                      <span>{t('admin:action_approve', 'Approve')}</span>
                     </Button>
                     <Button
                       onClick={() => handleRejectContent(item.id)}
                       variant="outline"
                       size="sm"
-                      className="gap-1 cursor-pointer text-rose-400 border-rose-800/60 hover:bg-rose-950/40"
+                      className="gap-1 cursor-pointer text-rose-700 border-rose-300 hover:bg-rose-50"
                     >
                       <XCircle className="w-3.5 h-3.5" />
-                      <span>Rejeitar</span>
+                      <span>{t('admin:action_reject', 'Reject')}</span>
                     </Button>
                   </div>
                 )}
@@ -303,69 +389,68 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
       )}
 
       {/* 2. Language Enablement Matrix */}
-      {activeTab === 'languages' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+      {(activeTab === 'languages' || activeTab === 'settings') && (
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Globe2 className="w-4 h-4 text-indigo-400" />
-                Matriz de Idiomas Suportados (13 Idiomas Oficiais)
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Globe2 className="w-4 h-4 text-stone-600" />
+                {t('admin:languages_title', 'Supported Language Matrix (PT · EN · ES)')}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Ativação e desativação de idiomas no currículo. O Hindi (HI) é estritamente proibido nesta plataforma.
+              <p className="text-xs text-stone-500 mt-0.5">
+                {t(
+                  'admin:languages_desc',
+                  'Portuguese, English and Spanish are the only enabled curriculum languages. Hindi (HI) is strictly forbidden.'
+                )}
               </p>
             </div>
-            <Badge variant="indigo">13 Ativos</Badge>
+            <Badge variant="emerald">{t('admin:languages_active_badge', '3 Active')}</Badge>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { code: 'pt', name: 'Português (BR / PT)', status: 'Habilitado' },
-              { code: 'es', name: 'Español (ES / MX)', status: 'Habilitado' },
-              { code: 'en', name: 'English (US / GB)', status: 'Habilitado' },
-              { code: 'fr', name: 'Français', status: 'Habilitado' },
-              { code: 'de', name: 'Deutsch', status: 'Habilitado' },
-              { code: 'it', name: 'Italiano', status: 'Habilitado' },
-              { code: 'ja', name: 'Japonês', status: 'Habilitado' },
-              { code: 'ko', name: 'Coreano', status: 'Habilitado' },
-              { code: 'ru', name: 'Russo', status: 'Habilitado' },
-              { code: 'nl', name: 'Holandês', status: 'Habilitado' },
-              { code: 'zh', name: 'Mandarim', status: 'Habilitado' },
-              { code: 'tr', name: 'Turco', status: 'Habilitado' },
-              { code: 'ta', name: 'Tâmil', status: 'Habilitado' },
+              { code: 'pt', name: 'Português (BR / PT)' },
+              { code: 'es', name: 'Español (ES / MX)' },
+              { code: 'en', name: 'English (US / GB)' },
             ].map(lang => (
               <div
                 key={lang.code}
-                className="p-3.5 bg-slate-950/40 rounded-xl border border-slate-800 flex items-center justify-between"
+                className="p-3.5 bg-stone-50/70 rounded-xl border border-stone-200 flex items-center justify-between"
               >
                 <div>
-                  <div className="text-xs font-bold text-slate-100">{lang.name}</div>
-                  <div className="text-[10px] text-slate-500 font-mono">Código: {lang.code.toUpperCase()}</div>
+                  <div className="text-xs font-bold text-stone-900">{lang.name}</div>
+                  <div className="text-[10px] text-stone-500 font-mono">
+                    {t('admin:language_code', 'Code: {{code}}', { code: lang.code.toUpperCase() })}
+                  </div>
                 </div>
                 <button
                   onClick={() => handleToggleLanguage(lang.code)}
                   className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${
                     enabledLanguages[lang.code] !== false
-                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800'
-                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                      : 'bg-stone-100 text-stone-500 border border-stone-300'
                   }`}
                 >
-                  {enabledLanguages[lang.code] !== false ? 'Ativo' : 'Inativo'}
+                  {enabledLanguages[lang.code] !== false
+                    ? t('admin:language_active', 'Active')
+                    : t('admin:language_inactive', 'Inactive')}
                 </button>
               </div>
             ))}
 
             {/* Invariant Excluded Language: Hindi */}
-            <div className="p-3.5 bg-rose-950/20 rounded-xl border border-rose-900/60 flex items-center justify-between">
+            <div className="p-3.5 bg-rose-50/70 rounded-xl border border-rose-200 flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold text-rose-300">HI (Hindi)</div>
-                <div className="text-[10px] text-rose-400 font-mono">Excluído pelo Escopo do Sistema</div>
+                <div className="text-xs font-bold text-rose-900">HI (Hindi)</div>
+                <div className="text-[10px] text-rose-700 font-mono">
+                  {t('admin:language_hindi_excluded', 'Excluded by system scope')}
+                </div>
               </div>
               <button
                 onClick={() => handleToggleLanguage('hi')}
-                className="px-3 py-1 rounded-lg text-xs font-bold bg-rose-950 text-rose-400 border border-rose-800 cursor-not-allowed opacity-80"
+                className="px-3 py-1 rounded-lg text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 cursor-not-allowed opacity-80"
               >
-                Bloqueado
+                {t('admin:language_blocked', 'Blocked')}
               </button>
             </div>
           </div>
@@ -374,45 +459,44 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 3. CEFR Content Validation Audit */}
       {activeTab === 'cefr_audit' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-emerald-400" />
-              Auditoria de Conteúdo Pedagógico CEFR (A1–C1)
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3">
+            <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-emerald-600" />
+              {t('admin:cefr_title', 'Pedagogical CEFR Content Audit (A1–C1)')}
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Verificação dos patamares mínimos de itens lexicais, leituras graduadas e exercícios por nível.
+            <p className="text-xs text-stone-500 mt-0.5">
+              {t(
+                'admin:cefr_desc',
+                'Verification of minimum lexical, graded-reading and exercise thresholds per level.'
+              )}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-            {[
-              { level: 'A1', vocab: 520, passages: 15, exercises: 85, status: 'Conforme' },
-              { level: 'A2', vocab: 740, passages: 22, exercises: 120, status: 'Conforme' },
-              { level: 'B1', vocab: 1250, passages: 34, exercises: 210, status: 'Conforme' },
-              { level: 'B2', vocab: 1800, passages: 45, exercises: 290, status: 'Conforme' },
-              { level: 'C1', vocab: 3400, passages: 72, exercises: 450, status: 'Excelente' },
-            ].map(lvl => (
+            {computeLiveCefrAudit(publishedItems).map(lvl => (
               <div
                 key={lvl.level}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2"
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <Badge variant="emerald">{lvl.level}</Badge>
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase">{lvl.status}</span>
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase">
+                    {t(lvl.statusKey, lvl.statusFallback)}
+                  </span>
                 </div>
-                <div className="space-y-1 text-xs text-slate-300">
+                <div className="space-y-1 text-xs text-stone-700">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Vocabulário:</span>
-                    <span className="font-mono">{lvl.vocab}</span>
+                    <span className="text-stone-500">{t('admin:cefr_vocab', 'Vocabulary:')}</span>
+                    <span className="font-mono font-medium">{lvl.vocab}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Textos:</span>
-                    <span className="font-mono">{lvl.passages}</span>
+                    <span className="text-stone-500">{t('admin:cefr_texts', 'Texts:')}</span>
+                    <span className="font-mono font-medium">{lvl.passages}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Exercícios:</span>
-                    <span className="font-mono">{lvl.exercises}</span>
+                    <span className="text-stone-500">{t('admin:cefr_exercises', 'Exercises:')}</span>
+                    <span className="font-mono font-medium">{lvl.exercises}</span>
                   </div>
                 </div>
               </div>
@@ -423,45 +507,56 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 4. Provider Health & Telemetry */}
       {activeTab === 'providers' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-400" />
-                Telemetria e Saúde dos Provedores Abertos
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-amber-600" />
+                {t('admin:provider_health_title', 'Live Provider Health & Latency Monitor')}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Monitoramento scrubbed de latência média, taxa de sucesso e disponibilidade operacional.
+              <p className="text-xs text-stone-500 mt-0.5">
+                {t(
+                  'admin:provider_health_desc',
+                  'Monitors Kaikki/Wiktionary, Tatoeba, Wikipedia, Open-Meteo, and REST Countries endpoints.'
+                )}
               </p>
             </div>
-            <Badge variant="emerald">Todos Operacionais</Badge>
+            <Badge variant="emerald">
+              {t('admin:providers_all_operational', 'All Operational')}
+            </Badge>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {healthRecords.map(rec => (
               <div
                 key={rec.providerId}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2"
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-slate-100">{rec.name}</div>
+                  <div className="text-xs font-bold text-stone-900">{rec.name}</div>
                   <Badge variant={rec.status === 'healthy' ? 'emerald' : 'amber'} size="sm">
                     {rec.status.toUpperCase()}
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center text-xs pt-2 border-t border-slate-800/80">
-                  <div className="p-2 bg-slate-900/60 rounded-lg">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Latência</div>
-                    <div className="text-slate-200 font-mono font-bold mt-0.5">{rec.averageLatencyMs} ms</div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs pt-2 border-t border-stone-200">
+                  <div className="p-2 bg-white rounded-lg border border-stone-200">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold">
+                      {t('admin:providers_latency', 'Latency')}
+                    </div>
+                    <div className="text-stone-900 font-mono font-bold mt-0.5">{rec.averageLatencyMs} ms</div>
                   </div>
-                  <div className="p-2 bg-slate-900/60 rounded-lg">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Requisições</div>
-                    <div className="text-slate-200 font-mono font-bold mt-0.5">{rec.totalRequests}</div>
+                  <div className="p-2 bg-white rounded-lg border border-stone-200">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold">
+                      {t('admin:providers_requests', 'Requests')}
+                    </div>
+                    <div className="text-stone-900 font-mono font-bold mt-0.5">{rec.totalRequests}</div>
                   </div>
-                  <div className="p-2 bg-slate-900/60 rounded-lg">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Falhas</div>
-                    <div className="text-slate-200 font-mono font-bold mt-0.5">{rec.failedRequests}</div>
+                  <div className="p-2 bg-white rounded-lg border border-stone-200">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold">
+                      {t('admin:providers_failures', 'Failures')}
+                    </div>
+                    <div className="text-stone-900 font-mono font-bold mt-0.5">{rec.failedRequests}</div>
                   </div>
                 </div>
               </div>
@@ -472,40 +567,44 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 5. Failed Generation Jobs Queue */}
       {activeTab === 'jobs' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-rose-400" />
-                Fila de Falhas & Retentativas
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-rose-600" />
+                {t('admin:jobs_title', 'Background Generation & Retry Queue')}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Recuperação resiliente de tarefas em lote interrompidas por timeout de rede ou limites de taxa.
+              <p className="text-xs text-stone-500 mt-0.5">
+                {t('admin:jobs_desc', 'Bounded retry queue for offline content generation and synchronization tasks.')}
               </p>
             </div>
-            <Badge variant="rose">{failedJobs.length} Falhas</Badge>
+            <Badge variant="rose">
+              {t('admin:jobs_failures_badge', '{{count}} Failures', { count: failedJobs.length })}
+            </Badge>
           </div>
 
           {failedJobs.length === 0 ? (
-            <div className="text-center py-8 text-xs text-slate-500">
-              Nenhuma tarefa com falha no momento. A esteira de geração opera de forma estável.
+            <div className="text-center py-8 text-xs text-stone-500">
+              {t('admin:no_failed_jobs', 'All background jobs completed successfully. Queue is clear.')}
             </div>
           ) : (
             <div className="space-y-3">
               {failedJobs.map(job => (
                 <div
                   key={job.id}
-                  className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                  className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 flex flex-col md:flex-row md:items-center justify-between gap-3"
                 >
                   <div className="space-y-1 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-200">{job.jobType}</span>
+                      <span className="font-serif font-bold text-stone-900">{job.jobType}</span>
                       <Badge variant="indigo" size="sm">{job.language.toUpperCase()}</Badge>
                       <Badge variant="emerald" size="sm">{job.cefrLevel}</Badge>
                     </div>
-                    <div className="text-rose-400 font-mono">{job.errorReason}</div>
-                    <div className="text-slate-500 text-[10px]">
-                      Ocorrido em: {new Date(job.lastRunAt || job.createdAt).toLocaleTimeString()} • Tentativas: {job.retryCount}
+                    <div className="text-rose-700 font-mono text-[11px]">{job.errorReason}</div>
+                    <div className="text-stone-500 text-[10px]">
+                      {t('admin:jobs_occurred', 'Occurred:')}{' '}
+                      {new Date(job.lastRunAt || job.createdAt).toLocaleTimeString()} •{' '}
+                      {t('admin:jobs_attempts', 'Attempts: {{count}}', { count: job.retryCount })}
                     </div>
                   </div>
 
@@ -513,10 +612,10 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
                     onClick={() => handleRetryJob(job.id)}
                     variant="primary"
                     size="sm"
-                    className="gap-1.5 cursor-pointer bg-rose-600 hover:bg-rose-500"
+                    className="gap-1.5 cursor-pointer bg-rose-700 hover:bg-rose-800"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Tentar Novamente</span>
+                    <span>{t('admin:jobs_retry', 'Try Again')}</span>
                   </Button>
                 </div>
               ))}
@@ -527,35 +626,38 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 6. Duplicate Content Scanner */}
       {activeTab === 'duplicates' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Search className="w-4 h-4 text-sky-400" />
-                Varredor de Conteúdo Duplicado
+              <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+                <Search className="w-4 h-4 text-stone-600" />
+                {t('admin:duplicates_title', 'Duplicate Content Scanner')}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Detecção de termos léxicos e sentenças redundantes nas matrizes de estudo.
+              <p className="text-xs text-stone-500 mt-0.5">
+                {t('admin:duplicates_desc', 'Detection of redundant lexical terms and sentences across study matrices.')}
               </p>
             </div>
             <Button
-              onClick={() => toast.success('Varredura concluída: 0 colisões críticas detectadas.')}
+              onClick={() => toast.success(t('admin:duplicates_scan_success', 'Scan complete: 0 critical collisions detected.'))}
               variant="secondary"
               size="sm"
               className="gap-1.5 cursor-pointer"
             >
               <Search className="w-3.5 h-3.5" />
-              <span>Executar Varredura Completa</span>
+              <span>{t('admin:duplicates_run', 'Run Full Scan')}</span>
             </Button>
           </div>
 
-          <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-center space-y-2">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <div className="text-sm font-bold text-slate-200">
-              Banco de Dados Íntegro
+          <div className="p-8 bg-stone-50/70 rounded-xl border border-stone-200 text-center space-y-2">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+            <div className="font-serif text-base font-bold text-stone-900">
+              {t('admin:duplicates_healthy', 'Database Integrity Verified')}
             </div>
-            <div className="text-xs text-slate-400 max-w-md mx-auto">
-              Todas as 13 linguagens utilizam hashing determinístico para garantir que nenhuma sentença ou cartão de repetição espaçada seja duplicado no armazenamento Dexie ou Supabase.
+            <div className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
+              {t(
+                'admin:duplicates_healthy_desc',
+                'All supported languages use deterministic hashing to ensure no sentence or spaced-repetition card is duplicated in Dexie or Supabase.'
+              )}
             </div>
           </div>
         </div>
@@ -563,37 +665,35 @@ export const AdminWorkbench: React.FC<AdminWorkbenchProps> = ({
 
       {/* 7. Dataset Version Registry */}
       {activeTab === 'datasets' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Database className="w-4 h-4 text-indigo-400" />
-              Rastreamento de Versões dos Datasets Abertos
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="border-b border-stone-200 pb-3">
+            <h3 className="font-serif text-base font-bold text-stone-900 flex items-center gap-2">
+              <Database className="w-4 h-4 text-stone-600" />
+              {t('admin:datasets_title', 'Open Educational Dataset Tracking')}
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Auditoria de proveniência e integridade das fontes educacionais livres.
+            <p className="text-xs text-stone-500 mt-0.5">
+              {t('admin:datasets_desc', 'Version stamps and license compliance for offline dictionaries and corpora.')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {[
-              { name: 'Kaikki / Wiktionary Lexical Dumps', version: '2026.04-stable', license: 'CC BY-SA 3.0', count: '1.4M vocábulos' },
-              { name: 'Tatoeba Multilingual Sentence Corpus', version: 'Release 2026-Q2', license: 'CC BY 2.0 FR', count: '12M frases' },
-              { name: 'OPUS Parallel Corpus Alignments', version: 'v4.1 OpenSubtitles', license: 'Open Domain', count: '85M alinhamentos' },
-              { name: 'wordfreq Multi-corpus Prioritization', version: 'v3.2.0 (MIT)', license: 'MIT License', count: '13 Idiomas' },
-              { name: 'Project Gutenberg Catalog (Gutendex)', version: 'Index 2026.3', license: 'Public Domain', count: '70k Livros' },
-              { name: 'LanguageTool Rule Repository', version: 'v6.4-community', license: 'LGPL 2.1', count: '6.5k Regras' },
-            ].map(ds => (
+            {getLiveSourceInventory(healthRecords).map(ds => (
               <div
-                key={ds.name}
-                className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 flex items-center justify-between gap-3"
+                key={ds.id}
+                className="p-4 bg-stone-50/70 rounded-xl border border-stone-200 flex items-center justify-between gap-3"
               >
                 <div>
-                  <div className="text-xs font-bold text-slate-100">{ds.name}</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
-                    Versão: {ds.version} • {ds.count}
+                  <div className="text-xs font-bold text-stone-900">{ds.name}</div>
+                  <div className="text-[11px] text-stone-500 mt-0.5 font-mono">
+                    {ds.attribution} •{' '}
+                    {t('admin:dataset_requests_count', '{{count}} requests', {
+                      count: ds.totalRequests,
+                    })}
                   </div>
                 </div>
-                <Badge variant="indigo" size="sm">{ds.license}</Badge>
+                <Badge variant={ds.status === 'healthy' || ds.status === 'ready' ? 'emerald' : 'indigo'} size="sm">
+                  {ds.category}
+                </Badge>
               </div>
             ))}
           </div>

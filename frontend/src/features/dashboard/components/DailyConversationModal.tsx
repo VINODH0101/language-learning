@@ -54,33 +54,33 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/30 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#FDFBF7] border border-stone-200 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-800 flex items-start justify-between sticky top-0 bg-slate-900/95 backdrop-blur-md z-10">
+        <div className="p-6 border-b border-stone-200 flex items-start justify-between sticky top-0 bg-[#FDFBF7]/95 backdrop-blur-md z-10">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-700/60 text-emerald-400">
+              <span className="p-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
                 <MessageSquare className="w-4 h-4" />
               </span>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
                 {t('dashboard:daily_conversation', 'Daily Immersive Dialogue')}
               </span>
-              <Badge variant="emerald" size="sm">{conversation.cefr_level}</Badge>
+              <Badge variant="amber" size="sm">{conversation.cefr_level}</Badge>
               {conversation.country_name && (
-                <span className="flex items-center gap-1 text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
-                  <MapPin className="w-3 h-3 text-emerald-400" />
+                <span className="flex items-center gap-1 text-[11px] text-stone-600 bg-stone-100 px-2 py-0.5 rounded-full border border-stone-200">
+                  <MapPin className="w-3 h-3 text-amber-700" />
                   <span>{conversation.country_name}</span>
                 </span>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-100">{conversation.title}</h2>
-            <p className="text-xs text-slate-400">{conversation.scenario}</p>
+            <h2 className="font-serif text-xl sm:text-2xl font-bold text-stone-900">{conversation.title}</h2>
+            <p className="text-xs text-stone-500">{conversation.scenario}</p>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition cursor-pointer"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -90,13 +90,13 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
         {/* Modal Content */}
         <div className="p-6 space-y-6 flex-1">
           {/* Controls */}
-          <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+          <div className="flex items-center justify-between gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
             <Button
               variant="outline"
               size="sm"
-              icon={<Volume2 className="w-4 h-4" />}
+              icon={<Volume2 className="w-4 h-4 text-amber-700" />}
               onClick={handlePlayAll}
-              className="text-xs text-emerald-300 border-emerald-700/60 hover:bg-emerald-950/50 min-h-[38px] cursor-pointer"
+              className="text-xs text-stone-700 border-stone-300 hover:bg-stone-100 min-h-[38px] cursor-pointer"
             >
               {t('learning:play_all', 'Play Full Dialogue')}
             </Button>
@@ -106,7 +106,7 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
               size="sm"
               icon={showTranslations ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               onClick={() => setShowTranslations(!showTranslations)}
-              className="text-xs text-slate-300 hover:text-white min-h-[38px] cursor-pointer"
+              className="text-xs text-stone-600 hover:text-stone-900 min-h-[38px] cursor-pointer"
             >
               {showTranslations ? t('common:hide_translation', 'Hide Translation') : t('common:show_translation', 'Show Translation')}
             </Button>
@@ -121,22 +121,22 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
               return (
                 <div
                   key={idx}
-                  className={`p-4 rounded-2xl border transition-all ${
+                  className={`p-4 rounded-xl border transition-all ${
                     isEven
-                      ? 'bg-slate-950/70 border-slate-800 ml-0 mr-4'
-                      : 'bg-indigo-950/20 border-indigo-900/40 ml-4 mr-0'
+                      ? 'bg-white border-stone-200 ml-0 mr-4'
+                      : 'bg-amber-50/60 border-amber-200/80 ml-4 mr-0'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                          isEven ? 'bg-indigo-900 text-indigo-200' : 'bg-emerald-900 text-emerald-200'
+                          isEven ? 'bg-stone-900 text-white' : 'bg-amber-600 text-white'
                         }`}
                       >
                         {line.speaker.slice(0, 1)}
                       </div>
-                      <span className="text-xs font-bold text-slate-300">{line.speaker}</span>
+                      <span className="text-xs font-bold text-stone-700">{line.speaker}</span>
                     </div>
 
                     <button
@@ -144,8 +144,8 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
                       onClick={() => handlePlayLine(line, idx)}
                       className={`p-1.5 rounded-lg transition ${
                         isSpeaking
-                          ? 'bg-emerald-600 text-white animate-pulse'
-                          : 'bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white'
+                          ? 'bg-amber-600 text-white animate-pulse'
+                          : 'bg-stone-100 hover:bg-stone-900 text-stone-600 hover:text-white'
                       }`}
                       title="Listen"
                     >
@@ -153,12 +153,12 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
                     </button>
                   </div>
 
-                  <p className="text-sm sm:text-base font-medium text-slate-100 mt-2 pl-9 leading-relaxed">
+                  <p className="text-sm sm:text-base font-medium text-stone-900 mt-2 pl-9 leading-relaxed">
                     {line.line}
                   </p>
 
                   {showTranslations && line.translation && (
-                    <p className="text-xs text-emerald-300/80 italic mt-1.5 pl-9 leading-relaxed">
+                    <p className="text-xs text-stone-600 italic mt-1.5 pl-9 leading-relaxed">
                       {line.translation}
                     </p>
                   )}
@@ -169,12 +169,12 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
 
           {/* Cultural & Situation Note */}
           {conversation.cultural_context && (
-            <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
+            <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                <Sparkles className="w-4 h-4 text-amber-700" />
                 <span>{t('dashboard:real_world_context', 'Real-World Interaction Tips')}</span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <p className="text-xs text-stone-700 leading-relaxed">
                 {conversation.cultural_context}
               </p>
             </div>
@@ -182,11 +182,11 @@ export const DailyConversationModal: React.FC<DailyConversationModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-800 flex items-center justify-between sticky bottom-0 bg-slate-900/95 backdrop-blur-md">
+        <div className="p-4 border-t border-stone-200 flex items-center justify-between sticky bottom-0 bg-[#FDFBF7]/95 backdrop-blur-md">
           <Button
             variant={isCompleted ? 'secondary' : 'primary'}
             size="sm"
-            icon={<CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-emerald-400' : ''}`} />}
+            icon={<CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-amber-700' : ''}`} />}
             onClick={handleMarkComplete}
             disabled={isCompleted}
             className="min-h-[40px] text-xs cursor-pointer"

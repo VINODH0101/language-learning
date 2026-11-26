@@ -22,15 +22,15 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg transition-all ${
-        hoverable ? 'hover:border-slate-700 hover:shadow-xl cursor-pointer' : ''
+      className={`bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm transition-all ${
+        hoverable ? 'hover:border-stone-300 hover:shadow-md cursor-pointer' : ''
       } ${className}`}
     >
       {(title || subtitle || action) && (
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between gap-4">
+        <div className="px-5 py-4 border-b border-stone-200 flex items-center justify-between gap-4">
           <div>
-            {title && <h3 className="text-base font-semibold text-slate-100">{title}</h3>}
-            {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+            {title && <h3 className="text-base font-serif font-bold text-stone-900">{title}</h3>}
+            {subtitle && <p className="text-xs text-stone-500 mt-0.5">{subtitle}</p>}
           </div>
           {action && <div className="shrink-0">{action}</div>}
         </div>

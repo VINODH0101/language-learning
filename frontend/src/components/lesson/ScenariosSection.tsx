@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MessageSquare,
   Sparkles,
@@ -13,11 +13,13 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { Language, DialogueScenario } from '../../types';
-import { dialogueScenarios } from '../../data/scenarioData';
+import { dailyContentService } from '../../services/dailyContentService';
+import { contentAccess } from '../../services/contentAccess';
 import { AudioButton } from '../common/AudioButton';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 
 interface ScenariosSectionProps {
   language: Language;
@@ -28,10 +30,60 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
   language,
   variety,
 }) => {
-  const { t } = useI18n();
-  const scenarios = dialogueScenarios.filter(s => s.language === language);
-  const [selectedId, setSelectedId] = useState<string>(scenarios[0]?.id || '');
+  const { t, interfaceLanguage } = useI18n();
+  const [scenarios, setScenarios] = useState<DialogueScenario[]>([]);
+  const [selectedId, setSelectedId] = useState<string>('');
   const [showTranslations, setShowTranslations] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [daily, aiConvos] = await Promise.all([
+          dailyContentService.getAllContent(),
+          contentAccess.getPublishedConversations(language).catch(() => []),
+        ]);
+        const merged = [
+          ...aiConvos,
+          ...daily.activeConversations.filter(c => c.learning_language === language),
+          ...daily.archivedConversations.filter(c => c.learning_language === language),
+        ];
+        const unique = new Map<string, DialogueScenario>();
+        for (const c of merged) {
+          if (unique.has(c.id)) continue;
+          unique.set(c.id, {
+            id: c.id,
+            language: c.learning_language,
+            title: c.title,
+            category: 'daily_life' as DialogueScenario['category'],
+            cefr_level: c.cefr_level,
+            context: c.scenario || c.cultural_context,
+            turns: c.dialogue.map(turn => ({
+              speaker: turn.speaker,
+              line: turn.line,
+              translation: turn.translation || '',
+              natural_translation: turn.translation,
+              translation_pt: c.learning_language === 'pt' ? turn.line : turn.translation,
+              translation_es: c.learning_language === 'es' ? turn.line : turn.translation,
+            })),
+            pragmatic_tips: c.cultural_context ? [c.cultural_context] : [],
+            vocabulary: [],
+          });
+        }
+        if (!cancelled) {
+          const list = Array.from(unique.values());
+          setScenarios(list);
+          setSelectedId(prev => prev || list[0]?.id || '');
+        }
+      } catch {
+        if (!cancelled) setScenarios([]);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   const activeScenario = scenarios.find(s => s.id === selectedId) || scenarios[0];
 
@@ -174,13 +226,13 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
                     <>
                       <div>
                         <span className="text-[10px] uppercase font-bold text-indigo-400 block">
-                          Tradução em Português (PT):
+                          {getLanguageName('pt', interfaceLanguage as any)} (PT):
                         </span>
                         <p className="text-slate-200">{turn.translation_pt || turn.translation}</p>
                       </div>
                       <div className="pt-1.5 border-t border-slate-800/60">
                         <span className="text-[10px] uppercase font-bold text-emerald-400 block">
-                          Traducción en Español (ES):
+                          {getLanguageName('es', interfaceLanguage as any)} (ES):
                         </span>
                         <p className="text-slate-200">{turn.translation_es || turn.translation}</p>
                       </div>
@@ -189,7 +241,7 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
                     <>
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                          English Translation (EN):
+                          {getLanguageName('en', interfaceLanguage as any)} (EN):
                         </span>
                         <p className="text-slate-200">{turn.natural_translation || turn.translation}</p>
                       </div>

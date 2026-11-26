@@ -152,8 +152,9 @@ class SyncEngine {
         if (item.retry_count > 0) {
           const jitter = Math.floor(Math.random() * 500);
           const backoffMs = Math.min(30000, 1000 * Math.pow(2, item.retry_count) + jitter);
-          const itemAgeMs = Date.now() - new Date(item.created_at).getTime();
-          if (itemAgeMs < backoffMs) {
+          const lastAttempt = item.last_attempted_at ? new Date(item.last_attempted_at).getTime() : new Date(item.created_at).getTime();
+          const elapsedMs = Date.now() - lastAttempt;
+          if (elapsedMs < backoffMs) {
             continue; // Skip until backoff window expires
           }
         }
@@ -351,6 +352,189 @@ class SyncEngine {
           mastery_status: srs.mastery_status || 'presented',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id, vocabulary_item_id' });
+
+        return !error;
+      }
+
+      // --- Content-Centred Platform Synchronization (Phase 7 / Milestone 7.8) ---
+      if (item.action === 'SYNC_LEARNER_PROGRESS') {
+        const prog = item.payload as any;
+
+        // Seed/legacy content uses non-UUID ids that cannot be inserted into
+        // UUID foreign-key columns. Keep such progress local-only and do not
+        // repeatedly fail (and re-queue) on a guaranteed FK violation.
+        if (!isValidUuid(prog.content_item_id)) {
+          return true;
+        }
+        if (prog.content_version_id && !isValidUuid(prog.content_version_id)) {
+          return true;
+        }
+
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          content_item_id: prog.content_item_id,
+          content_version_id: prog.content_version_id,
+          status: prog.status || 'in_progress',
+          percent_complete: prog.percent_complete ?? 0,
+          completed_activity_ids: prog.completed_activity_ids || [],
+          time_spent_seconds: prog.time_spent_seconds ?? 0,
+          comprehension_score: prog.comprehension_score ?? null,
+          client_mutation_id: prog.client_mutation_id || item.id,
+          first_opened_at: prog.first_opened_at || new Date().toISOString(),
+          last_studied_at: prog.last_studied_at || new Date().toISOString(),
+          completed_at: prog.completed_at || null,
+          updated_at: new Date().toISOString(),
+        };
+        if (prog.id && isValidUuid(prog.id)) {
+          payload.id = prog.id;
+        }
+
+        // Monotonic progress merging to prevent out-of-order regressions (RISK-809)
+        const { data: existingProg } = await supabase
+          .from('learner_content_progress')
+          .select('percent_complete, time_spent_seconds, completed_activity_ids, completed_at')
+          .eq('user_id', userId)
+          .eq('content_item_id', prog.content_item_id)
+          .maybeSingle();
+
+        if (existingProg) {
+          payload.percent_complete = Math.max(Number(prog.percent_complete ?? 0), Number(existingProg.percent_complete ?? 0));
+          payload.time_spent_seconds = Math.max(Number(prog.time_spent_seconds ?? 0), Number(existingProg.time_spent_seconds ?? 0));
+          const unionActivities = Array.from(new Set([
+            ...(prog.completed_activity_ids || []),
+            ...(existingProg.completed_activity_ids || [])
+          ]));
+          payload.completed_activity_ids = unionActivities;
+          if (payload.percent_complete === 100) {
+            payload.completed_at = prog.completed_at || existingProg.completed_at || new Date().toISOString();
+          }
+        }
+
+        const { error } = await supabase
+          .from('learner_content_progress')
+          .upsert(payload, { onConflict: 'user_id,content_item_id' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_USER_SAVED_WORD') {
+        const w = item.payload as any;
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          target_language: w.target_language,
+          explanation_language: w.explanation_language,
+          term: w.term,
+          lemma: w.lemma,
+          pos: w.pos || 'other',
+          cefr_level: w.cefr_level || null,
+          definition: w.definition,
+          context_sentence: w.context_sentence || null,
+          context_translation: w.context_translation || null,
+          source_content_id: isValidUuid(w.source_content_id) ? w.source_content_id : null,
+          source_version_id: isValidUuid(w.source_version_id) ? w.source_version_id : null,
+          audio_url: w.audio_url || null,
+          ipa: w.ipa || null,
+          client_mutation_id: w.client_mutation_id || item.id,
+          ease_factor: w.ease_factor ?? 2.5,
+          interval_days: w.interval_days ?? 0,
+          repetitions: w.repetitions ?? 0,
+          lapses: w.lapses ?? 0,
+          last_reviewed_at: w.last_reviewed_at || null,
+          next_review: w.next_review || new Date().toISOString().split('T')[0],
+          state: w.state || 'learning',
+          updated_at: new Date().toISOString(),
+        };
+        if (w.id && isValidUuid(w.id)) {
+          payload.id = w.id;
+        }
+
+        // Guard against out-of-order review snapshots overwriting newer reviews (RISK-809)
+        const { data: existingWord } = await supabase
+          .from('user_saved_words')
+          .select('last_reviewed_at, repetitions, ease_factor, interval_days, next_review, state')
+          .eq('user_id', userId)
+          .eq('target_language', w.target_language)
+          .eq('lemma', w.lemma)
+          .eq('pos', w.pos || 'other')
+          .eq('explanation_language', w.explanation_language)
+          .maybeSingle();
+
+        if (existingWord) {
+          const remoteTime = existingWord.last_reviewed_at ? new Date(existingWord.last_reviewed_at).getTime() : 0;
+          const localTime = w.last_reviewed_at ? new Date(w.last_reviewed_at).getTime() : 0;
+          if (remoteTime > localTime) {
+            // Remote has a newer review. Preserve remote SRS scheduling to prevent regression.
+            payload.repetitions = existingWord.repetitions;
+            payload.ease_factor = existingWord.ease_factor;
+            payload.interval_days = existingWord.interval_days;
+            payload.next_review = existingWord.next_review;
+            payload.last_reviewed_at = existingWord.last_reviewed_at;
+            payload.state = existingWord.state;
+          }
+        }
+
+        const { error } = await supabase
+          .from('user_saved_words')
+          .upsert(payload, { onConflict: 'user_id,target_language,lemma,pos,explanation_language' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_USER_MISTAKE') {
+        const m = item.payload as any;
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          content_item_id: isValidUuid(m.content_item_id) ? m.content_item_id : null,
+          content_version_id: isValidUuid(m.content_version_id) ? m.content_version_id : null,
+          activity_id: isValidUuid(m.activity_id) ? m.activity_id : null,
+          activity_type: m.activity_type || 'reading_comprehension',
+          error_category: m.error_category || 'general',
+          stimulus: m.stimulus,
+          user_response: m.user_response,
+          correct_response: m.correct_response,
+          pedagogical_explanation: m.pedagogical_explanation,
+          status: m.status || 'unresolved',
+          occurrences_count: m.occurrences_count ?? 1,
+          client_mutation_id: m.client_mutation_id || item.id,
+          first_occurred_at: m.first_occurred_at || new Date().toISOString(),
+          last_occurred_at: m.last_occurred_at || new Date().toISOString(),
+          resolved_at: m.resolved_at || null,
+          updated_at: new Date().toISOString(),
+        };
+        if (m.id && isValidUuid(m.id)) {
+          payload.id = m.id;
+        }
+
+        const { error } = await supabase
+          .from('user_mistakes')
+          .upsert(payload, { onConflict: 'id' });
+
+        return !error;
+      }
+
+      if (item.action === 'SYNC_WORD_REVIEW_EVENT') {
+        const ev = item.payload as any;
+        if (!isValidUuid(ev.saved_word_id)) {
+          return true;
+        }
+        const payload: Record<string, unknown> = {
+          user_id: userId,
+          saved_word_id: ev.saved_word_id,
+          rating: ev.rating,
+          previous_interval_days: ev.previous_interval_days ?? 0,
+          new_interval_days: ev.new_interval_days ?? 1,
+          previous_ease_factor: ev.previous_ease_factor ?? 2.5,
+          new_ease_factor: ev.new_ease_factor ?? 2.5,
+          client_mutation_id: ev.client_mutation_id || item.id,
+          reviewed_at: ev.reviewed_at || new Date().toISOString(),
+        };
+        if (ev.id && isValidUuid(ev.id)) {
+          payload.id = ev.id;
+        }
+
+        const { error } = await supabase
+          .from('user_word_review_events')
+          .insert(payload);
 
         return !error;
       }

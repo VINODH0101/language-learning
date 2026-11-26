@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "Kan de editie van vandaag niet laden",
+  "err_continue": "Kan leervoortgang niet laden",
+  "err_vocab": "Kan woordenschatstatistieken niet laden",
+  "err_recent": "Kan recente activiteiten niet laden",
+  "culture_preview_empty": "Nog geen culturele artikelen geladen. Open Landen Verkennen om live gegevens uit Wikipedia & AI-engine op te halen."
 }

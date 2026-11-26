@@ -45,8 +45,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     const nextStatus = user.account_status === 'active' ? 'disabled' : 'active';
     const confirmMsg =
       nextStatus === 'disabled'
-        ? `Tem certeza de que deseja desativar o acesso de ${user.email}? O usuário não conseguirá fazer login.`
-        : `Deseja reativar o acesso da conta ${user.email}?`;
+        ? t(
+            'admin:user_confirm_disable',
+            'Are you sure you want to disable access for {{email}}? The user will not be able to sign in.',
+            { email: user.email }
+          )
+        : t('admin:user_confirm_enable', 'Reactivate access for {{email}}?', {
+            email: user.email,
+          });
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -57,13 +63,17 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     if (ok) {
       toast.success(
         nextStatus === 'disabled'
-          ? `Conta de ${user.email} desativada.`
-          : `Conta de ${user.email} reativada.`
+          ? t('admin:user_status_disabled_success', 'Account {{email}} disabled.', {
+              email: user.email,
+            })
+          : t('admin:user_status_enabled_success', 'Account {{email}} reactivated.', {
+              email: user.email,
+            })
       );
       onRefresh();
       onClose();
     } else {
-      toast.error('Erro ao alterar status da conta.');
+      toast.error(t('admin:user_status_error', 'Error changing account status.'));
     }
   };
 
@@ -71,8 +81,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     const nextRole = user.role === 'admin' ? 'user' : 'admin';
     const confirmMsg =
       nextRole === 'admin'
-        ? `ATENÇÃO: Conceder privilégios de Administrador a ${user.email}? O usuário terá acesso completo aos dados de todos os alunos.`
-        : `Revogar privilégios administrativos de ${user.email}?`;
+        ? t(
+            'admin:user_confirm_grant_admin',
+            'WARNING: Grant administrator privileges to {{email}}? The user will have full access to all learner data.',
+            { email: user.email }
+          )
+        : t('admin:user_confirm_revoke_admin', 'Revoke administrative privileges from {{email}}?', {
+            email: user.email,
+          });
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -83,19 +99,23 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     if (ok) {
       toast.success(
         nextRole === 'admin'
-          ? `${user.email} promovido a Administrador.`
-          : `Permissões de administrador revogadas para ${user.email}.`
+          ? t('admin:user_grant_admin_success', '{{email}} promoted to Administrator.', {
+              email: user.email,
+            })
+          : t('admin:user_revoke_admin_success', 'Administrator permissions revoked for {{email}}.', {
+              email: user.email,
+            })
       );
       onRefresh();
       onClose();
     } else {
-      toast.error('Erro ao alterar permissão do usuário.');
+      toast.error(t('admin:user_role_error', 'Error changing user permission.'));
     }
   };
 
   const handleDeleteUser = async () => {
     if (deleteConfirmEmail !== user.email) {
-      toast.error('O email informado para confirmação não coincide.');
+      toast.error(t('admin:user_delete_email_mismatch', 'The confirmation email does not match.'));
       return;
     }
 
@@ -104,38 +124,42 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       deleted_email: user.email,
     });
     setLoading(false);
-    toast.success(`Conta de ${user.email} excluída com sucesso.`);
+    toast.success(
+      t('admin:user_delete_success', 'Account {{email}} deleted successfully.', {
+        email: user.email,
+      })
+    );
     onRefresh();
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-50/80 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white border border-stone-200 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-6 border-b border-stone-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-950 border border-indigo-700/60 flex items-center justify-center text-indigo-400">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-700">
               <User className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-100">{user.full_name}</h2>
+                <h2 className="text-base font-bold text-stone-900">{user.full_name}</h2>
                 <Badge variant={user.account_status === 'active' ? 'emerald' : 'rose'} size="sm">
-                  {user.account_status === 'active' ? 'Ativo' : 'Desativado'}
+                  {user.account_status === 'active' ? t('admin:users_active', 'Active') : t('admin:users_suspended', 'Suspended')}
                 </Badge>
                 {user.role === 'admin' && (
                   <Badge variant="indigo" size="sm">
-                    Administrador
+                    {t('admin:user_admin_role', 'Administrator')}
                   </Badge>
                 )}
               </div>
-              <span className="text-xs text-slate-400 font-mono">{user.email}</span>
+              <span className="text-xs text-stone-500 font-mono">{user.email}</span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
+            className="text-stone-500 hover:text-stone-800 p-1 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -145,71 +169,71 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         <div className="p-6 space-y-6 overflow-y-auto">
           {/* Identity & Account Specs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 text-xs">
-              <span className="text-[10px] text-slate-400 font-semibold uppercase block">Idioma Interface</span>
-              <span className="font-bold text-slate-200 uppercase font-mono">{user.interface_language}</span>
+            <div className="p-3 bg-stone-100/60 rounded-xl border border-stone-300/60 text-xs">
+              <span className="text-[10px] text-stone-500 font-semibold uppercase block">{t('admin:user_interface_language', 'Interface Language')}</span>
+              <span className="font-bold text-stone-800 uppercase font-mono">{user.interface_language}</span>
             </div>
-            <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 text-xs">
-              <span className="text-[10px] text-slate-400 font-semibold uppercase block">Idioma Alvo</span>
-              <span className="font-bold text-slate-200 uppercase font-mono">{user.primary_target_language}</span>
+            <div className="p-3 bg-stone-100/60 rounded-xl border border-stone-300/60 text-xs">
+              <span className="text-[10px] text-stone-500 font-semibold uppercase block">{t('admin:user_target_language', 'Target Language')}</span>
+              <span className="font-bold text-stone-800 uppercase font-mono">{user.primary_target_language}</span>
             </div>
-            <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 text-xs">
-              <span className="text-[10px] text-slate-400 font-semibold uppercase block">Meta Diária</span>
-              <span className="font-bold text-slate-200 font-mono">{user.daily_goal_minutes} min/dia</span>
+            <div className="p-3 bg-stone-100/60 rounded-xl border border-stone-300/60 text-xs">
+              <span className="text-[10px] text-stone-500 font-semibold uppercase block">{t('admin:user_daily_goal', 'Daily Goal')}</span>
+              <span className="font-bold text-stone-800 font-mono">{user.daily_goal_minutes} min</span>
             </div>
-            <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 text-xs">
-              <span className="text-[10px] text-slate-400 font-semibold uppercase block">Email Diário</span>
-              <span className="font-bold text-slate-200">
-                {user.email_daily_lesson_opt_in ? 'Opt-In Ativo' : 'Não Inscrito'}
+            <div className="p-3 bg-stone-100/60 rounded-xl border border-stone-300/60 text-xs">
+              <span className="text-[10px] text-stone-500 font-semibold uppercase block">{t('admin:user_daily_email', 'Daily Email')}</span>
+              <span className="font-bold text-stone-800">
+                {user.email_daily_lesson_opt_in ? t('admin:user_opt_in_active', 'Opt-In Active') : t('admin:user_not_subscribed', 'Not Subscribed')}
               </span>
             </div>
           </div>
 
           {/* Real Learning Telemetry & Performance */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Award className="w-4 h-4" /> Estatísticas Reais de Aprendizagem
+            <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Award className="w-4 h-4" /> {t('admin:user_stats_title', 'Real Learning Statistics')}
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 text-xs">
-                <span className="text-slate-400 block text-[10px] uppercase">Lições Concluídas</span>
-                <span className="text-base font-extrabold text-emerald-400">
+              <div className="p-3 bg-stone-100/40 rounded-xl border border-stone-300/50 text-xs">
+                <span className="text-stone-500 block text-[10px] uppercase">{t('admin:user_lessons_completed', 'Lessons Completed')}</span>
+                <span className="text-base font-extrabold text-emerald-700">
                   {user.total_lessons_completed || 0}
                 </span>
               </div>
-              <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 text-xs">
-                <span className="text-slate-400 block text-[10px] uppercase">Vocábulos Salvos</span>
-                <span className="text-base font-extrabold text-sky-400">
+              <div className="p-3 bg-stone-100/40 rounded-xl border border-stone-300/50 text-xs">
+                <span className="text-stone-500 block text-[10px] uppercase">{t('admin:user_saved_words', 'Saved Words')}</span>
+                <span className="text-base font-extrabold text-sky-700">
                   {user.saved_vocabulary_count || 0}
                 </span>
               </div>
-              <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 text-xs">
-                <span className="text-slate-400 block text-[10px] uppercase">Acurácia Exercícios</span>
-                <span className="text-base font-extrabold text-amber-400">
+              <div className="p-3 bg-stone-100/40 rounded-xl border border-stone-300/50 text-xs">
+                <span className="text-stone-500 block text-[10px] uppercase">{t('admin:user_exercise_accuracy', 'Exercise Accuracy')}</span>
+                <span className="text-base font-extrabold text-amber-700">
                   {user.accuracy_rate || 0}%
                 </span>
               </div>
-              <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 text-xs">
-                <span className="text-slate-400 block text-[10px] uppercase">Ofensiva de Estudo</span>
-                <span className="text-base font-extrabold text-rose-400">
-                  {user.streak_days || 0} dias
+              <div className="p-3 bg-stone-100/40 rounded-xl border border-stone-300/50 text-xs">
+                <span className="text-stone-500 block text-[10px] uppercase">{t('admin:user_streak', 'Study Streak')}</span>
+                <span className="text-base font-extrabold text-rose-700">
+                  {user.streak_days || 0} {t('admin:user_days_unit', 'days')}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Account Timestamps */}
-          <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 space-y-1">
+          <div className="p-3.5 rounded-xl bg-stone-50/60 border border-stone-200 text-xs text-stone-500 space-y-1">
             <div className="flex justify-between">
-              <span>Data de Registro:</span>
-              <span className="text-slate-200 font-mono">
+              <span>{t('admin:user_registered_at', 'Registered At:')}</span>
+              <span className="text-stone-800 font-mono">
                 {new Date(user.created_at).toLocaleString()}
               </span>
             </div>
             {user.last_active_at && (
               <div className="flex justify-between">
-                <span>Última Atividade Registrada:</span>
-                <span className="text-slate-200 font-mono">
+                <span>{t('admin:user_last_active', 'Last Recorded Activity:')}</span>
+                <span className="text-stone-800 font-mono">
                   {new Date(user.last_active_at).toLocaleString()}
                 </span>
               </div>
@@ -217,9 +241,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           </div>
 
           {/* Administrative Actions */}
-          <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/60 space-y-3">
-            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-              Ações Administrativas Governança
+          <div className="p-4 rounded-2xl bg-stone-100/40 border border-stone-300/60 space-y-3">
+            <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+              {t('admin:user_admin_actions', 'Administrative Actions & Governance')}
             </h4>
             <div className="flex flex-wrap gap-2.5">
               <Button
@@ -244,7 +268,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-rose-400 hover:text-rose-300 border-rose-800/60"
+                className="text-rose-700 hover:text-rose-300 border-rose-200/60"
                 icon={<Trash2 className="w-3.5 h-3.5" />}
                 onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
                 disabled={loading}
@@ -255,13 +279,13 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
             {/* Account Deletion Double Confirmation */}
             {showDeleteConfirm && (
-              <div className="mt-3 p-4 rounded-xl bg-rose-950/30 border border-rose-800/70 space-y-3 animate-fadeIn">
+              <div className="mt-3 p-4 rounded-xl bg-rose-50 border border-rose-200/70 space-y-3 animate-fadeIn">
                 <div className="flex items-center gap-2 text-rose-300 text-xs font-bold">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span>Ação Crítica e Irreversível</span>
+                  <AlertTriangle className="w-4 h-4 text-rose-700 shrink-0" />
+                  <span>{t('admin:user_critical_action', 'Critical & Irreversible Action')}</span>
                 </div>
-                <p className="text-xs text-rose-200/90 leading-relaxed">
-                  Para confirmar a exclusão permanente de todos os dados deste usuário, digite o email exato: <strong>{user.email}</strong>
+                <p className="text-xs text-rose-800/90 leading-relaxed">
+                  {t('admin:user_delete_confirm_prefix', 'To permanently delete all data for this user, type the exact email:')} <strong>{user.email}</strong>
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -269,7 +293,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                     value={deleteConfirmEmail}
                     onChange={(e) => setDeleteConfirmEmail(e.target.value)}
                     placeholder={user.email}
-                    className="flex-1 bg-slate-900 border border-rose-800 rounded-lg p-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
+                    className="flex-1 bg-white border border-rose-200 rounded-lg p-2 text-xs text-stone-900 placeholder-stone-400 focus:outline-none"
                   />
                   <Button
                     variant="danger"
@@ -277,7 +301,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                     disabled={deleteConfirmEmail !== user.email || loading}
                     onClick={handleDeleteUser}
                   >
-                    Confirmar Exclusão
+                    {t('admin:user_confirm_delete', 'Confirm Deletion')}
                   </Button>
                 </div>
               </div>
@@ -286,9 +310,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 flex justify-end bg-slate-900/60">
+        <div className="p-4 border-t border-stone-200 flex justify-end bg-white/60">
           <Button variant="outline" size="sm" onClick={onClose}>
-            Fechar
+            {t('admin:user_close', 'Close')}
           </Button>
         </div>
       </div>

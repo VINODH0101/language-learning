@@ -44,7 +44,7 @@ export class VoskProvider extends BaseProvider<VoskRecognitionInput, string> {
     return `${input.language}:${input.audioBlob.size}`;
   }
 
-  protected async fetchRaw(input: VoskRecognitionInput): Promise<unknown> {
+  protected async fetchRaw(_input: VoskRecognitionInput): Promise<unknown> {
     // Simulated WASM / WebWorker Vosk dispatch
     if (typeof window === 'undefined') {
       throw new ProviderUnavailableError(this.metadata.id, 501, 'Vosk offline speech recognition requer ambiente do navegador.');

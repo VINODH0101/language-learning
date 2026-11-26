@@ -15,19 +15,34 @@ import {
   Menu,
   X,
   ChevronDown,
-  Library,
   BookMarked,
+  Bookmark,
+  AlertTriangle,
+  ArrowLeft,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/i18nContext';
-import { InterfaceLanguage } from '../../i18n/translations';
 import { authService, AuthState } from '../../services/auth';
 import { courseService } from '../../services/courseService';
 import { Logo } from './Logo';
 import { InterfaceLanguageSelector } from './InterfaceLanguageSelector';
 import { SyncStatusBadge } from './SyncStatusBadge';
 import { BRANDING } from '../../config/branding';
+import {
+  getLanguageName,
+  LANGUAGE_METADATA,
+  LearningLanguage,
+} from '../../lib/languages/languageMatrix';
+import {
+  ADMIN_PRIMARY_DESTINATIONS,
+  AdminPrimaryDestination,
+  AdminWorkbenchTab,
+  DEFAULT_ADMIN_DESTINATION,
+} from '../../features/admin/adminNavigation';
 
 export type NavTab =
+  | 'learn'
+  | 'words'
+  | 'mistakes'
   | 'dashboard'
   | 'explore'
   | 'vocabulary'
@@ -43,21 +58,37 @@ export type NavTab =
 interface NavigationProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
+  adminTab?: AdminWorkbenchTab;
+  onSelectAdminTab?: (tab: AdminWorkbenchTab) => void;
   streakDays?: number;
   onOpenAuth: () => void;
   onOpenOnboarding: () => void;
 }
 
+const ADMIN_DESTINATION_ICONS = {
+  overview: LayoutDashboard,
+  content_studio: BookOpen,
+  content_import: Sparkles,
+  processing_studio: TrendingUp,
+  review: Shield,
+  settings: Settings,
+} as const;
+
 export const Navigation: React.FC<NavigationProps> = ({
   activeTab,
   onSelectTab,
+  adminTab,
+  onSelectAdminTab,
   onOpenAuth,
   onOpenOnboarding,
 }) => {
-  const { t, interfaceLanguage, setInterfaceLanguage } = useI18n();
+  const { t, interfaceLanguage } = useI18n();
   const [authState, setAuthState] = useState<AuthState>(authService.getState());
+  const [activeCourse, setActiveCourse] = useState(() => courseService.getActiveCourse());
   const [isLearnDropdownOpen, setIsLearnDropdownOpen] = useState(false);
+  const [isNotebooksDropdownOpen, setIsNotebooksDropdownOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(() => {
     try {
       if (typeof window !== 'undefined' && window.location.search) {
@@ -66,44 +97,56 @@ export const Navigation: React.FC<NavigationProps> = ({
     } catch {}
     return false;
   });
+
   const learnDropdownRef = useRef<HTMLDivElement>(null);
+  const notebooksDropdownRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const adminMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubAuth = authService.subscribe(setAuthState);
-    return () => {
-      unsubAuth();
-    };
+    return () => unsubAuth();
   }, []);
 
   useEffect(() => {
-    // Apply saved font size if previously set in settings/localStorage
+    const unsubCourse = courseService.subscribe((_courses, active) => {
+      setActiveCourse(active);
+    });
+    return () => unsubCourse();
+  }, []);
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem('polyglot_font_size');
       const root = document.documentElement;
-      if (saved === 'large') {
-        root.style.fontSize = '17px';
-      } else if (saved === 'xlarge') {
-        root.style.fontSize = '18.5px';
-      } else {
-        root.style.fontSize = '16px';
-      }
+      if (saved === 'large') root.style.fontSize = '17px';
+      else if (saved === 'xlarge') root.style.fontSize = '18.5px';
+      else root.style.fontSize = '16px';
     } catch {}
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (learnDropdownRef.current && !learnDropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (learnDropdownRef.current && !learnDropdownRef.current.contains(target)) {
         setIsLearnDropdownOpen(false);
       }
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+      if (notebooksDropdownRef.current && !notebooksDropdownRef.current.contains(target)) {
+        setIsNotebooksDropdownOpen(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
         setIsProfileMenuOpen(false);
+      }
+      if (adminMenuRef.current && !adminMenuRef.current.contains(target)) {
+        setIsAdminMenuOpen(false);
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsLearnDropdownOpen(false);
+        setIsNotebooksDropdownOpen(false);
         setIsProfileMenuOpen(false);
         setIsMobileDrawerOpen(false);
+        setIsAdminMenuOpen(false);
       }
     };
 
@@ -128,21 +171,45 @@ export const Navigation: React.FC<NavigationProps> = ({
   const handleSelectNavTab = (tab: NavTab) => {
     onSelectTab(tab);
     setIsLearnDropdownOpen(false);
+    setIsNotebooksDropdownOpen(false);
     setIsProfileMenuOpen(false);
     setIsMobileDrawerOpen(false);
   };
 
-  // Determine active course track for smart mobile navigation
   const getActiveCourseTab = (): NavTab => {
     try {
-      const activeCourse = courseService.getActiveCourse();
-      if (activeCourse?.target_language === 'es') return 'spanish';
-      if (activeCourse?.target_language === 'en') return 'english';
-      return 'portuguese';
+      const lang = courseService.getActiveCourse()?.target_language;
+      if (lang === 'pt') return 'portuguese';
+      if (lang === 'es') return 'spanish';
+      if (lang === 'en') return 'english';
+      return 'learn';
     } catch {
-      return 'portuguese';
+      return 'learn';
     }
   };
+
+  // Four-way decoupling: language labels localized strictly by interfaceLanguage
+  const targetLanguage = (activeCourse?.target_language || 'pt') as LearningLanguage;
+  const targetLanguageName = getLanguageName(targetLanguage, interfaceLanguage as any);
+  const explanationLanguageName = getLanguageName(
+    (activeCourse?.explanation_language || 'en') as LearningLanguage,
+    interfaceLanguage as any
+  );
+  const targetLanguageFlag = LANGUAGE_METADATA[targetLanguage]?.flag || '🌐';
+
+  const languageContext = (
+    <span
+      className="inline-flex items-center gap-1 min-w-0"
+      title={`${targetLanguageName} · ${t('dashboard:explanations_in', 'Explanations in')} ${explanationLanguageName}`}
+    >
+      <span aria-hidden="true">{targetLanguageFlag}</span>
+      <span className="truncate">{targetLanguageName}</span>
+      <span className="hidden xl:inline text-stone-400" aria-hidden="true">·</span>
+      <span className="hidden xl:inline truncate">
+        {t('dashboard:explanations_in', 'Explanations in')} {explanationLanguageName}
+      </span>
+    </span>
+  );
 
   const isLearnActive = [
     'portuguese',
@@ -153,204 +220,402 @@ export const Navigation: React.FC<NavigationProps> = ({
     'explore',
   ].includes(activeTab);
 
-  const curriculumTracks = [
-    {
-      id: 'portuguese' as NavTab,
-      label: t('nav_portuguese'),
-      desc: t('track_portuguese_desc', 'Trilha Imersiva C1 / B2'),
-      badge: 'PT',
-      flag: '🇵🇹',
-    },
-    {
-      id: 'spanish' as NavTab,
-      label: t('nav_spanish'),
-      desc: t('track_spanish_desc', 'Trilha Imersiva C1 / B2'),
-      badge: 'ES',
-      flag: '🇪🇸',
-    },
-    {
-      id: 'english' as NavTab,
-      label: t('nav_english'),
-      desc: t('track_english_desc', 'Trilha para Falantes PT/ES'),
-      badge: 'EN',
-      flag: '🇬🇧',
-    },
-  ];
+  const isNotebooksActive = activeTab === 'words' || activeTab === 'mistakes';
+
+  const trackRoutes: Record<'pt' | 'es' | 'en', NavTab> = {
+    pt: 'portuguese',
+    es: 'spanish',
+    en: 'english',
+  };
+
+  const curriculumTracks = (['pt', 'es', 'en'] as const).map(code => ({
+    id: trackRoutes[code],
+    label: getLanguageName(code, interfaceLanguage as any),
+    desc: t(`navigation:track_${code}_desc`, 'Immersive Track'),
+    badge: code.toUpperCase(),
+    flag: LANGUAGE_METADATA[code].flag,
+    isCurrent: targetLanguage === code,
+  }));
 
   const studyTools = [
     {
       id: 'vocabulary' as NavTab,
       label: t('nav_vocabulary'),
-      desc: t('tool_vocabulary_desc', 'Top 200 & Frases do Cotidiano'),
+      desc: t('tool_vocabulary_desc', 'Top 200 & Everyday Phrases'),
       badge: 'VOCAB',
       icon: BookMarked,
     },
     {
       id: 'translate' as NavTab,
       label: t('nav_translate'),
-      desc: t('tool_translate_desc', 'Dicionário Bilíngue & Tradução'),
+      desc: t('tool_translate_desc', 'Bilingual Dictionary & Translation'),
       badge: 'DICT',
       icon: Languages,
     },
     {
       id: 'explore' as NavTab,
       label: t('nav_explore'),
-      desc: t('tool_explore_desc', 'Imersão Cultural & Leituras Globais'),
-      badge: 'CULTURE',
+      desc: t('tool_explore_desc', 'Cultural Immersion & Global Readings'),
+      badge: 'WORLD',
       icon: Compass,
+    },
+  ];
+
+  const notebookItems = [
+    {
+      id: 'words' as NavTab,
+      label: t('navigation:nav_words', 'My Words'),
+      desc: t('navigation:tool_words_desc', 'Saved vocabulary & SM-2 cards'),
+      icon: Bookmark,
+      accentClass: 'text-amber-600',
+    },
+    {
+      id: 'mistakes' as NavTab,
+      label: t('navigation:nav_mistakes', 'My Mistakes'),
+      desc: t('navigation:tool_mistakes_desc', 'Error review & targeted practice'),
+      icon: AlertTriangle,
+      accentClass: 'text-rose-600',
     },
   ];
 
   const handleMobileLearnClick = () => {
     if (isLearnActive) {
-      // If user is already on a learning tab, open the drawer for quick course switching
       setIsMobileDrawerOpen(true);
     } else {
       handleSelectNavTab(getActiveCourseTab());
     }
   };
 
+  const desktopItemClass = (active: boolean) =>
+    `relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors duration-150 min-h-[44px] cursor-pointer whitespace-nowrap rounded-lg ${
+      active
+        ? 'text-stone-900 font-semibold'
+        : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100/70'
+    }`;
+
+  const activeUnderline = (active: boolean) =>
+    active ? (
+      <span
+        className="absolute inset-x-2.5 bottom-0.5 h-[2px] rounded-full bg-amber-600"
+        aria-hidden="true"
+      />
+    ) : null;
+
+  const currentAdminTab: AdminWorkbenchTab = adminTab ?? DEFAULT_ADMIN_DESTINATION;
+  const currentAdminDestination =
+    ADMIN_PRIMARY_DESTINATIONS.find(destination => destination.id === currentAdminTab) ||
+    ADMIN_PRIMARY_DESTINATIONS[0];
+
+  const adminDestinationLabel = (destination: AdminPrimaryDestination) => {
+    const fallback =
+      ADMIN_PRIMARY_DESTINATIONS.find(item => item.id === destination)?.label || destination;
+    return t(`navigation:admin_destination_${destination}`, fallback);
+  };
+
+  const handleSelectAdminDestination = (destination: AdminPrimaryDestination) => {
+    setIsAdminMenuOpen(false);
+    if (onSelectAdminTab) {
+      onSelectAdminTab(destination);
+    } else {
+      onSelectTab('admin');
+    }
+  };
+
+  // Dedicated Admin Navigation Header when viewing AdminDesk
+  if (activeTab === 'admin' && authState.role === 'admin') {
+    return (
+      <header className="bg-[#FDFBF7]/95 border-b border-stone-200 sticky top-0 z-40 backdrop-blur-md w-full shadow-xs">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 w-full gap-2">
+            {/* Left: Admin Logo & Exit to Learner App */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div
+                role="button"
+                tabIndex={0}
+                className="flex items-center gap-2 cursor-pointer shrink-0 select-none group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 rounded-xl"
+                onClick={() => handleSelectAdminDestination(DEFAULT_ADMIN_DESTINATION)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleSelectAdminDestination(DEFAULT_ADMIN_DESTINATION);
+                  }
+                }}
+                aria-label={`${BRANDING.name} ${t('navigation:admin_desk', 'Admin Desk')}`}
+              >
+                <Logo size="md" />
+                <span className="hidden 2xl:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-800 border border-stone-300 uppercase tracking-wider">
+                  {t('navigation:admin_desk', 'Admin Desk')}
+                </span>
+              </div>
+
+              <button
+                onClick={() => handleSelectNavTab('dashboard')}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 transition cursor-pointer border border-stone-200 shrink-0 min-h-[38px]"
+                aria-label={t('navigation:admin_return_learner', 'Return to Learner View')}
+                title={t('navigation:admin_return_learner', 'Return to Learner View')}
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">
+                  {t('navigation:admin_learner_app', 'Learner App')}
+                </span>
+              </button>
+            </div>
+
+            {/* Center: Desktop Admin Primary Destinations */}
+            <nav className="hidden xl:flex items-center gap-1 mx-auto shrink-0" aria-label="Admin Destinations">
+              {ADMIN_PRIMARY_DESTINATIONS.map((item) => {
+                const Icon = ADMIN_DESTINATION_ICONS[item.id];
+                const isActive = currentAdminTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSelectAdminDestination(item.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    aria-label={adminDestinationLabel(item.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[38px] ${
+                      isActive
+                        ? 'bg-stone-900 text-white shadow-xs'
+                        : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-300' : 'text-stone-500'}`} />
+                    <span className="whitespace-nowrap">{adminDestinationLabel(item.id)}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Right: Sync Status + Language + Sign Out */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="hidden 2xl:block">
+                <SyncStatusBadge />
+              </div>
+              <InterfaceLanguageSelector />
+              <button
+                onClick={() => {
+                  authService.signOut();
+                  handleSelectNavTab('dashboard');
+                }}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 border border-stone-200 hover:border-rose-200 text-xs font-bold text-rose-700 transition cursor-pointer min-h-[38px]"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t('nav_sign_out')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tablet & Mobile: Current destination with an accessible selector */}
+          <div className="xl:hidden border-t border-stone-200 py-1.5" ref={adminMenuRef}>
+            <button
+              onClick={() => setIsAdminMenuOpen(open => !open)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200 text-xs font-semibold text-stone-800 hover:bg-stone-100 transition cursor-pointer min-h-[44px]"
+              aria-label="Admin navigation menu"
+              aria-expanded={isAdminMenuOpen}
+              aria-haspopup="true"
+            >
+              <span className="flex items-center gap-2">
+                {(() => {
+                  const CurrentIcon = ADMIN_DESTINATION_ICONS[currentAdminDestination.id];
+                  return <CurrentIcon className="w-4 h-4 text-stone-600" />;
+                })()}
+                <span>{adminDestinationLabel(currentAdminDestination.id)}</span>
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-stone-500 transition-transform ${
+                  isAdminMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {isAdminMenuOpen && (
+              <nav
+                aria-label="Admin Destinations Mobile"
+                className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-1.5 bg-[#FDFBF7] border border-stone-200 rounded-xl shadow-lg"
+              >
+                {ADMIN_PRIMARY_DESTINATIONS.map((item) => {
+                  const Icon = ADMIN_DESTINATION_ICONS[item.id];
+                  const isActive = currentAdminTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectAdminDestination(item.id)}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                        isActive
+                          ? 'bg-stone-900 text-white'
+                          : 'text-stone-800 hover:bg-stone-100'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-amber-300' : 'text-stone-500'}`} />
+                      <span>{adminDestinationLabel(item.id)}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <>
       {/* Top Header Navbar */}
-      <header className="bg-slate-900/95 border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-md w-full shadow-sm">
-        <div className="w-full px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 w-full">
-            {/* LEFT CORNER ALWAYS: Brand Logo & Title */}
+      <header className="bg-[#FDFBF7]/95 border-b border-stone-200 sticky top-0 z-40 backdrop-blur-md w-full">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 w-full gap-3">
+            {/* LEFT: Brand Identity & Quiet Linguistic Context */}
             <div
               role="button"
               tabIndex={0}
-              className="flex items-center gap-2 cursor-pointer shrink-0 select-none group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
+              className="flex items-center gap-2 cursor-pointer shrink-0 select-none group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 rounded-xl"
               onClick={() => handleSelectNavTab('dashboard')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') handleSelectNavTab('dashboard');
               }}
-              aria-label={`${BRANDING.name} Início`}
+              aria-label={`${BRANDING.name} ${t('nav_home')}`}
             >
-              <Logo size="md" />
-              {authState.isGuest && (
-                <span className="hidden xl:inline-flex items-center ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800/80 uppercase tracking-wide">
-                  {t('nav_guest_mode')}
-                </span>
-              )}
+              <Logo size="md" subtitle={languageContext} />
             </div>
 
-            {/* CENTER: Desktop Navigation Menu */}
-            <nav className="hidden lg:flex items-center gap-1 xl:gap-2 mx-auto" aria-label={t('navigation:menu_title', 'Main Navigation')}>
+            {/* CENTER: Calm 5-Destination Desktop Navigation (Home, Learn, Practice, Notebooks, Progress) */}
+            <nav
+              className="hidden lg:flex items-center gap-1 mx-auto"
+              aria-label={t('navigation:menu_title', 'Navigation Menu')}
+            >
               {/* 1. Home / Dashboard */}
               <button
                 onClick={() => handleSelectNavTab('dashboard')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'dashboard'
-                    ? 'bg-slate-800 text-indigo-300 shadow-sm border border-slate-700/80 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
+                aria-current={activeTab === 'dashboard' ? 'page' : undefined}
+                className={desktopItemClass(activeTab === 'dashboard')}
               >
-                <LayoutDashboard className="w-4 h-4 text-indigo-400" />
                 <span>{t('nav_home')}</span>
+                {activeUnderline(activeTab === 'dashboard')}
               </button>
 
-              {/* 2. Learn Dropdown (PT, ES, EN, Vocab, Dictionary) */}
+              {/* 2. Learn Hub (Reading Room + Track Switcher + Study Tools) */}
               <div className="relative" ref={learnDropdownRef}>
-                <button
-                  onClick={() => setIsLearnDropdownOpen(!isLearnDropdownOpen)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                    isLearnActive
-                      ? 'bg-slate-800 text-emerald-300 shadow-sm border border-slate-700/80 font-bold'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                  aria-expanded={isLearnDropdownOpen}
-                  aria-haspopup="true"
-                  aria-label={`${t('nav_learn')} menu`}
-                >
-                  <BookOpen className="w-4 h-4 text-emerald-400" />
-                  <span>{t('nav_learn')}</span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                      isLearnDropdownOpen ? 'rotate-180 text-emerald-300' : 'text-slate-500'
+                <div className="relative flex items-center">
+                  <button
+                    onClick={() => handleSelectNavTab('learn')}
+                    aria-label="Content Library"
+                    aria-current={activeTab === 'learn' ? 'page' : undefined}
+                    className={desktopItemClass(activeTab === 'learn' || isLearnActive)}
+                  >
+                    <span>{t('nav_learn')}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsLearnDropdownOpen(prev => !prev);
+                      setIsNotebooksDropdownOpen(false);
+                    }}
+                    className={`relative flex items-center justify-center px-1.5 py-2 min-h-[44px] rounded-lg cursor-pointer transition-colors ${
+                      activeTab === 'learn' || isLearnActive
+                        ? 'text-stone-900'
+                        : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100/70'
                     }`}
-                  />
-                </button>
+                    aria-expanded={isLearnDropdownOpen}
+                    aria-haspopup="true"
+                    aria-label={`${t('nav_learn')} menu`}
+                    title={`${t('nav_learn')} menu`}
+                  >
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        isLearnDropdownOpen ? 'rotate-180 text-stone-900' : 'text-stone-500'
+                      }`}
+                    />
+                  </button>
+                  {activeUnderline(activeTab === 'learn' || isLearnActive)}
+                </div>
 
-                {/* Dropdown Menu Panel */}
                 {isLearnDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-72 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn space-y-2 backdrop-blur-md">
-                    {/* Curriculum Tracks Section */}
+                  <div className="absolute top-full left-0 mt-2 w-80 bg-[#FDFBF7] border border-stone-200 rounded-2xl shadow-xl p-2.5 z-50 animate-fadeIn space-y-2.5">
                     <div>
-                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-500">
                         {t('navigation:curriculum_tracks_header', 'Language Tracks (CEFR)')}
                       </div>
                       <div className="space-y-1 mt-0.5">
-                        {curriculumTracks.map((sub) => (
-                          <button
-                            key={sub.id}
-                            onClick={() => handleSelectNavTab(sub.id)}
-                            className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition cursor-pointer min-h-[42px] ${
-                              activeTab === sub.id
-                                ? 'bg-indigo-600 text-white shadow-sm'
-                                : 'hover:bg-slate-800 text-slate-300 hover:text-white'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <span className="text-lg leading-none">{sub.flag}</span>
-                              <div>
-                                <div className="font-semibold text-xs text-slate-100">{sub.label}</div>
-                                <div className="text-[10px] text-slate-400">{sub.desc}</div>
-                              </div>
-                            </div>
-                            <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
-                                activeTab === sub.id
-                                  ? 'bg-indigo-700/80 text-indigo-100 border-indigo-500'
-                                  : 'bg-slate-800 text-slate-300 border-slate-700'
+                        {curriculumTracks.map((sub) => {
+                          const isSelected = activeTab === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => handleSelectNavTab(sub.id)}
+                              aria-current={isSelected ? 'page' : undefined}
+                              className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition cursor-pointer min-h-[42px] ${
+                                isSelected
+                                  ? 'bg-stone-900 text-white'
+                                  : 'hover:bg-amber-50/70 text-stone-800 hover:text-stone-900'
                               }`}
                             >
-                              {sub.badge}
-                            </span>
-                          </button>
-                        ))}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="text-lg leading-none shrink-0">{sub.flag}</span>
+                                <div className="min-w-0">
+                                  <div className={`font-semibold text-xs truncate ${isSelected ? 'text-white' : 'text-stone-900'}`}>
+                                    {sub.label}
+                                  </div>
+                                  <div className={`text-[10px] truncate ${isSelected ? 'text-stone-300' : 'text-stone-600'}`}>
+                                    {sub.desc}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="flex items-center gap-1.5 shrink-0 ml-2">
+                                {sub.isCurrent && (
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full bg-amber-500"
+                                    title={t('dashboard:active_badge', 'Active')}
+                                    aria-label={t('dashboard:active_badge', 'Active')}
+                                  />
+                                )}
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                    isSelected
+                                      ? 'bg-amber-600 text-white border-amber-600'
+                                      : 'bg-stone-100 text-stone-800 border-stone-300'
+                                  }`}
+                                >
+                                  {sub.badge}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {/* Divider */}
-                    <div className="border-t border-slate-800/80 my-1" />
+                    <div className="border-t border-stone-200" />
 
-                    {/* Reference & Practice Tools Section */}
                     <div>
-                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-500">
                         {t('navigation:study_tools_header', 'Study Tools')}
                       </div>
                       <div className="space-y-1 mt-0.5">
                         {studyTools.map((tool) => {
-                          const IconComp = tool.icon;
+                          const isSelected = activeTab === tool.id;
                           return (
                             <button
                               key={tool.id}
                               onClick={() => handleSelectNavTab(tool.id)}
                               className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition cursor-pointer min-h-[42px] ${
-                                activeTab === tool.id
-                                  ? 'bg-indigo-600 text-white shadow-sm'
-                                  : 'hover:bg-slate-800 text-slate-300 hover:text-white'
+                                isSelected
+                                  ? 'bg-stone-900 text-white'
+                                  : 'hover:bg-amber-50/70 text-stone-800 hover:text-stone-900'
                               }`}
                             >
-                              <div className="flex items-center gap-2.5">
-                                <div
-                                  className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                                    activeTab === tool.id ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-indigo-400'
-                                  }`}
-                                >
-                                  <IconComp className="w-4 h-4" />
+                              <div className="min-w-0 pr-2">
+                                <div className={`font-semibold text-xs truncate ${isSelected ? 'text-white' : 'text-stone-900'}`}>
+                                  {tool.label}
                                 </div>
-                                <div>
-                                  <div className="font-semibold text-xs text-slate-100">{tool.label}</div>
-                                  <div className="text-[10px] text-slate-400">{tool.desc}</div>
+                                <div className={`text-[10px] truncate ${isSelected ? 'text-stone-300' : 'text-stone-600'}`}>
+                                  {tool.desc}
                                 </div>
                               </div>
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
-                                  activeTab === tool.id
-                                    ? 'bg-indigo-700/80 text-indigo-100 border-indigo-500'
-                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold border shrink-0 ${
+                                  isSelected
+                                    ? 'bg-amber-600 text-white border-amber-600'
+                                    : 'bg-stone-100 text-stone-600 border-stone-300'
                                 }`}
                               >
                                 {tool.badge}
@@ -367,43 +632,87 @@ export const Navigation: React.FC<NavigationProps> = ({
               {/* 3. Practice */}
               <button
                 onClick={() => handleSelectNavTab('practice')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'practice'
-                    ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700/80 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
+                aria-current={activeTab === 'practice' ? 'page' : undefined}
+                className={desktopItemClass(activeTab === 'practice')}
               >
-                <Sparkles className="w-4 h-4 text-amber-400" />
                 <span>{t('nav_practice')}</span>
+                {activeUnderline(activeTab === 'practice')}
               </button>
 
-              {/* 4. Progress */}
+              {/* 4. Personal Notebooks (My Words + My Mistakes) */}
+              <div className="relative" ref={notebooksDropdownRef}>
+                <button
+                  onClick={() => {
+                    setIsNotebooksDropdownOpen(prev => !prev);
+                    setIsLearnDropdownOpen(false);
+                  }}
+                  aria-expanded={isNotebooksDropdownOpen}
+                  aria-haspopup="true"
+                  className={desktopItemClass(isNotebooksActive)}
+                >
+                  <span>{t('navigation:nav_notebooks', 'Notebooks')}</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      isNotebooksDropdownOpen ? 'rotate-180 text-stone-900' : 'text-stone-500'
+                    }`}
+                  />
+                  {activeUnderline(isNotebooksActive)}
+                </button>
+
+                {isNotebooksDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-72 bg-[#FDFBF7] border border-stone-200 rounded-2xl shadow-xl p-2 z-50 animate-fadeIn space-y-1">
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                      {t('navigation:notebooks_header', 'Personal Notebooks')}
+                    </div>
+                    {notebookItems.map(nb => {
+                      const Icon = nb.icon;
+                      const isSelected = activeTab === nb.id;
+                      return (
+                        <button
+                          key={nb.id}
+                          onClick={() => handleSelectNavTab(nb.id)}
+                          aria-current={isSelected ? 'page' : undefined}
+                          className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition cursor-pointer min-h-[44px] ${
+                            isSelected
+                              ? 'bg-stone-900 text-white'
+                              : 'hover:bg-amber-50/70 text-stone-800 hover:text-stone-900'
+                          }`}
+                        >
+                          <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-amber-300' : nb.accentClass}`} />
+                          <div className="min-w-0">
+                            <div className={`font-semibold text-xs ${isSelected ? 'text-white' : 'text-stone-900'}`}>
+                              {nb.label}
+                            </div>
+                            <div className={`text-[10px] ${isSelected ? 'text-stone-300' : 'text-stone-600'}`}>
+                              {nb.desc}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Progress */}
               <button
                 onClick={() => handleSelectNavTab('progress')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[42px] cursor-pointer ${
-                  activeTab === 'progress'
-                    ? 'bg-slate-800 text-indigo-300 shadow-sm border border-slate-700/80 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
+                aria-current={activeTab === 'progress' ? 'page' : undefined}
+                className={desktopItemClass(activeTab === 'progress')}
               >
-                <TrendingUp className="w-4 h-4 text-indigo-400" />
                 <span>{t('nav_progress')}</span>
+                {activeUnderline(activeTab === 'progress')}
               </button>
             </nav>
 
-            {/* RIGHT CORNER ALWAYS: Sync Status, Language Switcher, Sign In Button & Controls */}
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-              {/* Truthful Live Synchronization Status Indicator */}
-              <SyncStatusBadge />
-
-              {/* Centralized Accessible 15-Locale Interface Language Selector */}
+            {/* RIGHT: Interface Language, Auth & Profile/Settings */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <InterfaceLanguageSelector />
 
-              {/* Sign In CTA Button (Guests) */}
               {authState.isGuest && (
                 <button
                   onClick={onOpenAuth}
-                  className="flex items-center justify-center gap-1.5 p-2 sm:px-4 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs sm:text-sm font-bold cursor-pointer transition-all duration-150 shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/40 min-h-[38px] min-w-[38px] shrink-0"
+                  className="flex items-center justify-center gap-1.5 p-2 sm:px-3.5 sm:py-2 rounded-lg bg-stone-900 hover:bg-stone-800 active:scale-95 text-white text-xs font-semibold cursor-pointer transition-all duration-150 shadow-xs min-h-[38px] min-w-[38px] shrink-0"
                   aria-label={t('nav_sign_in')}
                   title={t('nav_sign_in')}
                 >
@@ -416,57 +725,72 @@ export const Navigation: React.FC<NavigationProps> = ({
               <div className="relative" ref={profileMenuRef}>
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-200 hover:text-white transition cursor-pointer min-h-[38px]"
+                  className="flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white hover:bg-stone-100 border border-stone-200 text-xs text-stone-900 transition cursor-pointer min-h-[38px]"
                   aria-expanded={isProfileMenuOpen}
                   aria-haspopup="true"
-                  aria-label={t('navigation:profile_menu_aria', 'Menu do Perfil e Configurações')}
-                  title={t('navigation:profile_menu_aria', 'Menu do Perfil e Configurações')}
+                  aria-label={t('navigation:profile_menu_aria', 'Profile and Settings Menu')}
+                  title={t('navigation:profile_menu_aria', 'Profile and Settings Menu')}
                 >
-                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold shadow-inner shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-stone-900 text-amber-300 flex items-center justify-center text-[11px] font-bold shrink-0">
                     {authState.user?.full_name ? (
                       authState.user.full_name.charAt(0).toUpperCase()
                     ) : (
                       <User className="w-3.5 h-3.5" />
                     )}
                   </div>
-                  <span className="hidden md:inline font-semibold max-w-[90px] truncate">
-                    {authState.user?.full_name?.split(' ')[0] || (authState.isGuest ? t('navigation:guest_mode', 'Convidado') : t('navigation:account', 'Conta'))}
+                  <span className="hidden md:inline font-semibold max-w-[90px] truncate text-stone-800">
+                    {authState.user?.full_name?.split(' ')[0] ||
+                      (authState.isGuest
+                        ? t('navigation:guest_mode', 'Guest')
+                        : t('navigation:account', 'Account'))}
                   </span>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                      isProfileMenuOpen ? 'rotate-180 text-indigo-400' : ''
+                    className={`w-3.5 h-3.5 text-stone-500 transition-transform duration-200 ${
+                      isProfileMenuOpen ? 'rotate-180 text-stone-900' : ''
                     }`}
                   />
                 </button>
 
-                {/* Profile Menu Dropdown Panel */}
                 {isProfileMenuOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn space-y-1 backdrop-blur-md">
-                    {/* User Info Header */}
-                    <div className="px-3 py-2 border-b border-slate-800/80">
-                      <p className="font-bold text-xs text-white truncate">
-                        {authState.user?.full_name || t('navigation:guest_mode', 'Modo Convidado')}
+                  <div className="absolute top-full right-0 mt-2 w-72 bg-[#FDFBF7] border border-stone-200 rounded-2xl shadow-xl p-2 z-50 animate-fadeIn space-y-1">
+                    {/* User Identity & Sync Health */}
+                    <div className="px-3 py-2.5 border-b border-stone-200 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold text-xs text-stone-900 truncate">
+                          {authState.user?.full_name || t('navigation:guest_mode', 'Guest Mode')}
+                        </p>
+                        {authState.isGuest && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase shrink-0">
+                            {t('nav_guest_mode')}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-stone-500 truncate">
+                        {authState.user?.email || t('common:offline', 'Offline Storage')}
                       </p>
-                      <p className="text-[10px] text-slate-400 truncate">
-                        {authState.user?.email || t('common:offline', 'Armazenamento Local Offline')}
-                      </p>
+                      <div className="pt-1">
+                        <SyncStatusBadge />
+                      </div>
                     </div>
 
-                    {/* Profile & Settings Navigation */}
+                    {/* Unified Profile & Settings */}
                     <button
                       onClick={() => handleSelectNavTab('settings')}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition cursor-pointer min-h-[42px] ${
+                        activeTab === 'settings'
+                          ? 'bg-stone-900 text-white'
+                          : 'text-stone-800 hover:bg-stone-100'
+                      }`}
                     >
-                      <User className="w-4 h-4 text-indigo-400" />
-                      <span>{t('navigation:my_profile_track', 'Meu Perfil & Metas')}</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleSelectNavTab('settings')}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-                    >
-                      <Settings className="w-4 h-4 text-slate-400" />
-                      <span>{t('nav_settings')}</span>
+                      <Settings className={`w-4 h-4 ${activeTab === 'settings' ? 'text-amber-300' : 'text-stone-500'}`} />
+                      <div className="min-w-0">
+                        <div className={activeTab === 'settings' ? 'text-white' : 'text-stone-900'}>
+                          {t('navigation:my_profile_track', 'My Profile & Track')}
+                        </div>
+                        <div className={`text-[10px] font-normal ${activeTab === 'settings' ? 'text-stone-300' : 'text-stone-500'}`}>
+                          {t('navigation:settings_sync_status', 'Language Matrix, Goals & Preferences')}
+                        </div>
+                      </div>
                     </button>
 
                     <button
@@ -474,35 +798,33 @@ export const Navigation: React.FC<NavigationProps> = ({
                         setIsProfileMenuOpen(false);
                         onOpenOnboarding();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-stone-800 hover:bg-stone-100 transition cursor-pointer min-h-[40px]"
                     >
-                      <GraduationCap className="w-4 h-4 text-amber-400" />
-                      <span>{t('navigation:onboarding_guide', 'Guia de Boas-Vindas')}</span>
+                      <GraduationCap className="w-4 h-4 text-amber-600" />
+                      <span>{t('navigation:onboarding_guide', 'Welcome Guide')}</span>
                     </button>
 
-                    {/* Admin Item if Admin */}
                     {authState.role === 'admin' && (
                       <button
                         onClick={() => handleSelectNavTab('admin')}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-purple-300 hover:text-purple-100 hover:bg-purple-950/60 border border-purple-900/60 transition cursor-pointer"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 transition cursor-pointer min-h-[40px]"
                       >
-                        <Shield className="w-4 h-4 text-purple-400" />
-                        <span>{t('navigation:admin_panel', 'Console Admin')}</span>
+                        <Shield className="w-4 h-4 text-amber-700" />
+                        <span>{t('navigation:admin_panel', 'Governance Panel')}</span>
                       </button>
                     )}
 
-                    <div className="border-t border-slate-800/80 my-1" />
+                    <div className="border-t border-stone-200 my-1" />
 
-                    {/* Sign in / Sign out */}
                     {authState.isGuest ? (
                       <button
                         onClick={() => {
                           setIsProfileMenuOpen(false);
                           onOpenAuth();
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40 transition cursor-pointer"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold text-stone-900 hover:bg-stone-100 transition cursor-pointer min-h-[40px]"
                       >
-                        <LogIn className="w-4 h-4" />
+                        <LogIn className="w-4 h-4 text-stone-700" />
                         <span>{t('nav_sign_in')}</span>
                       </button>
                     ) : (
@@ -511,7 +833,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                           setIsProfileMenuOpen(false);
                           authService.signOut();
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 transition cursor-pointer"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold text-rose-700 hover:bg-rose-50 transition cursor-pointer min-h-[40px]"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>{t('nav_sign_out')}</span>
@@ -524,11 +846,11 @@ export const Navigation: React.FC<NavigationProps> = ({
               {/* Mobile Drawer Hamburger Button */}
               <button
                 onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
-                className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 border border-slate-700/70 transition min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer shrink-0 z-10"
+                className="lg:hidden p-2 rounded-xl text-stone-800 hover:bg-stone-100 border border-stone-200 bg-white transition min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer shrink-0 z-10"
                 aria-label={isMobileDrawerOpen ? t('navigation:close_menu', 'Close Menu') : t('navigation:open_menu', 'Open Navigation Menu')}
                 aria-expanded={isMobileDrawerOpen}
               >
-                {isMobileDrawerOpen ? <X className="w-5 h-5 text-indigo-400" /> : <Menu className="w-5 h-5" />}
+                {isMobileDrawerOpen ? <X className="w-5 h-5 text-stone-900" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
           </div>
@@ -537,153 +859,227 @@ export const Navigation: React.FC<NavigationProps> = ({
 
       {/* Accessible Mobile Bottom Navigation Dock (< 1024px) */}
       <nav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/90 flex items-center justify-around py-1.5 px-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-2xl"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-xl border-t border-stone-200 flex items-center justify-around py-1 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg"
         aria-label={t('navigation:mobile_nav_aria', 'Mobile Navigation')}
       >
-        {/* 1. Home */}
-        <button
-          onClick={() => handleSelectNavTab('dashboard')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            activeTab === 'dashboard' ? 'text-indigo-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <LayoutDashboard className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight leading-none">{t('nav_home')}</span>
-        </button>
-
-        {/* 2. Learn (Course-aware: Navigates to active course or opens drawer if already in learn) */}
-        <button
-          onClick={handleMobileLearnClick}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            isLearnActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-          aria-label={t('nav_learn')}
-        >
-          <BookOpen className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight leading-none">{t('nav_learn')}</span>
-        </button>
-
-        {/* 3. Practice */}
-        <button
-          onClick={() => handleSelectNavTab('practice')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            activeTab === 'practice' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Sparkles className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight leading-none">{t('nav_practice')}</span>
-        </button>
-
-        {/* 4. Progress */}
-        <button
-          onClick={() => handleSelectNavTab('progress')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition cursor-pointer min-h-[44px] ${
-            activeTab === 'progress' ? 'text-indigo-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <TrendingUp className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight leading-none">{t('nav_progress')}</span>
-        </button>
+        {[
+          {
+            id: 'dashboard',
+            active: activeTab === 'dashboard',
+            icon: LayoutDashboard,
+            label: t('nav_home'),
+            onClick: () => handleSelectNavTab('dashboard'),
+          },
+          {
+            id: 'learn',
+            active: isLearnActive || activeTab === 'learn',
+            icon: BookOpen,
+            label: t('nav_learn'),
+            onClick: handleMobileLearnClick,
+          },
+          {
+            id: 'practice',
+            active: activeTab === 'practice',
+            icon: Sparkles,
+            label: t('nav_practice'),
+            onClick: () => handleSelectNavTab('practice'),
+          },
+          {
+            id: 'progress',
+            active: activeTab === 'progress',
+            icon: TrendingUp,
+            label: t('nav_progress'),
+            onClick: () => handleSelectNavTab('progress'),
+          },
+          {
+            id: 'more',
+            active: isMobileDrawerOpen || ['words', 'mistakes', 'settings'].includes(activeTab),
+            icon: Menu,
+            label: t('navigation:more', 'More'),
+            ariaLabel: t('navigation:more_menu_aria', 'More menu'),
+            onClick: () => setIsMobileDrawerOpen(true),
+          },
+        ].map(dockItem => {
+          const DockIcon = dockItem.icon;
+          return (
+            <button
+              key={dockItem.id}
+              onClick={dockItem.onClick}
+              aria-label={dockItem.ariaLabel || dockItem.label}
+              className={`relative flex flex-col items-center justify-center flex-1 py-1.5 rounded-xl transition cursor-pointer min-h-[44px] ${
+                dockItem.active ? 'text-stone-900 font-semibold' : 'text-stone-500 hover:text-stone-900'
+              }`}
+            >
+              {dockItem.active && (
+                <span className="w-5 h-0.5 rounded-full bg-amber-600 mb-1" aria-hidden="true" />
+              )}
+              <DockIcon className={`w-5 h-5 ${dockItem.active ? 'mb-0.5 text-stone-900' : 'mb-0.5'}`} />
+              <span className="text-[10px] tracking-tight leading-none">{dockItem.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       {/* Accessible Mobile Slide-out Drawer Overlay */}
       {isMobileDrawerOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+          className="lg:hidden fixed inset-0 z-50 bg-stone-900/40 backdrop-blur-sm transition-opacity"
           onClick={() => setIsMobileDrawerOpen(false)}
         >
           <div
-            className="fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-slate-900 border-l border-slate-800/90 shadow-2xl p-5 flex flex-col justify-between overflow-y-auto animate-slideLeft"
+            className="fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-[#FDFBF7] border-l border-stone-200 shadow-2xl p-5 flex flex-col justify-between overflow-y-auto animate-fadeIn"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-5">
               {/* Drawer Top Header */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                 <div>
-                  <Logo size="sm" />
-                  <p className="text-[10px] text-slate-400 mt-1">{t('navigation:full_navigation', 'Full Navigation')}</p>
+                  <Logo size="sm" subtitle={languageContext} />
+                  <p className="text-[10px] text-stone-500 mt-1">{t('navigation:full_navigation', 'Full Navigation')}</p>
                 </div>
                 <button
                   onClick={() => setIsMobileDrawerOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer transition"
+                  className="p-1.5 text-stone-600 hover:text-stone-900 rounded-lg hover:bg-stone-100 cursor-pointer transition min-h-[38px] min-w-[38px] flex items-center justify-center"
                   aria-label={t('navigation:close_menu', 'Close Menu')}
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Interface Language Dropdown in Drawer */}
-              <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-800">
-                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5 px-1">
-                  {t('settings:interface_lang_label', 'Idioma da Interface')}
+              {/* Interface Language Picker */}
+              <div className="bg-stone-100/70 p-2.5 rounded-xl border border-stone-200">
+                <div className="text-[10px] uppercase font-bold text-stone-500 tracking-wider mb-1.5 px-1">
+                  {t('settings:interface_language', 'Interface Language')}
                 </div>
                 <InterfaceLanguageSelector className="w-full" />
               </div>
 
-              {/* Subsection 1: Trilhas de Idiomas */}
+              {/* Section 1: Reading Room & Notebooks */}
               <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
-                  {t('learning:curriculum_tracks', 'Trilhas de Aprendizado (CEFR)')}
+                <span className="text-[10px] uppercase font-bold text-stone-500 tracking-wider px-2">
+                  {t('navigation:notebooks_header', 'Personal Notebooks')}
                 </span>
-                {curriculumTracks.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelectNavTab(item.id)}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
-                      activeTab === item.id
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-base leading-none">{item.flag}</span>
-                      <div className="text-left">
-                        <div className="text-slate-100 font-semibold">{item.label}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">{item.desc}</div>
+
+                <button
+                  onClick={() => handleSelectNavTab('learn')}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                    activeTab === 'learn' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-800 hover:bg-stone-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <BookOpen className={`w-4 h-4 ${activeTab === 'learn' ? 'text-amber-300' : 'text-emerald-700'}`} />
+                    <div className="text-left">
+                      <div className={activeTab === 'learn' ? 'text-white font-semibold' : 'text-stone-900 font-semibold'}>
+                        {t('navigation:reading_room_title', 'The Reading Room')}
+                      </div>
+                      <div className={`text-[10px] font-normal ${activeTab === 'learn' ? 'text-stone-300' : 'text-stone-500'}`}>
+                        {t('navigation:reading_room_desc', 'Authentic texts, stories & dialogues')}
                       </div>
                     </div>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
-                        activeTab === item.id
-                          ? 'bg-indigo-700/80 text-white border-indigo-500'
-                          : 'bg-slate-800 text-slate-300 border-slate-700'
+                  </div>
+                </button>
+
+                {notebookItems.map(nb => {
+                  const Icon = nb.icon;
+                  const isSelected = activeTab === nb.id;
+                  return (
+                    <button
+                      key={nb.id}
+                      onClick={() => handleSelectNavTab(nb.id)}
+                      className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                        isSelected ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-800 hover:bg-stone-100'
                       }`}
                     >
-                      {item.badge}
-                    </span>
-                  </button>
-                ))}
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-amber-300' : nb.accentClass}`} />
+                      <div className="text-left">
+                        <div className={isSelected ? 'text-white font-semibold' : 'text-stone-900 font-semibold'}>
+                          {nb.label}
+                        </div>
+                        <div className={`text-[10px] font-normal ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
+                          {nb.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Subsection 2: Ferramentas & Vocabulário */}
-              <div className="space-y-1 pt-2 border-t border-slate-800">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
-                  {t('learning:study_tools', 'Ferramentas & Consulta')}
+              {/* Section 2: Language Tracks */}
+              <div className="space-y-1 pt-2 border-t border-stone-200">
+                <span className="text-[10px] uppercase font-bold text-stone-500 tracking-wider px-2">
+                  {t('navigation:curriculum_tracks_header', 'Language Tracks (CEFR)')}
+                </span>
+                {curriculumTracks.map((item) => {
+                  const isSelected = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectNavTab(item.id)}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
+                        isSelected
+                          ? 'bg-stone-900 text-white shadow-xs'
+                          : 'text-stone-800 hover:bg-stone-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base leading-none">{item.flag}</span>
+                        <div className="text-left">
+                          <div className={isSelected ? 'text-white font-semibold' : 'text-stone-900 font-semibold'}>
+                            {item.label}
+                          </div>
+                          <div className={`text-[10px] font-normal ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
+                            {item.desc}
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                          isSelected
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-stone-100 text-stone-800 border-stone-300'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Section 3: Study Tools */}
+              <div className="space-y-1 pt-2 border-t border-stone-200">
+                <span className="text-[10px] uppercase font-bold text-stone-500 tracking-wider px-2">
+                  {t('navigation:study_tools_header', 'Study Tools')}
                 </span>
                 {studyTools.map((tool) => {
                   const ToolIcon = tool.icon;
+                  const isSelected = activeTab === tool.id;
                   return (
                     <button
                       key={tool.id}
                       onClick={() => handleSelectNavTab(tool.id)}
                       className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
-                        activeTab === tool.id
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-300 hover:bg-slate-800'
+                        isSelected
+                          ? 'bg-stone-900 text-white shadow-xs'
+                          : 'text-stone-800 hover:bg-stone-100'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <ToolIcon className="w-4 h-4 text-indigo-400" />
-                        <div className="text-left">
-                          <div className="text-slate-100 font-semibold">{tool.label}</div>
-                          <div className="text-[10px] text-slate-400 font-normal">{tool.desc}</div>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <ToolIcon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-amber-300' : 'text-stone-600'}`} />
+                        <div className="text-left min-w-0">
+                          <div className={`truncate ${isSelected ? 'text-white font-semibold' : 'text-stone-900 font-semibold'}`}>
+                            {tool.label}
+                          </div>
+                          <div className={`text-[10px] font-normal truncate ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
+                            {tool.desc}
+                          </div>
                         </div>
                       </div>
                       <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
-                          activeTab === tool.id
-                            ? 'bg-indigo-700/80 text-white border-indigo-500'
-                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold border shrink-0 ${
+                          isSelected
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-stone-100 text-stone-600 border-stone-300'
                         }`}
                       >
                         {tool.badge}
@@ -693,20 +1089,20 @@ export const Navigation: React.FC<NavigationProps> = ({
                 })}
               </div>
 
-              {/* Subsection 3: Preferências & Admin */}
-              <div className="space-y-1 pt-2 border-t border-slate-800">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
-                  {t('settings:title', 'Sistema & Preferências')}
+              {/* Section 4: Account & Preferences */}
+              <div className="space-y-1 pt-2 border-t border-stone-200">
+                <span className="text-[10px] uppercase font-bold text-stone-500 tracking-wider px-2">
+                  {t('navigation:account_preferences_header', 'Account & Preferences')}
                 </span>
                 <button
                   onClick={() => handleSelectNavTab('settings')}
                   className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
                     activeTab === 'settings'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-300 hover:bg-slate-800'
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'text-stone-800 hover:bg-stone-100'
                   }`}
                 >
-                  <Settings className="w-4 h-4 text-slate-400" />
+                  <Settings className={`w-4 h-4 ${activeTab === 'settings' ? 'text-amber-300' : 'text-stone-600'}`} />
                   <span>{t('nav_settings')}</span>
                 </button>
 
@@ -715,38 +1111,37 @@ export const Navigation: React.FC<NavigationProps> = ({
                     onClick={() => handleSelectNavTab('admin')}
                     className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer min-h-[44px] ${
                       activeTab === 'admin'
-                        ? 'bg-purple-900 text-white shadow-sm'
-                        : 'text-purple-400 hover:bg-slate-800'
+                        ? 'bg-amber-700 text-white shadow-xs'
+                        : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
                     }`}
                   >
                     <Shield className="w-4 h-4" />
-                    <span>{t('navigation:admin_panel', 'Painel Administrativo')}</span>
+                    <span>{t('navigation:admin_panel', 'Governance Panel')}</span>
                   </button>
                 )}
               </div>
             </div>
 
             {/* Bottom Drawer Actions */}
-            <div className="border-t border-slate-800 pt-4 space-y-3">
+            <div className="border-t border-stone-200 pt-4 mt-6 space-y-2.5">
               <button
                 onClick={() => {
                   setIsMobileDrawerOpen(false);
                   onOpenOnboarding();
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition cursor-pointer min-h-[44px]"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white hover:bg-stone-100 text-xs font-semibold text-stone-800 border border-stone-200 transition cursor-pointer min-h-[44px]"
               >
-                <Compass className="w-4 h-4 text-sky-400" />
-                <span>{t('navigation:onboarding_guide', 'Reiniciar Guia de Onboarding')}</span>
+                <Compass className="w-4 h-4 text-amber-600" />
+                <span>{t('navigation:onboarding_guide', 'Welcome Guide')}</span>
               </button>
 
-              {/* Sign in / Sign out button in drawer */}
               {authState.isGuest ? (
                 <button
                   onClick={() => {
                     setIsMobileDrawerOpen(false);
                     onOpenAuth();
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition shadow-sm cursor-pointer min-h-[44px]"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-xs font-bold text-white transition shadow-xs cursor-pointer min-h-[44px]"
                 >
                   <LogIn className="w-4 h-4" />
                   <span>{t('nav_sign_in')}</span>
@@ -757,14 +1152,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                     setIsMobileDrawerOpen(false);
                     authService.signOut();
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950/40 text-xs font-bold text-rose-300 border border-slate-700/80 hover:border-rose-800 transition cursor-pointer min-h-[44px]"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 border border-rose-200 transition cursor-pointer min-h-[44px]"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>{t('nav_sign_out')}</span>
                 </button>
               )}
 
-              <div className="text-[11px] text-slate-500 text-center">
+              <div className="text-[11px] text-stone-500 text-center">
                 {BRANDING.name} • {BRANDING.tagline}
               </div>
             </div>

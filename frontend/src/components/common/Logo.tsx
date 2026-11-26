@@ -4,12 +4,15 @@ import { BRANDING } from '../../config/branding';
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   showTagline?: boolean;
+  /** Optional localized context (e.g. target + explanation language). Never hardcode languages here. */
+  subtitle?: React.ReactNode;
   className?: string;
 }
 
 export const Logo: React.FC<LogoProps> = ({
   size = 'md',
   showTagline = false,
+  subtitle,
   className = '',
 }) => {
   const iconDimensions = {
@@ -28,7 +31,7 @@ export const Logo: React.FC<LogoProps> = ({
     <div className={`flex items-center gap-2.5 select-none ${className}`}>
       {/* Lexilume Emblem: Stylized geometric 'L' emitting an illumination beam over a subtle open book curve */}
       <div
-        className={`${iconDimensions} rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-0.5 shadow-md shadow-indigo-950/50 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 border border-indigo-400/30`}
+        className={`${iconDimensions} rounded-xl bg-gradient-to-br from-stone-900 via-stone-800 to-amber-700 p-0.5 shadow-sm flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 border border-amber-600/30`}
       >
         <svg
           viewBox="0 0 40 40"
@@ -43,7 +46,7 @@ export const Logo: React.FC<LogoProps> = ({
           {/* Book / light beam rays */}
           <path
             d="M20 7L23 13M20 7L17 13M20 7V14"
-            stroke="#38bdf8"
+            stroke="#fbbf24"
             strokeWidth="1.5"
             strokeLinecap="round"
             opacity="0.85"
@@ -56,18 +59,18 @@ export const Logo: React.FC<LogoProps> = ({
           />
 
           {/* Accent Luminescence Dot / Sparkle at upper apex */}
-          <circle cx="20" cy="7" r="2.2" fill="#38bdf8" />
+          <circle cx="20" cy="7" r="2.2" fill="#fbbf24" />
           <circle cx="20" cy="7" r="1" fill="#ffffff" />
 
           <defs>
             <linearGradient id="lexilume-l-grad" x1="14" y1="10" x2="28" y2="28" gradientUnits="userSpaceOnUse">
               <stop stopColor="#ffffff" />
-              <stop offset="0.6" stopColor="#e0e7ff" />
-              <stop offset="1" stopColor="#a5b4fc" />
+              <stop offset="0.6" stopColor="#fef3c7" />
+              <stop offset="1" stopColor="#fcd34d" />
             </linearGradient>
             <radialGradient id="lexilume-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20 18) rotate(90) scale(14)">
-              <stop stopColor="#06b6d4" />
-              <stop offset="1" stopColor="#4f46e5" stopOpacity="0" />
+              <stop stopColor="#f59e0b" />
+              <stop offset="1" stopColor="#b45309" stopOpacity="0" />
             </radialGradient>
           </defs>
         </svg>
@@ -75,22 +78,22 @@ export const Logo: React.FC<LogoProps> = ({
 
       <div className="flex flex-col justify-center">
         <div className="flex items-center gap-1.5">
-          <span className={`font-extrabold text-slate-100 ${titleSizes} tracking-tight font-sans leading-none`}>
+          <span className={`font-extrabold text-stone-900 ${titleSizes} tracking-tight font-sans leading-none`}>
             {BRANDING.name}
           </span>
-          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-indigo-950/80 text-cyan-300 border border-indigo-700/60 uppercase tracking-wider">
+          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-200 uppercase tracking-wider">
             AI
           </span>
         </div>
-        {showTagline ? (
-          <p className="text-[11px] text-cyan-300/90 font-medium tracking-tight mt-0.5">
+        {subtitle ? (
+          <div className="text-[10px] text-stone-500 font-medium tracking-wide mt-0.5 max-w-[15rem] truncate">
+            {subtitle}
+          </div>
+        ) : showTagline ? (
+          <p className="text-[11px] text-amber-800/90 font-medium tracking-tight mt-0.5">
             {BRANDING.tagline}
           </p>
-        ) : (
-          <p className="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5">
-            PT · ES · EN • CEFR A1–C1
-          </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

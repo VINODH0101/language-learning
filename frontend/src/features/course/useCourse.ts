@@ -42,25 +42,36 @@ export function useCourse(language: Language): UseCourseReturn {
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const today = new Date().toISOString().split('T')[0];
     const course = courseService.getCourseForLanguage(language);
-    const generated = ClientLessonGenerator.generateOrGetLesson(
-      course ? courseService.toCourseConfig(course) : language,
-      today
-    );
-    setLesson(generated);
+    const configOrLang = course ? courseService.toCourseConfig(course) : language;
+    const initial = ClientLessonGenerator.generateOrGetLesson(configOrLang, today);
+    setLesson(initial);
     UmamiProvider.getInstance().trackEvent('lesson_started', { language });
 
     const track = StorageService.getTrackState(language);
-    if (track.completed_curriculum_node_ids.includes(generated.curriculum_node_id)) {
+    if (track.completed_curriculum_node_ids.includes(initial.curriculum_node_id)) {
       setIsCompleted(true);
     }
 
+    ClientLessonGenerator.generateOrFetchDailyLesson(configOrLang, today)
+      .then(hydrated => {
+        if (!cancelled) {
+          setLesson(hydrated);
+        }
+      })
+      .catch(() => {});
+
     getActiveProgress(language).then(saved => {
-      if (saved && saved.lesson_date === today && saved.selected_tab) {
+      if (!cancelled && saved && saved.lesson_date === today && saved.selected_tab) {
         setActiveTab(saved.selected_tab as SectionTab);
       }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [language]);
 
   const selectTab = useCallback((tab: SectionTab) => {

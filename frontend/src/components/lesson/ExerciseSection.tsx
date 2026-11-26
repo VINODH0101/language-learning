@@ -25,7 +25,27 @@ export const ExerciseSection: React.FC<ExerciseSectionProps> = ({
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string; explanation: string } | null>(null);
 
   const currentExercise = exercises[currentIdx];
-  const currentKey = answerKeys.find(k => k.exercise_id === currentExercise.id) || answerKeys[currentIdx];
+  const currentKey =
+    currentExercise
+      ? answerKeys.find(k => k.exercise_id === currentExercise.id) || answerKeys[currentIdx]
+      : undefined;
+
+  if (!exercises || exercises.length === 0 || !currentExercise || !currentKey) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center space-y-2 text-slate-400">
+        <HelpCircle className="w-8 h-8 text-slate-500 mx-auto" />
+        <p className="text-sm font-semibold text-slate-200">
+          {t('practice:exercises_empty_title', 'No Exercises Published Yet')}
+        </p>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          {t(
+            'practice:exercises_empty_desc',
+            'Generate and publish interactive exercises via the AI Content Engine to start practicing.'
+          )}
+        </p>
+      </div>
+    );
+  }
 
   const handleCheck = () => {
     const answer = (currentExercise.options ? selectedOption : textInput).trim();

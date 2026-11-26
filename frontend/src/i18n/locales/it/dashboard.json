@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "Impossibile caricare l'Edizione di Oggi",
+  "err_continue": "Impossibile caricare i progressi recenti",
+  "err_vocab": "Impossibile caricare le metriche del vocabolario",
+  "err_recent": "Impossibile caricare le attività recenti",
+  "culture_preview_empty": "Nessun articolo culturale ancora caricato. Apri Esplora Paesi per recuperare contenuti da Wikipedia e Motore IA."
 }

@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "本日のエディションの読み込みに失敗しました",
+  "err_continue": "学習の進捗の読み込みに失敗しました",
+  "err_vocab": "語彙データの読み込みに失敗しました",
+  "err_recent": "最近のアクティビティの読み込みに失敗しました",
+  "culture_preview_empty": "文化記事はまだ読み込まれていません。「国を探索」を開いてWikipediaとAIコンテンツエンジンから取得してください。"
 }

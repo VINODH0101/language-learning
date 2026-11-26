@@ -6,6 +6,7 @@ import { Button } from '../../../components/common/Button';
 import { ProgressBar } from '../../../components/common/ProgressBar';
 import { useI18n } from '../../../i18n/i18nContext';
 import { courseService } from '../../../services/courseService';
+import { getLanguageName } from '../../../lib/languages/languageMatrix';
 
 interface CoursesOverviewCardProps {
   courses: Course[];
@@ -24,15 +25,8 @@ export const CoursesOverviewCard: React.FC<CoursesOverviewCardProps> = ({
 }) => {
   const { t, interfaceLanguage } = useI18n();
 
-  const getLanguageLabel = (lang: Language) => {
-    if (interfaceLanguage === 'en') {
-      return lang === 'en' ? 'English' : lang === 'pt' ? 'Portuguese' : lang === 'es' ? 'Spanish' : lang;
-    }
-    if (interfaceLanguage === 'es') {
-      return lang === 'en' ? 'Inglés' : lang === 'pt' ? 'Portugués' : lang === 'es' ? 'Español' : lang;
-    }
-    return lang === 'en' ? 'Inglês' : lang === 'pt' ? 'Português' : lang === 'es' ? 'Espanhol' : lang;
-  };
+  const getLanguageLabel = (lang: Language) =>
+    getLanguageName(lang, interfaceLanguage as any);
 
   const getLanguageFlag = (lang: Language, variant?: RegionalVariety) => {
     if (lang === 'en') return variant?.includes('GB') ? '🇬🇧' : '🇺🇸';

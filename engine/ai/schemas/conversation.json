@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/conversation.json",
+  "title": "Conversation content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "scenario": { "type": "string" },
+    "participants": { "type": "array", "items": { "type": "string" } },
+    "dialogue": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "speaker": { "type": "string" },
+          "line": { "type": "string" },
+          "translation": { "type": "string" },
+          "pronunciation_hint": { "type": "string" }
+        },
+        "required": ["speaker", "line"]
+      }
+    },
+    "vocabulary": { "type": "array" },
+    "follow_up_questions": { "type": "array", "items": { "type": "string" } },
+    "comprehension_activities": { "type": "array" }
+  },
+  "required": ["meta", "scenario", "dialogue"]
+}

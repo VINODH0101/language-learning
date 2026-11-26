@@ -48,7 +48,35 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.getByText(/0 of 10 min \(0%\)/i)).toBeDefined();
   });
 
-  it('3. Renders Daily Masterpiece Learning (Poetry & Immersive Conversation)', () => {
+  const publishSampleDailyContent = async () => {
+    await dailyContentService.publishPoem({
+      title: 'Mar Português',
+      author: 'Fernando Pessoa',
+      learning_language: 'pt',
+      cefr_level: 'B2',
+      excerpt: 'Ó mar salgado, quanto do teu sal...',
+      full_text: 'Ó mar salgado, quanto do teu sal\nSão lágrimas de Portugal!',
+      cultural_context: 'Clássico da poesia lusófona.',
+      country_name: 'Portugal',
+      country_code: 'PT',
+    });
+    await dailyContentService.publishConversation({
+      title: 'Café da Manhã em Lisboa',
+      scenario: 'Pedindo um café com pastel de nata',
+      learning_language: 'pt',
+      cefr_level: 'A2',
+      cultural_context: 'Pastelaria tradicional em Lisboa.',
+      country_name: 'Portugal',
+      country_code: 'PT',
+      dialogue: [
+        { speaker: 'Cliente', line: 'Bom dia! Quero uma bica, por favor.', translation: 'Good morning! An espresso, please.' },
+        { speaker: 'Atendente', line: 'Com certeza, já vai sair.', translation: 'Certainly, coming right up.' },
+      ],
+    });
+  };
+
+  it('3. Renders Daily Masterpiece Learning (Poetry & Immersive Conversation)', async () => {
+    await publishSampleDailyContent();
     renderDashboard('en');
 
     // Section header
@@ -61,7 +89,8 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.getByText(/Practice Dialogue/i)).toBeDefined();
   });
 
-  it('4. Opens Daily Poetry Reader modal on click and renders full verses and audio button', () => {
+  it('4. Opens Daily Poetry Reader modal on click and renders full verses and audio button', async () => {
+    await publishSampleDailyContent();
     renderDashboard('en');
 
     const readPoemBtn = screen.getByText(/Read Poetry/i);
@@ -79,7 +108,8 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.queryByText(/Daily Masterpiece Poetry/i)).toBeNull();
   });
 
-  it('5. Opens Daily Conversation modal on click and renders interactive dialogue lines', () => {
+  it('5. Opens Daily Conversation modal on click and renders interactive dialogue lines', async () => {
+    await publishSampleDailyContent();
     renderDashboard('en');
 
     const practiceDialogueBtn = screen.getByText(/Practice Dialogue/i);
@@ -97,26 +127,9 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     expect(screen.queryByText(/Daily Immersive Dialogue/i)).toBeNull();
   });
 
-  it('6. Supports global country exploration across 250+ countries with genuine coordinates', async () => {
-    renderDashboard('en');
-
-    // Global Discovery header and selector
-    expect(screen.getByText(/Global Discovery/i)).toBeDefined();
-    expect(screen.getByText(/Capital & Region/i)).toBeDefined();
-    expect(screen.getByText(/Population/i)).toBeDefined();
-    expect(screen.getByText(/Local Weather/i)).toBeDefined();
-    expect(screen.getByText(/GPS:/i)).toBeDefined();
-
-    // Switch country dropdown to another sovereign nation
-    const select = screen.getByLabelText(/Select country to explore/i) as HTMLSelectElement;
-    expect(select).toBeDefined();
-
-    fireEvent.change(select, { target: { value: 'BR' } });
-    expect(select.value).toBe('BR');
-  });
-
-  it('7. Enforces replacement semantics in DailyContentService (new activates, old archives)', async () => {
-    const initial = await dailyContentService.getAllContent();
+  it('6. Enforces replacement semantics in DailyContentService (new activates, old archives)', async () => {
+    await publishSampleDailyContent();
+    await dailyContentService.getAllContent();
 
     // Publish new poem
     const newPoem = await dailyContentService.publishPoem({
@@ -142,5 +155,36 @@ describe('Lexilume Dashboard Redesign & Information Architecture Suite', () => {
     // Previous active poem was safely archived (not deleted)
     const archivedPt = updated.archivedPoetry.filter(p => p.learning_language === 'pt');
     expect(archivedPt.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('7. Displays Section 4 Vocabulary Summary with genuine review schedule and links to My Words', async () => {
+    renderDashboard('en');
+
+    expect(screen.getByText(/Vocabulary Summary/i)).toBeDefined();
+    expect(await screen.findByText(/Due for Review Today/i)).toBeDefined();
+    expect(screen.getByText(/Saved in Past 7 Days/i)).toBeDefined();
+
+    const myWordsBtn = screen.getByText(/My Words/i);
+    fireEvent.click(myWordsBtn);
+    expect(mockNavigateTab).toHaveBeenCalledWith('words');
+  });
+
+  it('8. Displays Section 6 Recently Learned and provides link to full progress history', async () => {
+    renderDashboard('en');
+
+    expect(screen.getByText(/Recently Learned/i)).toBeDefined();
+    const historyBtn = screen.getByText(/View Learning History/i);
+    fireEvent.click(historyBtn);
+    expect(mockNavigateTab).toHaveBeenCalledWith('progress');
+  });
+
+  it('9. Enforces Four-Way Linguistic Decoupling in masthead', () => {
+    renderDashboard('en');
+
+    // Should indicate target language and explanation language separately
+    expect(screen.getAllByText(/Learning/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Portuguese/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Explanations in/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/English/i).length).toBeGreaterThan(0);
   });
 });

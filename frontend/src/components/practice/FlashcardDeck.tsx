@@ -6,7 +6,6 @@ import {
   Volume2,
   ArrowRight,
   TrendingUp,
-  Target,
   Calendar,
   Layers,
   History,
@@ -219,18 +218,18 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
 
   return (
     <div className="space-y-4 max-w-xl mx-auto">
-      {/* Daily Review Target Progress Bar */}
-      <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 text-slate-300 font-semibold">
-            <Target className="w-4 h-4 text-indigo-400" />
-            <span>Meta Diária de Revisão SM-2</span>
-          </div>
-          <span className="font-mono text-indigo-300 font-bold">
-            {todayCompletedCount} / {dailyTarget} itens ({progressPct}%)
+      {/* Slim daily goal line — the page summary shows the headline number,
+          this keeps progress visible while the learner is inside the deck. */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <span className="font-semibold uppercase tracking-wide">
+            Meta Diária de Revisão SM-2
+          </span>
+          <span className="font-mono">
+            {todayCompletedCount}/{dailyTarget} · {progressPct}%
           </span>
         </div>
-        <ProgressBar progress={progressPct} variant="indigo" />
+        <ProgressBar progress={progressPct} variant="bronze" />
       </div>
 
       {/* Header Info */}
@@ -249,9 +248,6 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
           >
             {currentVocab.language.toUpperCase()}
           </Badge>
-          <span className="capitalize text-slate-300 font-mono text-[11px]">
-            Repetições: {currentSRS.repetition_count} • EF: {currentSRS.ease_factor}
-          </span>
         </div>
       </div>
 

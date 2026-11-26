@@ -1,5 +1,5 @@
 import React from 'react';
-import { Feather, MessageSquare, CheckCircle2, Volume2, BookOpen, Clock, ShieldCheck } from 'lucide-react';
+import { Feather, MessageSquare, Info } from 'lucide-react';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
 import { Language, DailyPoem, DailyConversation, UnifiedActivityEvent } from '../../../types';
@@ -33,133 +33,138 @@ export const DailyContentProgressCard: React.FC<DailyContentProgressCardProps> =
       title={`${t('progress:daily_content_title', 'Daily Literature & Conversation Progress')} (${selectedLanguage.toUpperCase()})`}
       subtitle={t(
         'progress:daily_content_subtitle',
-        'Verified completions of administrator-published poetry and communicative dialogues, version-pinned across updates'
+        'Completed daily poetry readings and dialogues preserved by version'
       )}
     >
-      <div className="space-y-5">
+      <div className="space-y-4">
         {/* Metric Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Poetry Completed */}
-          <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-900/40">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Feather className="w-3.5 h-3.5" />
+          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200">
+            <div className="flex items-center justify-between gap-1.5 mb-1">
+              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Feather className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                 {t('progress:poems_completed', 'Poems Studied')}
               </span>
-              <Badge variant="indigo" size="sm">Literary</Badge>
             </div>
-            <span className="text-2xl font-black text-indigo-400 block mt-1">{poemsCompletedCount}</span>
-            <span className="text-[11px] text-slate-400 block mt-1">
+            <span className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 block mt-1">
+              {poemsCompletedCount}
+            </span>
+            <span className="text-[11px] text-stone-600 block mt-1">
               {poemsListenedCount} {t('progress:verses_listened', 'audio playthroughs')}
             </span>
           </div>
 
           {/* Conversation Completed */}
-          <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-900/40">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5" />
-                {t('progress:convos_completed', 'Dialogues Completed')}
+          <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
+            <div className="flex items-center justify-between gap-1.5 mb-1">
+              <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                {t('progress:convos_completed', 'Dialogues Studied')}
               </span>
-              <Badge variant="emerald" size="sm">Dialogue</Badge>
             </div>
-            <span className="text-2xl font-black text-emerald-400 block mt-1">{conversationsCompletedCount}</span>
-            <span className="text-[11px] text-slate-400 block mt-1">
-              {conversationsListenedCount} {t('progress:turns_listened', 'spoken dialogue audio runs')}
+            <span className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 block mt-1">
+              {conversationsCompletedCount}
+            </span>
+            <span className="text-[11px] text-stone-600 block mt-1">
+              {conversationsListenedCount} {t('progress:turns_listened', 'spoken runs')}
             </span>
           </div>
 
-          {/* Active Poem Status */}
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              {t('progress:todays_poem', 'Today’s Active Poem')}
+          {/* Today's Poem */}
+          <div className="p-4 rounded-xl bg-[#FAF9F6] border border-stone-200">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+              {t('progress:todays_poem', "Today's Poetry")}
             </span>
             {activePoem ? (
-              <div className="mt-1.5">
-                <span className="text-xs font-bold text-slate-200 line-clamp-1">
+              <div className="mt-1.5 space-y-0.5">
+                <span className="text-xs font-bold text-stone-900 line-clamp-1">
                   "{activePoem.title}"
                 </span>
-                <span className="text-[11px] text-slate-400 block">
+                <span className="text-[11px] text-stone-500 block">
                   {activePoem.author} • {activePoem.cefr_level}
                 </span>
               </div>
             ) : (
-              <span className="text-xs text-slate-500 mt-2 block italic">
-                {t('progress:no_active_poem', 'None active today')}
+              <span className="text-xs text-stone-400 mt-2 block">
+                {t('progress:no_active_poem', 'No poem active for today')}
               </span>
             )}
           </div>
 
-          {/* Active Conversation Status */}
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              {t('progress:todays_convo', 'Today’s Active Dialogue')}
+          {/* Today's Dialogue */}
+          <div className="p-4 rounded-xl bg-[#FAF9F6] border border-stone-200">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+              {t('progress:todays_convo', "Today's Conversation")}
             </span>
             {activeConversation ? (
-              <div className="mt-1.5">
-                <span className="text-xs font-bold text-slate-200 line-clamp-1">
+              <div className="mt-1.5 space-y-0.5">
+                <span className="text-xs font-bold text-stone-900 line-clamp-1">
                   {activeConversation.title}
                 </span>
-                <span className="text-[11px] text-slate-400 block">
+                <span className="text-[11px] text-stone-500 block">
                   {activeConversation.cefr_level} • {activeConversation.dialogue.length} {t('progress:turns', 'turns')}
                 </span>
               </div>
             ) : (
-              <span className="text-xs text-slate-500 mt-2 block italic">
-                {t('progress:no_active_convo', 'None active today')}
+              <span className="text-xs text-stone-400 mt-2 block">
+                {t('progress:no_active_convo', 'No conversation active for today')}
               </span>
             )}
           </div>
         </div>
 
-        {/* Historical Integrity Guarantee Banner */}
-        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            {t(
-              'progress:version_pinning_note',
-              'Content Version Invariant: When an administrator replaces daily poetry or dialogue content, previous completion records remain pinned to their historical version and timestamp. Completed content is never retroactively erased or transferred to replacements.'
-            )}
-          </p>
-        </div>
-
-        {/* Recent Daily Content History List */}
+        {/* Recent History */}
         {recentDailyActivities.length > 0 && (
           <div className="space-y-2">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              {t('progress:recent_daily_history', 'Recent Verified Literary & Dialogue Activity')}
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+              {t('progress:recent_daily_history', 'Recent Daily History')}
             </span>
 
             <div className="space-y-1.5">
               {recentDailyActivities.map(ev => (
                 <div
                   key={ev.id}
-                  className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/60 flex items-center justify-between text-xs gap-3"
+                  className="p-3 rounded-xl bg-[#FAF9F6] border border-stone-200 flex items-center justify-between text-xs gap-3"
                 >
-                  <div className="flex items-center gap-2.5 truncate">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     {ev.activity_type.includes('poetry') ? (
-                      <Feather className="w-4 h-4 text-indigo-400 shrink-0" />
+                      <Feather className="w-4 h-4 text-amber-700 shrink-0" />
                     ) : (
-                      <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <MessageSquare className="w-4 h-4 text-emerald-700 shrink-0" />
                     )}
-                    <div className="truncate">
-                      <span className="font-semibold text-slate-200 block truncate">
+                    <div className="min-w-0">
+                      <span className="font-semibold text-stone-900 block truncate">
                         {ev.title || ev.content_id}
                       </span>
-                      <span className="text-[11px] text-slate-400 capitalize">
+                      <span className="text-[11px] text-stone-500 capitalize">
                         {ev.activity_type.replace(/_/g, ' ')}
                       </span>
                     </div>
                   </div>
 
-                  <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                  <Badge variant="slate" size="sm">
                     {new Date(ev.timestamp).toLocaleDateString()}
-                  </span>
+                  </Badge>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* Collapsible Version Pinning Note */}
+        <details className="text-xs text-stone-500 bg-[#FAF9F6] px-3.5 py-2.5 rounded-xl border border-stone-200">
+          <summary className="cursor-pointer font-medium text-stone-700 flex items-center gap-1.5 select-none">
+            <Info className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+            <span>{t('progress:methodology_toggle', 'How this is calculated')}</span>
+          </summary>
+          <p className="mt-2 text-[11px] text-stone-500 leading-relaxed pl-5">
+            {t(
+              'progress:version_pinning_note',
+              'Completed poetry and dialogue records remain pinned to their historical edition and are preserved across updates.'
+            )}
+          </p>
+        </details>
       </div>
     </Card>
   );

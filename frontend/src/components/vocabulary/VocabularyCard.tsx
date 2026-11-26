@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { BookmarkPlus, Volume2, Eye, EyeOff, Sparkles, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookmarkPlus, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { VocabularyEntry } from '../../types/vocabulary';
 import { Language } from '../../types';
 import { AudioButton } from '../common/AudioButton';
+import { Badge } from '../common/Badge';
 import { savePhrasebookWord } from '../../services/localDb';
 import { StorageService } from '../../services/storage';
+import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 interface VocabularyCardProps {
@@ -20,6 +22,7 @@ export const VocabularyCard: React.FC<VocabularyCardProps> = ({
   userId = StorageService.getCurrentUser(),
   defaultExpanded = false,
 }) => {
+  const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isTranslationVisible, setIsTranslationVisible] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -42,25 +45,25 @@ export const VocabularyCard: React.FC<VocabularyCardProps> = ({
         is_verified: true,
       });
       setIsSaved(true);
-      toast.success(`"${entry.lemma}" adicionado ao seu vocabulário pessoal!`);
+      toast.success(t('learning:lookup_saved_toast', 'Saved "{{term}}" to your personal vocabulary.', { term: entry.lemma }));
     } catch {
-      toast.error('Erro ao salvar vocabulário localmente.');
+      toast.error(t('learning:lookup_save_error', 'Could not save word'));
     }
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700/80 transition flex flex-col justify-between space-y-4">
-      {/* Top Header: Lemma, POS, IPA, Badges & Audio */}
-      <div className="space-y-2">
+    <article className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs hover:border-stone-300 transition flex flex-col justify-between space-y-4">
+      <div className="space-y-3">
+        {/* Top Header */}
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-lg sm:text-xl font-bold text-slate-100 tracking-tight">
+              <span className="font-serif text-xl font-bold text-stone-900 tracking-tight">
                 {entry.lemma}
               </span>
 
               {entry.phonetic_ipa && (
-                <span className="text-xs font-mono text-indigo-400 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-900/50">
+                <span className="text-xs font-mono text-stone-600 bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
                   {entry.phonetic_ipa}
                 </span>
               )}
@@ -68,72 +71,77 @@ export const VocabularyCard: React.FC<VocabularyCardProps> = ({
               <AudioButton text={entry.lemma} language={entry.target_language} />
             </div>
 
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400">
-              <span className="capitalize font-medium text-slate-300">{entry.part_of_speech}</span>
+            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-stone-500 flex-wrap">
+              <span className="capitalize font-medium text-stone-700">{entry.part_of_speech}</span>
               <span>•</span>
-              <span className="px-1.5 py-0.2 rounded font-bold bg-amber-950/70 text-amber-300 border border-amber-800/60">
+              <Badge variant="amber" size="sm">
                 {entry.cefr_level}
-              </span>
+              </Badge>
               {entry.frequency_rank && (
                 <>
                   <span>•</span>
-                  <span className="text-slate-400">Top #{entry.frequency_rank}</span>
+                  <span className="font-mono">Top #{entry.frequency_rank}</span>
                 </>
               )}
             </div>
           </div>
 
-          {/* Action: Save to phrasebook */}
           <button
+            type="button"
             onClick={handleSave}
-            className={`p-2 rounded-xl border transition min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer ${
+            className={`p-2 rounded-xl border transition min-h-[42px] min-w-[42px] flex items-center justify-center cursor-pointer shrink-0 ${
               isSaved
-                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
-                : 'bg-slate-800 text-slate-400 hover:text-white border-slate-700'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-stone-50 text-stone-500 hover:text-stone-900 hover:bg-stone-100 border-stone-200'
             }`}
-            title="Salvar no Vocabulário"
-            aria-label="Salvar no Vocabulário"
+            title={t('learning:lookup_save_btn', 'Save to My Words')}
+            aria-label={t('learning:lookup_save_btn', 'Save to My Words')}
           >
             <BookmarkPlus className="w-4 h-4" />
           </button>
         </div>
 
         {/* Translation & Reveal Toggle */}
-        <div className="pt-1 flex items-center justify-between border-t border-slate-800/60">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-400">Significado:</span>
+        <div className="pt-2.5 flex items-center justify-between border-t border-stone-100">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-medium text-stone-500 shrink-0">
+              {t('learning:lookup_translation_heading', 'Translation')}:
+            </span>
             {isTranslationVisible ? (
-              <span className="text-sm font-bold text-indigo-300">{translation}</span>
+              <span className="text-sm font-bold text-stone-900 truncate">{translation}</span>
             ) : (
-              <span className="text-xs italic text-slate-500 bg-slate-800 px-2 py-0.5 rounded">Oculto</span>
+              <span className="text-xs italic text-stone-400 bg-stone-100 px-2 py-0.5 rounded">
+                •••
+              </span>
             )}
           </div>
 
           <button
+            type="button"
             onClick={() => setIsTranslationVisible(!isTranslationVisible)}
-            className="p-1.5 text-slate-400 hover:text-slate-200 cursor-pointer rounded-lg hover:bg-slate-800 transition"
-            title={isTranslationVisible ? 'Ocultar Tradução' : 'Exibir Tradução'}
-            aria-label={isTranslationVisible ? 'Ocultar Tradução' : 'Exibir Tradução'}
+            className="p-1.5 text-stone-400 hover:text-stone-800 cursor-pointer rounded-lg hover:bg-stone-100 transition shrink-0"
+            title={isTranslationVisible ? t('learning:hide_translation', 'Hide Translation') : t('learning:show_translation', 'Show Translation')}
+            aria-label={isTranslationVisible ? t('learning:hide_translation', 'Hide Translation') : t('learning:show_translation', 'Show Translation')}
           >
             {isTranslationVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </button>
         </div>
 
-        {/* Definition in Explanation Language */}
-        <p className="text-xs text-slate-300 leading-relaxed pt-1">
+        {/* Definition */}
+        <p className="text-xs text-stone-600 leading-relaxed">
           {definition}
         </p>
 
-        {/* Example Sentence with Audio */}
-        <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/60 space-y-1.5 mt-2">
+        {/* Example Sentence */}
+        <div className="p-3 bg-[#FAF9F6] rounded-xl border border-stone-200 space-y-1.5">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-xs sm:text-sm font-medium text-slate-100 italic">
+            <p className="font-serif text-xs sm:text-sm font-medium text-stone-900 italic leading-snug">
               "{entry.example_sentence_target}"
             </p>
             <AudioButton text={entry.example_sentence_target} language={entry.target_language} />
           </div>
-          {isTranslationVisible && (
-            <p className="text-xs text-slate-400">
+          {isTranslationVisible && exampleTranslation && (
+            <p className="text-xs text-stone-500">
               → {exampleTranslation}
             </p>
           )}
@@ -141,28 +149,28 @@ export const VocabularyCard: React.FC<VocabularyCardProps> = ({
 
         {/* Expandable Grammar & Collocations */}
         {(entry.grammar_notes || (entry.collocations && entry.collocations.length > 0)) && (
-          <div className="pt-1">
+          <div>
             <button
+              type="button"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer py-1"
+              className="flex items-center gap-1 text-xs font-semibold text-stone-700 hover:text-stone-900 cursor-pointer py-1"
             >
-              <span>{isExpanded ? 'Menos detalhes' : 'Mais detalhes e colocações'}</span>
+              <span>{isExpanded ? t('common:close', 'Hide details') : t('learning:lookup_context_heading', 'Context & notes')}</span>
               {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
 
             {isExpanded && (
-              <div className="space-y-2 pt-2 border-t border-slate-800 text-xs animate-fadeIn">
+              <div className="space-y-2 pt-2 border-t border-stone-100 text-xs animate-fadeIn">
                 {entry.grammar_notes && (
-                  <p className="text-slate-400 leading-relaxed">
-                    <strong className="text-slate-300">Nota:</strong> {entry.grammar_notes}
+                  <p className="text-stone-600 leading-relaxed">
+                    {entry.grammar_notes}
                   </p>
                 )}
 
                 {entry.collocations && entry.collocations.length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-slate-400 font-semibold text-[11px]">Colocações:</span>
                     {entry.collocations.map(c => (
-                      <span key={c} className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[11px] font-mono">
+                      <span key={c} className="px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200 text-[11px] font-mono">
                         {c}
                       </span>
                     ))}
@@ -173,6 +181,6 @@ export const VocabularyCard: React.FC<VocabularyCardProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 };

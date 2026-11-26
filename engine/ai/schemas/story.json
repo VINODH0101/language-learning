@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lexilume.local/schemas/story.json",
+  "title": "Story content",
+  "type": "object",
+  "properties": {
+    "meta": { "$ref": "common.json" },
+    "narrative": { "type": "string", "minLength": 1 },
+    "paragraphs": {
+      "type": "array",
+      "items": { "type": "object", "properties": { "text": { "type": "string" } }, "required": ["text"] }
+    },
+    "characters": { "type": "array", "items": { "type": "object" } },
+    "vocabulary": { "type": "array" },
+    "grammar_highlights": { "type": "array", "items": { "type": "object" } },
+    "comprehension_questions": { "type": "array", "items": { "type": "object" } },
+    "answer_key": { "type": "array" },
+    "explanation_translations": { "type": "object" }
+  },
+  "required": ["meta", "narrative", "comprehension_questions"]
+}

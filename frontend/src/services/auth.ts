@@ -1,6 +1,6 @@
 import { UserProfile, UserRole } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { getPhrasebookWords, migrateGuestVocabulary } from './localDb';
+import { getPhrasebookWords, migrateGuestVocabulary, migrateGuestContentData } from './localDb';
 import { StorageService } from './storage';
 import { courseService } from './courseService';
 import { syncEngine } from './syncEngine';
@@ -599,6 +599,7 @@ class AuthService {
     // Migrate guest courses to the authenticated user account
     courseService.migrateGuestCourses(userId);
     await migrateGuestVocabulary(userId);
+    await migrateGuestContentData(userId);
 
     return {
       wordsImported,

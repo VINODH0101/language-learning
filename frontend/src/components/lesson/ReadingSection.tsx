@@ -21,6 +21,7 @@ import { Badge } from '../common/Badge';
 import { savePhrasebookWord } from '../../services/localDb';
 import { StorageService } from '../../services/storage';
 import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 import { toast } from 'sonner';
 
 interface ReadingSectionProps {
@@ -41,7 +42,7 @@ export const ReadingSection: React.FC<ReadingSectionProps> = ({
   language,
   variety,
 }) => {
-  const { t } = useI18n();
+  const { t, interfaceLanguage } = useI18n();
   const [viewMode, setViewMode] = useState<ReadingViewMode>('original');
   const [showTranslation, setShowTranslation] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
@@ -263,7 +264,7 @@ export const ReadingSection: React.FC<ReadingSectionProps> = ({
                   {reading.passage_pt && (
                     <div>
                       <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1 font-sans">
-                        Tradução em Português (PT):
+                        {getLanguageName('pt', interfaceLanguage as any)} (PT):
                       </span>
                       <p className="whitespace-pre-line text-slate-300 text-xs sm:text-sm">{reading.passage_pt}</p>
                     </div>
@@ -271,7 +272,7 @@ export const ReadingSection: React.FC<ReadingSectionProps> = ({
                   {reading.passage_es && (
                     <div className={reading.passage_pt ? 'pt-3 border-t border-slate-800' : ''}>
                       <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-1 font-sans">
-                        Traducción en Español (ES):
+                        {getLanguageName('es', interfaceLanguage as any)} (ES):
                       </span>
                       <p className="whitespace-pre-line text-slate-300 text-xs sm:text-sm">{reading.passage_es}</p>
                     </div>
@@ -283,7 +284,7 @@ export const ReadingSection: React.FC<ReadingSectionProps> = ({
               ) : (
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 font-sans">
-                    Tradução Paralela (EN):
+                    {getLanguageName('en', interfaceLanguage as any)} (EN):
                   </span>
                   <p className="whitespace-pre-line">{reading.passage_en || '(Tradução em inglês indisponível)'}</p>
                 </div>
@@ -370,13 +371,13 @@ export const ReadingSection: React.FC<ReadingSectionProps> = ({
               <>
                 {reading.passage_pt && (
                   <div>
-                    <span className="font-bold text-indigo-400 block mb-1">Tradução em Português (PT):</span>
+                    <span className="font-bold text-indigo-400 block mb-1">{getLanguageName('pt', interfaceLanguage as any)} (PT):</span>
                     <p className="whitespace-pre-line text-slate-300">{reading.passage_pt}</p>
                   </div>
                 )}
                 {reading.passage_es && (
                   <div className={reading.passage_pt ? 'pt-2 border-t border-slate-700/50' : ''}>
-                    <span className="font-bold text-emerald-400 block mb-1">Traducción en Español (ES):</span>
+                    <span className="font-bold text-emerald-400 block mb-1">{getLanguageName('es', interfaceLanguage as any)} (ES):</span>
                     <p className="whitespace-pre-line text-slate-300">{reading.passage_es}</p>
                   </div>
                 )}
@@ -384,7 +385,7 @@ export const ReadingSection: React.FC<ReadingSectionProps> = ({
             ) : (
               reading.passage_en && (
                 <div>
-                  <span className="font-semibold text-slate-300 block mb-1">Tradução de Referência (EN):</span>
+                  <span className="font-semibold text-slate-300 block mb-1">{getLanguageName('en', interfaceLanguage as any)} (EN):</span>
                   <p className="whitespace-pre-line text-slate-400">{reading.passage_en}</p>
                 </div>
               )

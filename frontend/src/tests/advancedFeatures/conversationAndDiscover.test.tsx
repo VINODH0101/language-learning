@@ -1,11 +1,72 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ConversationStudio } from '../../features/conversation/ConversationStudio';
-import { DiscoverHub } from '../../features/discover/DiscoverHub';
+import { ConversationStudio, ScenarioPreset } from '../../features/conversation/ConversationStudio';
+import { DiscoverHub, ThematicCluster, DiscoveryScenarioSummary } from '../../features/discover/DiscoverHub';
 import { SpeechService } from '../../services/speech';
 import * as localDb from '../../services/localDb';
 import { ReadingManager } from '../../services/providers/reading/readingManager';
+
+const MOCK_SCENARIO: ScenarioPreset = {
+  id: 'pt-hotel-b1',
+  title: 'Check-in e Reservas em Hotel Boutique',
+  category: 'Viagens & Hospitalidade',
+  cefrLevel: 'B1',
+  initialPrompt: 'Boa tarde! Bem-vindo ao Hotel Miradouro de Lisboa. Em que posso ajudá-lo hoje?',
+  initialPromptTranslation: 'Good afternoon! Welcome to Hotel Miradouro de Lisboa. How can I help you today?',
+  candidateResponses: [
+    'Sim, tenho uma reserva em meu nome por duas noites.',
+    'Gostaria de saber o horário do café da manhã, por favor.',
+  ],
+  usefulVocab: [
+    { word: 'Miradouro', meaning: 'Scenic viewpoint / overlook' },
+    { word: 'Reserva', meaning: 'Reservation / booking' },
+  ],
+};
+
+const MOCK_THEMES: ThematicCluster[] = [
+  {
+    id: 'theme-pt-gastro',
+    title: 'Gastronomia e Doçaria Conventual Portuguesa',
+    description: 'Vocabulário culinário tradicional e expressões regionais.',
+    cefrLevel: 'B1',
+    language: 'pt',
+    terms: ['pastel de nata', 'bacalhau', 'azeite'],
+  },
+  {
+    id: 'theme-pt-acad',
+    title: 'Discurso Acadêmico & Ensaística Contemporânea',
+    description: 'Conectores formais e léxico argumentativo C1.',
+    cefrLevel: 'C1',
+    language: 'pt',
+    terms: ['não obstante', 'hermenêutica', 'prerrogativa'],
+  },
+  {
+    id: 'theme-es-retorica',
+    title: 'Retórica Jurídica y Filosofía Política Hispánica',
+    description: 'Léxico de argumentación avanzada en español.',
+    cefrLevel: 'C1',
+    language: 'es',
+    terms: ['jurisprudencia', 'idiosincrasia', 'consenso'],
+  },
+];
+
+const MOCK_DISCOVER_SCENARIOS: DiscoveryScenarioSummary[] = [
+  {
+    id: 'disc-scen-pt-1',
+    title: 'Debate Cultural em Coimbra',
+    description: 'Prática de argumentação sobre patrimônio universitário.',
+    cefrLevel: 'C1',
+    language: 'pt',
+  },
+  {
+    id: 'disc-scen-es-1',
+    title: 'Coloquio Académico en Salamanca',
+    description: 'Práctica de debate formal en español.',
+    cefrLevel: 'C1',
+    language: 'es',
+  },
+];
 
 describe('Step 8: Advanced Learning Features — Conversation & Discover Hub', () => {
   beforeEach(() => {
@@ -14,17 +75,17 @@ describe('Step 8: Advanced Learning Features — Conversation & Discover Hub', (
 
   describe('8. Conversation Practice Studio', () => {
     it('renders structured roleplay, handles turn-taking, enforces bounded limits, and saves vocabulary', async () => {
-      const speakSpy = vi.spyOn(SpeechService, 'speak').mockResolvedValue();
+      vi.spyOn(SpeechService, 'speak').mockResolvedValue();
       const saveVocabSpy = vi.spyOn(localDb, 'savePhrasebookWord').mockResolvedValue('mock-vocab-id');
 
-      render(<ConversationStudio language="pt" />);
+      render(<ConversationStudio language="pt" scenarios={[MOCK_SCENARIO]} />);
 
       // Scenario header and CEFR badge
       expect(screen.getByText(/Conversation Studio & Roleplay/i)).toBeDefined();
       expect(screen.getByText(/Check-in e Reservas em Hotel Boutique/i)).toBeDefined();
 
       // Initial prompt token and translation
-      expect(screen.getByText('Miradouro')).toBeDefined();
+      expect(screen.getAllByText('Miradouro').length).toBeGreaterThan(0);
       expect(screen.getByText(/Good afternoon! Welcome to Hotel Miradouro de Lisboa/i)).toBeDefined();
 
       // Suggested candidate responses
@@ -65,7 +126,7 @@ describe('Step 8: Advanced Learning Features — Conversation & Discover Hub', (
         },
       ]);
 
-      render(<DiscoverHub initialLanguage="pt" />);
+      render(<DiscoverHub initialLanguage="pt" themes={MOCK_THEMES} scenarios={MOCK_DISCOVER_SCENARIOS} />);
 
       // Hub title
       expect(screen.getByText(/Discover Hub — Exploração Multilingual/i)).toBeDefined();

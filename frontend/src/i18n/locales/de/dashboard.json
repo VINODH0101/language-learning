@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "Heutige Ausgabe konnte nicht geladen werden",
+  "err_continue": "Lernfortschritt konnte nicht geladen werden",
+  "err_vocab": "Vokabelstatistiken konnten nicht geladen werden",
+  "err_recent": "Letzte Aktivitäten konnten nicht geladen werden",
+  "culture_preview_empty": "Noch keine Kulturartikel geladen. Öffnen Sie Länder entdecken, um Inhalte von Wikipedia & der KI-Engine abzurufen."
 }

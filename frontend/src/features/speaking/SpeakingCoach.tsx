@@ -26,6 +26,9 @@ import {
 import { Language } from '../../types';
 import { SpeechService } from '../../services/speech';
 import { SpeechManager } from '../../services/providers/speech/speechManager';
+import { contentAccess } from '../../services/contentAccess';
+import { dailyContentService } from '../../services/dailyContentService';
+import { VocabularyService } from '../../services/vocabularyService';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { ProgressBar } from '../../components/common/ProgressBar';
@@ -43,56 +46,90 @@ export interface SpeakingCoachProps {
   language: Language;
   variety?: string;
   customChallenge?: SpeakingChallenge;
+  challenges?: SpeakingChallenge[];
 }
-
-const DEFAULT_CHALLENGES: Record<string, SpeakingChallenge[]> = {
-  pt: [
-    {
-      id: 'pt_1',
-      prompt: 'Explique a importância da preservação ambiental em áreas urbanas.',
-      targetResponse: 'A preservação ambiental nas cidades garante a qualidade do ar e o equilíbrio ecológico sustentável.',
-      targetIpa: 'a pɾezeɾvaˈsɐ̃w ɐ̃bjẽˈtaw nas siˈdadʒis...',
-      keyVocabulary: ['preservação', 'sustentável', 'equilíbrio', 'qualidade'],
-      grammarNotes: 'Concordância nominal correta entre substantivos e adjetivos compostos.',
-    },
-    {
-      id: 'pt_2',
-      prompt: 'Descreva uma decisão profissional desafiadora que você tomou recentemente.',
-      targetResponse: 'Caso tivéssemos adiado a decisão, teríamos comprometido o cronograma estratégico da equipe.',
-      targetIpa: 'ˈkazu tʃiˈvɛsemus adʒiˈadu...',
-      keyVocabulary: ['cronograma', 'estratégico', 'comprometido', 'decisão'],
-      grammarNotes: 'Emprego do pretérito mais-que-perfeito composto do subjuntivo com condicional composto.',
-    },
-  ],
-  es: [
-    {
-      id: 'es_1',
-      prompt: 'Explica los beneficios de una transición hacia fuentes de energía renovable.',
-      targetResponse: 'La transición hacia energías renovables reduce la huella de carbono y fomenta el desarrollo sostenible.',
-      targetIpa: 'la tɾansiˈsjon ˈasja eneɾˈxi.as...',
-      keyVocabulary: ['transición', 'renovables', 'carbono', 'sostenible'],
-      grammarNotes: 'Uso de conectores de causa y efecto en modo indicativo.',
-    },
-  ],
-  en: [
-    {
-      id: 'en_1',
-      prompt: 'Discuss the impact of artificial intelligence on modern workplace productivity.',
-      targetResponse: 'Artificial intelligence streamlines repetitive tasks and empowers professionals to focus on creative problem-solving.',
-      targetIpa: 'ˌɑːtɪˈfɪʃl ɪnˈtelɪdʒəns...',
-      keyVocabulary: ['streamlines', 'repetitive', 'empowers', 'problem-solving'],
-      grammarNotes: 'Subject-verb agreement in present tense with compound predicates.',
-    },
-  ],
-};
 
 export const SpeakingCoach: React.FC<SpeakingCoachProps> = ({
   language,
   variety = 'all',
   customChallenge,
+  challenges,
 }) => {
-  const challengeList = DEFAULT_CHALLENGES[language] || DEFAULT_CHALLENGES.pt;
+  const [liveChallenges, setLiveChallenges] = useState<SpeakingChallenge[]>(challenges || []);
   const [activeChallengeIdx, setActiveChallengeIdx] = useState(0);
+
+  useEffect(() => {
+    if (challenges) {
+      setLiveChallenges(challenges);
+      return;
+    }
+    let cancelled = false;
+    const loadLive = async () => {
+      try {
+        await VocabularyService.loadLiveCatalog(language, language === 'en' ? 'pt' : 'en').catch(() => {});
+        const [vocab, sentences, poem, conv] = await Promise.all([
+          contentAccess.getPublishedVocabularyEntries(language).catch(() => []),
+          Promise.resolve(VocabularyService.getSentences(language)),
+          dailyContentService.getActivePoetry(language).catch(() => null),
+          contentAccess.getPublishedConversations(language).catch(() => []),
+        ]);
+
+        const built: SpeakingChallenge[] = [];
+        if (conv.length > 0 && conv[0].dialogue.length > 0) {
+          built.push({
+            id: `speak-conv-${conv[0].id}`,
+            prompt: conv[0].scenario || conv[0].title,
+            targetResponse: conv[0].dialogue[0].line,
+            keyVocabulary: conv[0].dialogue[0].line
+              .split(/\s+/)
+              .map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚàâêôõãçñ]/gi, ''))
+              .filter(w => w.length > 4)
+              .slice(0, 4),
+            grammarNotes: conv[0].cultural_context || '',
+          });
+        }
+        if (poem) {
+          built.push({
+            id: `speak-poem-${poem.id}`,
+            prompt: poem.title,
+            targetResponse: poem.excerpt.split('\n')[0] || poem.excerpt,
+            keyVocabulary: [poem.title, poem.author],
+            grammarNotes: poem.cultural_context || '',
+          });
+        }
+        for (const s of sentences.slice(0, 3)) {
+          built.push({
+            id: `speak-sent-${s.id}`,
+            prompt: s.translations.en || s.sentence_target,
+            targetResponse: s.sentence_target,
+            keyVocabulary: s.linked_vocabulary || [],
+            grammarNotes: s.context_notes || '',
+          });
+        }
+        for (const v of vocab.slice(0, 3)) {
+          if (v.example_sentence_target) {
+            built.push({
+              id: `speak-voc-${v.id}`,
+              prompt: v.definitions.en || v.lemma,
+              targetResponse: v.example_sentence_target,
+              targetIpa: v.phonetic_ipa,
+              keyVocabulary: [v.lemma, ...(v.collocations || []).slice(0, 2)],
+              grammarNotes: v.grammar_notes || '',
+            });
+          }
+        }
+        if (!cancelled) setLiveChallenges(built);
+      } catch {
+        if (!cancelled) setLiveChallenges([]);
+      }
+    };
+    loadLive();
+    return () => {
+      cancelled = true;
+    };
+  }, [language, challenges]);
+
+  const challengeList = liveChallenges;
   const challenge = customChallenge || challengeList[activeChallengeIdx] || challengeList[0];
 
   const [isRecording, setIsRecording] = useState(false);
@@ -138,11 +175,11 @@ export const SpeakingCoach: React.FC<SpeakingCoachProps> = ({
 
   // Evaluation: Token matching & metrics calculation
   const evaluation = useMemo(() => {
-    if (!transcript.trim()) {
+    if (!transcript.trim() || !challenge) {
       return {
         transcriptionAccuracyPct: 0,
         matchedWords: [] as string[],
-        missingWords: challenge.keyVocabulary,
+        missingWords: challenge?.keyVocabulary || [],
         pronunciationRating: 'Pendente',
       };
     }
@@ -177,6 +214,18 @@ export const SpeakingCoach: React.FC<SpeakingCoachProps> = ({
       pronunciationRating: pronRating,
     };
   }, [transcript, challenge]);
+
+  if (!challenge) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3">
+        <Mic className="w-8 h-8 text-emerald-400 mx-auto" />
+        <h3 className="text-base font-bold text-slate-100">Speaking Coach</h3>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          No speaking prompts loaded yet for {language.toUpperCase()}. Publish content or search vocabulary to practice oral pronunciation.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

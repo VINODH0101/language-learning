@@ -2,18 +2,13 @@ import React, { useState } from 'react';
 import {
   AlertTriangle,
   Lightbulb,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   ArrowRight,
-  Sparkles,
-  BookMarked,
-  Layers,
 } from 'lucide-react';
 import { MistakeNotebookItem, ExerciseAttempt, Language } from '../../../types';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
-import { Button } from '../../../components/common/Button';
 import { useI18n } from '../../../i18n/i18nContext';
 
 interface WeakAreasCardProps {
@@ -43,7 +38,6 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
   const { t } = useI18n();
   const [isMistakesExpanded, setIsMistakesExpanded] = useState(false);
 
-  // Derive genuine error categories from mistake logs and failed attempts
   const categoryCounts = new Map<string, number>();
   mistakes.forEach(m => {
     const cat = m.error_category || 'grammar';
@@ -54,14 +48,22 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
-  // Generate actionable, data-backed recommendations
-  const recommendations: Array<{ id: string; title: string; desc: string; priority: 'high' | 'medium' | 'general' }> = [];
+  const recommendations: Array<{
+    id: string;
+    title: string;
+    desc: string;
+    priority: 'high' | 'medium' | 'general';
+  }> = [];
 
   if (dueSRSCount > 0) {
     recommendations.push({
       id: 'rec_srs',
-      title: `${t('progress:rec_due_reviews_title', 'Consolidate Due Lexicon')} (${dueSRSCount} ${t('progress:terms_due', 'terms')})`,
-      desc: t('progress:rec_due_reviews_desc', 'Clear your SM-2 flashcard queue today to prevent memory lapses along the forgetting curve.'),
+      title: `${t('progress:rec_due_reviews_title', 'Clear Pending SRS Reviews')} (${dueSRSCount})`,
+      desc: t(
+        'progress:rec_due_reviews_desc',
+        'You have {{count}} cards due for SuperMemo SM-2 recall.',
+        { count: dueSRSCount }
+      ),
       priority: 'high',
     });
   }
@@ -71,8 +73,12 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
     const catName = CATEGORY_LABELS[topCat[0]] || topCat[0];
     recommendations.push({
       id: 'rec_cat',
-      title: `${t('progress:rec_weak_cat_title', 'Targeted Review')}: ${catName}`,
-      desc: `${t('progress:rec_weak_cat_desc', 'Recorded')} ${topCat[1]} ${t('progress:errors_in_category', 'inaccuracies in this linguistic category. Revisit related lesson nodes in Practice.')}`,
+      title: `${t('progress:rec_weak_cat_title', 'Strengthen Focus: {{category}}', { category: catName })}`,
+      desc: t(
+        'progress:rec_weak_cat_desc',
+        'Focused practice on {{category}} will help turn recurring mistakes into mastery.',
+        { category: catName, accuracy: 0 }
+      ),
       priority: 'high',
     });
   }
@@ -80,64 +86,75 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
   if (failedAttempts.length > 3) {
     recommendations.push({
       id: 'rec_exercises',
-      title: t('progress:rec_error_recovery_title', 'Error Recovery Session'),
-      desc: t('progress:rec_error_recovery_desc', 'Work through your Mistake Notebook to turn recurring errors into consolidated competencies.'),
+      title: t('progress:rec_error_recovery_title', 'Review Mistake Notebook'),
+      desc: t(
+        'progress:rec_error_recovery_desc',
+        'You have {{count}} recorded mistakes in this track. Targeted correction builds confidence.',
+        { count: failedAttempts.length }
+      ),
       priority: 'medium',
     });
   }
 
-  // If evidence is insufficient, show honest general learning suggestion
   if (recommendations.length === 0) {
     recommendations.push({
       id: 'rec_general',
       title: t('progress:rec_keep_going_title', 'Pace Your Daily Practice'),
-      desc: t('progress:rec_keep_going_desc', 'Complete daily lessons and practice exercises to unlock personalized weak-area diagnostics.'),
+      desc: t(
+        'progress:rec_keep_going_desc',
+        'Complete daily lessons and practice exercises to build personalized focus insights.',
+        { accuracy: 100 }
+      ),
       priority: 'general',
     });
   }
 
   return (
     <Card
-      title={`${t('progress:weak_areas_title', 'Diagnostic Insights & Recommendations')} (${selectedLanguage.toUpperCase()})`}
+      title={`${t('progress:weak_areas_title', 'Diagnostic Weak Areas & Mistake Recovery')} (${selectedLanguage.toUpperCase()})`}
       subtitle={t(
         'progress:weak_areas_subtitle',
-        'Actionable learning suggestions derived strictly from your verified exercise telemetry and error logs'
+        'Practical next steps based on your due flashcards and recorded mistakes'
       )}
     >
-      <div className="space-y-5">
-        {/* Recommendations Grid */}
-        <div className="space-y-3">
-          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-            {t('progress:actionable_recommendations', 'Recommended Next Steps')}
+      <div className="space-y-4">
+        {/* Actionable Recommendations */}
+        <div className="space-y-2.5">
+          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+            {t('progress:actionable_recommendations', 'Actionable Next Steps')}
           </span>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {recommendations.map(rec => (
               <div
                 key={rec.id}
-                className={`p-4 rounded-2xl border flex flex-col justify-between ${
+                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
                   rec.priority === 'high'
-                    ? 'bg-amber-950/20 border-amber-800/40'
-                    : 'bg-slate-950/60 border-slate-800'
+                    ? 'bg-amber-50/70 border-amber-200'
+                    : 'bg-[#FAF9F6] border-stone-200'
                 }`}
               >
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lightbulb className={`w-4 h-4 ${rec.priority === 'high' ? 'text-amber-400' : 'text-indigo-400'}`} />
-                    <span className="text-xs font-bold text-slate-200 line-clamp-1">{rec.title}</span>
+                  <div className="flex items-start gap-2 mb-1.5">
+                    <Lightbulb
+                      className={`w-4 h-4 shrink-0 mt-0.5 ${
+                        rec.priority === 'high' ? 'text-amber-700' : 'text-stone-600'
+                      }`}
+                    />
+                    <span className="text-xs font-bold text-stone-900 leading-snug">{rec.title}</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{rec.desc}</p>
+                  <p className="text-xs text-stone-600 leading-relaxed">{rec.desc}</p>
                 </div>
 
                 {onNavigatePractice && (
-                  <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-end">
+                  <div className="pt-2 border-t border-stone-200/70 flex justify-end">
                     <button
                       type="button"
                       onClick={onNavigatePractice}
-                      className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-semibold text-stone-900 hover:text-amber-800 inline-flex items-center gap-1 cursor-pointer transition-colors"
                     >
                       <span>{t('progress:practice_now', 'Practice Now')}</span>
-                      <ArrowRight className="w-3 h-3" />
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}
@@ -146,21 +163,21 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
           </div>
         </div>
 
-        {/* Top Error Categories Breakdown */}
+        {/* Error Categories */}
         {topErrorCategories.length > 0 && (
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2.5">
-              {t('progress:recurring_error_categories', 'Identified Error Categories')}
+          <div className="p-4 rounded-xl bg-[#FAF9F6] border border-stone-200">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-2.5">
+              {t('progress:recurring_error_categories', 'Recurring Mistake Categories')}
             </span>
 
             <div className="flex flex-wrap gap-2">
               {topErrorCategories.map(([cat, count]) => (
                 <div
                   key={cat}
-                  className="px-3 py-1.5 rounded-xl bg-slate-850 border border-slate-700/80 text-xs flex items-center gap-2"
+                  className="px-3 py-1.5 rounded-lg bg-white border border-stone-200 text-xs flex items-center gap-2"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="font-semibold text-slate-200">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="font-semibold text-stone-800">
                     {CATEGORY_LABELS[cat] || cat}
                   </span>
                   <Badge variant="amber" size="sm">
@@ -172,19 +189,20 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
           </div>
         )}
 
-        {/* Expandable Mistake History */}
+        {/* Collapsible Mistake Notebook Preview */}
         {(mistakes.length > 0 || failedAttempts.length > 0) && (
-          <div className="border-t border-slate-800 pt-3">
+          <div className="border-t border-stone-200 pt-3">
             <button
               type="button"
               onClick={() => setIsMistakesExpanded(!isMistakesExpanded)}
-              className="w-full flex items-center justify-between text-xs font-bold text-slate-300 hover:text-slate-100 p-2 rounded-xl hover:bg-slate-800/40 cursor-pointer transition"
+              className="w-full flex items-center justify-between text-xs font-semibold text-stone-700 hover:text-stone-900 p-2 rounded-xl hover:bg-stone-100 cursor-pointer transition"
             >
               <span className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
                 <span>
-                  {t('progress:view_mistake_history', 'Detailed Mistake Notebook')} ({mistakes.length + failedAttempts.length}{' '}
-                  {t('progress:entries', 'entries')})
+                  {t('progress:view_mistake_history', 'View Mistake History ({{count}})', {
+                    count: mistakes.length + failedAttempts.length,
+                  })}
                 </span>
               </span>
               {isMistakesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -195,34 +213,36 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
                 {mistakes.slice(0, 5).map(m => (
                   <div
                     key={m.id}
-                    className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-1.5"
+                    className="p-3.5 rounded-xl bg-[#FAF9F6] border border-stone-200 text-xs space-y-2"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <Badge variant="amber" size="sm">
                         {CATEGORY_LABELS[m.error_category] || m.error_category}
                       </Badge>
-                      <span className="text-[10px] text-slate-500 font-mono">
+                      <span className="text-[11px] text-stone-500 font-mono">
                         {new Date(m.timestamp).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <p className="text-slate-300 font-medium">"{m.prompt}"</p>
+                    <p className="text-stone-900 font-medium">"{m.prompt}"</p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
-                      <div className="p-2 rounded bg-rose-950/30 border border-rose-800/40 text-rose-300">
-                        <span className="font-semibold block text-[10px] uppercase">{t('progress:your_answer', 'Your Submission')}:</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900">
+                        <span className="font-bold block text-[10px] uppercase text-rose-700">
+                          {t('progress:your_answer', 'Your answer')}:
+                        </span>
                         "{m.user_answer}"
                       </div>
-                      <div className="p-2 rounded bg-emerald-950/30 border border-emerald-800/40 text-emerald-300">
-                        <span className="font-semibold block text-[10px] uppercase">{t('progress:correct_answer', 'Expected Answer')}:</span>
+                      <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900">
+                        <span className="font-bold block text-[10px] uppercase text-emerald-700">
+                          {t('progress:correct_answer', 'Correct answer')}:
+                        </span>
                         "{m.correct_answer}"
                       </div>
                     </div>
 
                     {m.explanation && (
-                      <p className="text-[11px] text-slate-400 italic pt-0.5">
-                        {m.explanation}
-                      </p>
+                      <p className="text-[11px] text-stone-600 italic">{m.explanation}</p>
                     )}
                   </div>
                 ))}
@@ -232,13 +252,15 @@ export const WeakAreasCard: React.FC<WeakAreasCardProps> = ({
                     {failedAttempts.slice(0, 5).map(att => (
                       <div
                         key={att.id}
-                        className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs flex justify-between items-center gap-3"
+                        className="p-3 rounded-xl bg-[#FAF9F6] border border-stone-200 text-xs flex justify-between items-center gap-3"
                       >
-                        <div>
-                          <span className="text-rose-400 font-semibold block">"{att.submitted_answer}"</span>
-                          <span className="text-slate-400 text-[11px]">{att.feedback}</span>
+                        <div className="min-w-0">
+                          <span className="text-rose-700 font-semibold block truncate">
+                            "{att.submitted_answer}"
+                          </span>
+                          <span className="text-stone-600 text-[11px] block">{att.feedback}</span>
                         </div>
-                        <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                        <span className="text-[11px] text-stone-500 font-mono shrink-0">
                           {new Date(att.timestamp).toLocaleDateString()}
                         </span>
                       </div>

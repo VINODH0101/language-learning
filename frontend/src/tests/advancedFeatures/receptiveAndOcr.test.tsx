@@ -1,12 +1,70 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ListeningStudio } from '../../features/listening/ListeningStudio';
-import { ReadingStudio } from '../../features/reading/ReadingStudio';
+import { ListeningStudio, ListeningPassage } from '../../features/listening/ListeningStudio';
+import { ReadingStudio, ReadingItem } from '../../features/reading/ReadingStudio';
 import { ScanAndLearn } from '../../features/ocr/ScanAndLearn';
 import { SpeechService } from '../../services/speech';
 import { OcrService } from '../../services/ocrService';
 import * as localDb from '../../services/localDb';
+
+const MOCK_LISTENING_PASSAGE: ListeningPassage = {
+  id: 'listen-pt-santa-apolonia',
+  title: 'Aviso na Estação de Santa Apolónia',
+  category: 'Transportes & Viagens',
+  cefrLevel: 'B1',
+  sentences: [
+    {
+      id: 's1',
+      targetText: 'Atenção, senhores passageiros com destino ao Porto.',
+      explanationText: 'Attention passengers heading to Porto.',
+    },
+    {
+      id: 's2',
+      targetText: 'O comboio Alfa Pendular partirá da Linha 4 dentro de cinco minutos.',
+      explanationText: 'The Alfa Pendular train will depart from Platform 4 within five minutes.',
+    },
+  ],
+  questions: [
+    {
+      id: 'q1',
+      question: 'Para qual cidade se dirige o comboio mencionado no aviso?',
+      options: ['Lisboa', 'Porto', 'Coimbra'],
+      correctIndex: 1,
+      explanation: 'O anúncio menciona explicitamente o destino ao Porto.',
+    },
+    {
+      id: 'q2',
+      question: 'De qual plataforma (linha) partirá o comboio?',
+      options: ['Linha 1', 'Linha 2', 'Linha 4'],
+      correctIndex: 2,
+      explanation: 'O texto indica a Linha 4.',
+    },
+  ],
+};
+
+const MOCK_READING_ITEMS: ReadingItem[] = [
+  {
+    id: 'pt-read-c1-1',
+    title: 'A Influência do Barroco na Arquitetura do Norte de Portugal',
+    cefrLevel: 'C1',
+    source: 'curated',
+    authorOrAttribution: 'Lexilume Content Engine',
+    summary: 'Estudo arquitetônico sobre o barroco em Braga e no Porto.',
+    content: 'O estilo barroco deixou marcas profundas nas fachadas de granito e na talha dourada das igrejas nortenhas.',
+    comprehensionQuestions: [],
+  },
+  {
+    id: 'pt-read-b1-1',
+    title: 'O Fado e a Tradição dos Bairros Típicos de Lisboa',
+    cefrLevel: 'B1',
+    source: 'wikipedia',
+    authorOrAttribution: 'Wikipedia — CC BY-SA 4.0',
+    summary: 'Panorama histórico do Fado em Alfama e na Mouraria.',
+    content: 'O Fado é uma expressão musical urbana associada aos bairros tradicionais de Lisboa.',
+    comprehensionQuestions: [],
+  },
+];
 
 describe('Step 8: Advanced Learning Features — Receptive & Multi-Modal Skills', () => {
   beforeEach(() => {
@@ -17,7 +75,7 @@ describe('Step 8: Advanced Learning Features — Receptive & Multi-Modal Skills'
     it('renders synchronized transcript, playback speed controls, and evaluates comprehension', async () => {
       const speakSpy = vi.spyOn(SpeechService, 'speak').mockResolvedValue();
 
-      render(<ListeningStudio language="pt" />);
+      render(<ListeningStudio language="pt" passages={[MOCK_LISTENING_PASSAGE]} />);
 
       // Title & CEFR level
       expect(screen.getByText('Listening Practice Studio')).toBeDefined();
@@ -70,7 +128,7 @@ describe('Step 8: Advanced Learning Features — Receptive & Multi-Modal Skills'
         completed_at: new Date().toISOString(),
       });
 
-      render(<ReadingStudio language="pt" />);
+      render(<ReadingStudio language="pt" items={MOCK_READING_ITEMS} />);
 
       // Title & CEFR level
       expect(screen.getByText(/Reading Studio & Text Comprehension/i)).toBeDefined();
@@ -99,7 +157,7 @@ describe('Step 8: Advanced Learning Features — Receptive & Multi-Modal Skills'
   });
 
   describe('7. Scan and Learn (OCR)', () => {
-    it('detects scripts and extracts editable text with confidence scoring', async () => {
+    it('detects scripts and extracts editable text with confidence scoring from uploaded image', async () => {
       // Test script detection
       const latinRes = OcrService.detectScript('A rápida raposa castanha salta sobre o cão preguiçoso.');
       expect(latinRes.script).toBe('Latin Script');
@@ -110,17 +168,45 @@ describe('Step 8: Advanced Learning Features — Receptive & Multi-Modal Skills'
       const tamilRes = OcrService.detectScript('தமிழ் மொழி மிகவும் தொன்மையானது.');
       expect(tamilRes.script).toContain('Tamil');
 
-      render(<ScanAndLearn language="pt" />);
+      class MockFileReader {
+        public onload: ((ev: ProgressEvent<FileReader>) => void) | null = null;
+        public readAsDataURL() {
+          if (this.onload) {
+            this.onload({
+              target: { result: 'data:image/png;base64,iVBORw0KGgo=' } as FileReader,
+            } as ProgressEvent<FileReader>);
+          }
+        }
+      }
+      vi.stubGlobal('FileReader', MockFileReader);
+
+      vi.spyOn(OcrService, 'recognizeImage').mockResolvedValue({
+        text: 'Pastéis de bacalhau artesanais com azeite.',
+        confidence: 94,
+        detectedScript: 'Latin Script',
+        detectedLanguage: 'pt',
+        isLowConfidence: false,
+        words: [
+          { text: 'Pastéis', confidence: 95 },
+          { text: 'bacalhau', confidence: 96 },
+        ],
+      });
+
+      const { container } = render(<ScanAndLearn language="pt" />);
 
       expect(screen.getByText(/Scan & Learn — OCR Poliglota/i)).toBeDefined();
 
-      // Click sample menu button
-      const sampleBtn = screen.getByRole('button', { name: /Cardápio \/ Menu \(PT\)/i });
-      fireEvent.click(sampleBtn);
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const mockFile = new File(['dummy-image'], 'menu.png', { type: 'image/png' });
+      fireEvent.change(fileInput, { target: { files: [mockFile] } });
 
-      // Extracted text should populate textarea
-      const textarea = screen.getByPlaceholderText(/O texto extraído aparecerá aqui.../i) as HTMLTextAreaElement;
-      expect(textarea.value).toContain('Pastéis de bacalhau artesanais');
+      const runOcrBtn = await screen.findByRole('button', { name: /Extrair Texto com OCR/i });
+      fireEvent.click(runOcrBtn);
+
+      await waitFor(() => {
+        const textarea = screen.getByPlaceholderText(/O texto extraído aparecerá aqui.../i) as HTMLTextAreaElement;
+        expect(textarea.value).toContain('Pastéis de bacalhau artesanais');
+      });
 
       // Diagnostic info shown
       expect(screen.getByText(/Escrita Detectada/i)).toBeDefined();
@@ -129,6 +215,8 @@ describe('Step 8: Advanced Learning Features — Receptive & Multi-Modal Skills'
 
       // Interactive words rendered
       expect(screen.getAllByText(/bacalhau/i).length).toBeGreaterThan(0);
+
+      vi.unstubAllGlobals();
     });
   });
 });

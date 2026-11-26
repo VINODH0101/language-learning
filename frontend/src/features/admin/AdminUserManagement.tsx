@@ -23,10 +23,12 @@ import { adminService } from '../../services/adminService';
 import { UserDetailModal } from '../../components/admin/UserDetailModal';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
-import { SUPPORTED_LEARNING_LANGUAGES, getLanguageName } from '../../lib/languages/languageMatrix';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
+import { useI18n } from '../../i18n/i18nContext';
 import { toast } from 'sonner';
 
 export const AdminUserManagement: React.FC = () => {
+  const { t } = useI18n();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +43,7 @@ export const AdminUserManagement: React.FC = () => {
       setUsers(list);
     } catch (err) {
       console.error('Failed to load users', err);
-      toast.error('Erro ao carregar lista de usuários.');
+      toast.error(t('admin:users_load_error', 'Error loading the learner list.'));
     } finally {
       setLoading(false);
     }
@@ -61,10 +63,16 @@ export const AdminUserManagement: React.FC = () => {
         prev.map(u => (u.id === user.id ? { ...u, account_status: newStatus } : u))
       );
       toast.success(
-        `Conta de ${user.full_name || user.email} foi ${newStatus === 'active' ? 'ativada' : 'suspensa'}.`
+        t('admin:users_status_updated', 'Account {{name}} was {{status}}.', {
+          name: user.full_name || user.email,
+          status: t(
+            newStatus === 'active' ? 'admin:users_status_active_word' : 'admin:users_status_suspended_word',
+            newStatus === 'active' ? 'activated' : 'suspended'
+          ),
+        })
       );
     } catch {
-      toast.error('Erro ao alterar status da conta.');
+      toast.error(t('admin:users_status_error', 'Error changing account status.'));
     }
   };
 
@@ -83,22 +91,24 @@ export const AdminUserManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* User Governance Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="p-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+            <span className="p-1 rounded-lg bg-amber-500/10 border border-amber-400/20 text-amber-700">
               <Users className="w-4 h-4" />
             </span>
-            <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
-              Governança de Usuários & Contas
+            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+              {t('admin:users_kicker', 'User Governance & Accounts')}
             </span>
             <Badge variant="indigo" size="sm">
-              {users.length} Registrados
+              {t('admin:users_registered', '{{count}} Registered', { count: users.length })}
             </Badge>
           </div>
-          <h2 className="text-xl font-bold text-slate-100">Gestão e Auditoria de Alunos</h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Inspeção de progresso individual, status de conta, trilhas de aprendizagem ativas e papéis de segurança.
+          <h2 className="font-serif text-xl font-bold text-stone-900">
+            {t('admin:users_heading', 'Learner Management & Audit')}
+          </h2>
+          <p className="text-xs text-stone-500 mt-1 max-w-2xl">
+            {t('admin:users_desc', 'Inspect individual progress, account status, active learning tracks, and security roles.')}
           </p>
         </div>
 
@@ -110,49 +120,49 @@ export const AdminUserManagement: React.FC = () => {
             onClick={loadUsers}
             className="cursor-pointer"
           >
-            Atualizar Lista
+            {t('admin:users_refresh', 'Refresh List')}
           </Button>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nome, email ou ID..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            placeholder={t('admin:users_search', 'Search by name, email or ID...')}
+            className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-400"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-stone-500">
             <Filter className="w-3.5 h-3.5" />
-            <span>Status:</span>
+            <span>{t('admin:users_status', 'Status:')}</span>
           </div>
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value as any)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-800 focus:outline-none focus:border-amber-400"
           >
-            <option value="all">Todos ({users.length})</option>
-            <option value="active">Ativos</option>
-            <option value="disabled">Suspensos</option>
+            <option value="all">{t('admin:users_all', 'All ({{count}})', { count: users.length })}</option>
+            <option value="active">{t('admin:users_active', 'Active')}</option>
+            <option value="disabled">{t('admin:users_suspended', 'Suspended')}</option>
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 ml-2">
-            <span>Idioma:</span>
+          <div className="flex items-center gap-1.5 text-xs text-stone-500 ml-2">
+            <span>{t('admin:users_language', 'Language:')}</span>
           </div>
           <select
             value={targetLangFilter}
             onChange={e => setTargetLangFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-800 focus:outline-none focus:border-amber-400"
           >
-            <option value="all">Todos os Idiomas</option>
-            {SUPPORTED_LEARNING_LANGUAGES.map(lang => (
+            <option value="all">{t('admin:users_all_languages', 'All Languages')}</option>
+            {(['pt', 'es', 'en'] as const).map(lang => (
               <option key={lang} value={lang}>
                 {lang.toUpperCase()} — {getLanguageName(lang)}
               </option>
@@ -162,35 +172,35 @@ export const AdminUserManagement: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
+          <table className="w-full text-left text-xs text-stone-700">
+            <thead className="bg-stone-50/70 border-b border-stone-200 text-[11px] uppercase tracking-wider text-stone-500">
               <tr>
-                <th className="py-3 px-4">Usuário</th>
-                <th className="py-3 px-4">Papel</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Trilha Alvo</th>
-                <th className="py-3 px-4 text-center">Lições</th>
-                <th className="py-3 px-4 text-center">Ofensiva</th>
-                <th className="py-3 px-4 text-right">Ações</th>
+                <th className="py-3 px-4">{t('admin:users_col_user', 'Learner')}</th>
+                <th className="py-3 px-4">{t('admin:users_col_role', 'Role')}</th>
+                <th className="py-3 px-4">{t('admin:users_col_status', 'Status')}</th>
+                <th className="py-3 px-4">{t('admin:users_col_track', 'Target Track')}</th>
+                <th className="py-3 px-4 text-center">{t('admin:users_col_lessons', 'Lessons')}</th>
+                <th className="py-3 px-4 text-center">{t('admin:users_col_streak', 'Streak')}</th>
+                <th className="py-3 px-4 text-right">{t('admin:users_col_actions', 'Actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-stone-200/60">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
-                    Nenhum usuário encontrado com os filtros aplicados.
+                  <td colSpan={7} className="py-8 text-center text-stone-500">
+                    {t('admin:users_empty', 'No learners match the current filters.')}
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-slate-800/40 transition">
+                  <tr key={user.id} className="hover:bg-stone-100/40 transition">
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-100">
-                        {user.full_name || 'Sem nome registrado'}
+                      <div className="font-semibold text-stone-900">
+                        {user.full_name || t('admin:users_no_name', 'No name recorded')}
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono">{user.email}</div>
+                      <div className="text-[11px] text-stone-500 font-mono">{user.email}</div>
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge variant={user.role === 'admin' ? 'rose' : 'slate'} size="sm">
@@ -199,21 +209,23 @@ export const AdminUserManagement: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge variant={user.account_status === 'active' ? 'emerald' : 'rose'} size="sm">
-                        {user.account_status === 'active' ? 'Ativo' : 'Suspenso'}
+                        {user.account_status === 'active'
+                          ? t('admin:users_active', 'Active')
+                          : t('admin:users_suspended', 'Suspended')}
                       </Badge>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="font-semibold text-slate-200">
+                      <span className="font-semibold text-stone-800">
                         {(user.primary_target_language || 'pt').toUpperCase()}
                       </span>
-                      <span className="text-slate-500 text-[10px] ml-1">
+                      <span className="text-stone-500 text-[10px] ml-1">
                         ({getLanguageName((user.primary_target_language as any) || 'pt')})
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono text-slate-200 font-bold">
+                    <td className="py-3.5 px-4 text-center font-mono text-stone-800 font-bold">
                       {user.total_lessons_completed || 0}
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono text-amber-400 font-bold">
+                    <td className="py-3.5 px-4 text-center font-mono text-amber-700 font-bold">
                       {user.streak_days || 0}d
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -225,7 +237,7 @@ export const AdminUserManagement: React.FC = () => {
                           onClick={() => setSelectedUser(user)}
                           className="cursor-pointer"
                         >
-                          Ver Detalhes
+                          {t('admin:users_view', 'View Details')}
                         </Button>
                         <Button
                           variant={user.account_status === 'active' ? 'outline' : 'primary'}
@@ -233,11 +245,13 @@ export const AdminUserManagement: React.FC = () => {
                           onClick={() => handleToggleStatus(user)}
                           className={`cursor-pointer ${
                             user.account_status === 'active'
-                              ? 'text-rose-400 hover:bg-rose-950/40 border-rose-800/50'
+                              ? 'text-rose-700 hover:bg-rose-50/40 border-rose-200/50'
                               : 'bg-emerald-600 hover:bg-emerald-500'
                           }`}
                         >
-                          {user.account_status === 'active' ? 'Suspender' : 'Ativar'}
+                          {user.account_status === 'active'
+                            ? t('admin:users_suspend', 'Suspend')
+                            : t('admin:users_activate', 'Activate')}
                         </Button>
                       </div>
                     </td>

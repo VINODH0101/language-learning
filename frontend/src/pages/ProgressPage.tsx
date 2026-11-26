@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { BookMarked, Compass, Target } from 'lucide-react';
 import {
   Language,
   UserTrackState,
-  DiagnosticResult,
   MistakeNotebookItem,
   DailyPoem,
   DailyConversation,
@@ -29,6 +29,8 @@ import {
   DiagnosticSummaryCard,
 } from '../features/progress/components';
 
+type ProgressFocusView = 'path' | 'diagnostics' | 'immersion';
+
 interface ProgressPageProps {
   onNavigateTab?: (
     tab:
@@ -47,7 +49,6 @@ interface ProgressPageProps {
 export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => {
   const { t } = useI18n();
 
-  // Active language track defaults to the user's active course or 'pt'
   const [selectedLang, setSelectedLang] = useState<Language>(() => {
     try {
       const active = courseService.getActiveCourse();
@@ -57,11 +58,12 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => 
     }
   });
 
+  const [focusView, setFocusView] = useState<ProgressFocusView>('path');
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
   const [mistakes, setMistakes] = useState<MistakeNotebookItem[]>([]);
   const [culturalBookmarks, setCulturalBookmarks] = useState<CulturalBookmarkRecord[]>([]);
 
-  // Load language-scoped learning data (Zero cross-language contamination)
+  // Language-scoped learning state
   const track: UserTrackState = StorageService.getTrackState(selectedLang);
   const activeCourse = courseService.getCourseForLanguage(selectedLang);
   const curriculum = courseService.getCurriculumForLanguage(selectedLang);
@@ -70,15 +72,12 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => 
   const diagnostics = StorageService.getDiagnosticResults().filter(d => d.language === selectedLang);
   const latestDiagnostic = diagnostics.length > 0 ? diagnostics[0] : null;
 
-  // Real activity telemetry
   const activitySummary = activityService.getLanguageActivitySummary(selectedLang);
   const activePoem: DailyPoem | null = dailyContentService.getDailyPoem(selectedLang);
   const activeConversation: DailyConversation | null = dailyContentService.getDailyConversation(selectedLang);
 
-  // Check if diagnostic questions exist for selected language
   const hasDiagnosticAvailable = diagnosticQuestions.some(q => q.language === selectedLang);
 
-  // Load mistakes and cultural bookmarks asynchronously
   useEffect(() => {
     let isCancelled = false;
     getMistakes(selectedLang).then(res => {
@@ -92,7 +91,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => 
     };
   }, [selectedLang]);
 
-  // Derived Genuine Metrics (Zero fabricated statistics)
+  // Derived metrics (strictly from real records)
   const totalCompleted = track.completed_curriculum_node_ids.length;
   const totalCurriculumNodes = curriculum.length;
   const completionPct =
@@ -102,7 +101,6 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => 
   const accuracyPct = attempts.length > 0 ? Math.round((correctAttempts / attempts.length) * 100) : 0;
   const failedAttempts = attempts.filter(a => !a.is_correct);
 
-  // SM-2 distribution
   const presentedCount = srsItems.filter(s => s.mastery_status === 'presented').length;
   const learningCount = srsItems.filter(s => s.mastery_status === 'learning').length;
   const reviewingCount = srsItems.filter(s => s.mastery_status === 'reviewing').length;
@@ -113,22 +111,44 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => 
 
   const todayStudyMinutes = StorageService.getTodayStudyMinutes();
   const streakDays = activeCourse?.streak_days || track.streak_days || 1;
+  const attentionCount = mistakes.length + failedAttempts.length;
 
   const handleNavigatePractice = () => {
-    if (onNavigateTab) {
-      onNavigateTab('practice');
-    }
+    onNavigateTab?.('practice');
   };
 
   const handleNavigateExplore = () => {
-    if (onNavigateTab) {
-      onNavigateTab('explore');
-    }
+    onNavigateTab?.('explore');
   };
 
+  const views: Array<{
+    id: ProgressFocusView;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: number;
+  }> = [
+    {
+      id: 'path',
+      label: t('progress:tab_path_vocab', 'Path & Memory'),
+      icon: BookMarked,
+      badge: dueSRSCount > 0 ? dueSRSCount : undefined,
+    },
+    {
+      id: 'diagnostics',
+      label: t('progress:tab_diagnostics_skills', 'Focus & Skills'),
+      icon: Target,
+      badge: attentionCount > 0 ? attentionCount : undefined,
+    },
+    {
+      id: 'immersion',
+      label: t('progress:tab_immersion_placement', 'Immersion & Placement'),
+      icon: Compass,
+    },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
-      {/* 1. Progress Header & Multi-Language Track Selector */}
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 animate-fadeIn">
+      {/* 1. Editorial header with language track switcher */}
       <ProgressHeader
         selectedLang={selectedLang}
         onSelectLang={setSelectedLang}
@@ -138,7 +158,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => 
         hasDiagnosticAvailable={hasDiagnosticAvailable}
       />
 
-      {/* 2. Compact Overview KPI Metrics Grid (Language Scoped) */}
+      {/* 2. Calm snapshot */}
       <LearningOverviewGrid
         currentCefr={track.current_cefr_level}
         targetCefr={track.target_cefr_level}
@@ -153,75 +173,118 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigateTab }) => 
         streakDays={streakDays}
       />
 
-      {/* 3. Vocabulary Retention SM-2 Distribution & Queue */}
-      <VocabularyRetentionCard
-        presentedCount={presentedCount}
-        learningCount={learningCount}
-        reviewingCount={reviewingCount}
-        masteredCount={masteredCount}
-        dueCount={dueSRSCount}
-        onNavigatePractice={handleNavigatePractice}
-      />
+      {/* 3. Focused View Switcher — reduces cognitive overload from 8 simultaneous cards to 2–3 cohesive views */}
+      <div className="space-y-5">
+        <div
+          role="tablist"
+          aria-label={t('progress:progress_view_aria', 'Progress analytics views')}
+          className="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-white border border-stone-200 p-1.5 rounded-2xl shadow-xs w-full sm:w-fit"
+        >
+          {views.map(view => {
+            const Icon = view.icon;
+            const isSelected = focusView === view.id;
+            return (
+              <button
+                key={view.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => setFocusView(view.id)}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer min-h-[40px] flex-1 sm:flex-none justify-center ${
+                  isSelected
+                    ? 'bg-stone-900 text-white shadow-xs'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-amber-300' : 'text-stone-400'}`} />
+                <span>{view.label}</span>
+                {typeof view.badge === 'number' && view.badge > 0 && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      isSelected
+                        ? 'bg-amber-500/20 text-amber-200'
+                        : 'bg-amber-100 text-amber-900'
+                    }`}
+                  >
+                    {view.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* 4. Sequential CEFR Curriculum Roadmap (A1 to C1) */}
-      <CEFRRoadmap
-        curriculum={curriculum}
-        completedNodeIds={track.completed_curriculum_node_ids}
-        currentNodeId={track.current_curriculum_node_id}
-        selectedLanguage={selectedLang}
-      />
+        {/* Focused Panel 1: Path & Memory (Default) */}
+        {focusView === 'path' && (
+          <div className="space-y-5 animate-fadeIn">
+            <VocabularyRetentionCard
+              presentedCount={presentedCount}
+              learningCount={learningCount}
+              reviewingCount={reviewingCount}
+              masteredCount={masteredCount}
+              dueCount={dueSRSCount}
+              onNavigatePractice={onNavigateTab ? handleNavigatePractice : undefined}
+            />
+            <CEFRRoadmap
+              curriculum={curriculum}
+              completedNodeIds={track.completed_curriculum_node_ids}
+              currentNodeId={track.current_curriculum_node_id}
+              selectedLanguage={selectedLang}
+            />
+          </div>
+        )}
 
-      {/* 5. Exercise Performance & Accuracy Analytics (Language Scoped) */}
-      <ExercisePerformanceCard
-        attempts={attempts}
-        selectedLanguage={selectedLang}
-      />
+        {/* Focused Panel 2: Weak Areas, Exercises & Skills */}
+        {focusView === 'diagnostics' && (
+          <div className="space-y-5 animate-fadeIn">
+            <WeakAreasCard
+              mistakes={mistakes}
+              failedAttempts={failedAttempts}
+              dueSRSCount={dueSRSCount}
+              selectedLanguage={selectedLang}
+              onNavigatePractice={onNavigateTab ? handleNavigatePractice : undefined}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <ExercisePerformanceCard attempts={attempts} selectedLanguage={selectedLang} />
+              <SkillDevelopmentCard skillActivityCounts={activitySummary.skillActivityCounts} />
+            </div>
+          </div>
+        )}
 
-      {/* 6. Skill Development & Linguistic Competencies */}
-      <SkillDevelopmentCard
-        skillActivityCounts={activitySummary.skillActivityCounts}
-      />
+        {/* Focused Panel 3: Daily Literature, World Discovery & Placement */}
+        {focusView === 'immersion' && (
+          <div className="space-y-5 animate-fadeIn">
+            <DailyContentProgressCard
+              selectedLanguage={selectedLang}
+              activePoem={activePoem}
+              activeConversation={activeConversation}
+              poemsCompletedCount={activitySummary.poetryCompletedCount}
+              poemsListenedCount={activitySummary.poetryListenedCount}
+              conversationsCompletedCount={activitySummary.conversationCompletedCount}
+              conversationsListenedCount={activitySummary.conversationListenedCount}
+              recentDailyActivities={activitySummary.recentActivities}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <CulturalDiscoveryCard
+                exploredCountriesCount={activitySummary.countriesExploredCount}
+                totalAvailableCountries={250}
+                bookmarkedArticlesCount={culturalBookmarks.length}
+                readArticlesCount={activitySummary.skillActivityCounts.reading}
+                onNavigateExplore={onNavigateTab ? handleNavigateExplore : undefined}
+              />
+              <DiagnosticSummaryCard
+                latestResult={latestDiagnostic}
+                history={diagnostics}
+                selectedLanguage={selectedLang}
+                onTakeDiagnostic={() => setIsDiagnosticOpen(true)}
+                hasQuestionsAvailable={hasDiagnosticAvailable}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* 7. Daily Literature (Poetry) & Communicative Dialogue Progress */}
-      <DailyContentProgressCard
-        selectedLanguage={selectedLang}
-        activePoem={activePoem}
-        activeConversation={activeConversation}
-        poemsCompletedCount={activitySummary.poetryCompletedCount}
-        poemsListenedCount={activitySummary.poetryListenedCount}
-        conversationsCompletedCount={activitySummary.conversationCompletedCount}
-        conversationsListenedCount={activitySummary.conversationListenedCount}
-        recentDailyActivities={activitySummary.recentActivities}
-      />
-
-      {/* 8. Global Discovery & Cultural Exploration (Decoupled from CEFR) */}
-      <CulturalDiscoveryCard
-        exploredCountriesCount={activitySummary.countriesExploredCount}
-        totalAvailableCountries={250}
-        bookmarkedArticlesCount={culturalBookmarks.length}
-        readArticlesCount={activitySummary.skillActivityCounts.reading}
-        onNavigateExplore={handleNavigateExplore}
-      />
-
-      {/* 9. Weak Areas, Actionable Recommendations & Mistake Notebook */}
-      <WeakAreasCard
-        mistakes={mistakes}
-        failedAttempts={failedAttempts}
-        dueSRSCount={dueSRSCount}
-        selectedLanguage={selectedLang}
-        onNavigatePractice={handleNavigatePractice}
-      />
-
-      {/* 10. Diagnostic Placement Evaluation Summary */}
-      <DiagnosticSummaryCard
-        latestResult={latestDiagnostic}
-        history={diagnostics}
-        selectedLanguage={selectedLang}
-        onTakeDiagnostic={() => setIsDiagnosticOpen(true)}
-        hasQuestionsAvailable={hasDiagnosticAvailable}
-      />
-
-      {/* Diagnostic Placement Test Modal */}
+      {/* Placement Diagnostic Modal */}
       <PlacementTestModal
         language={selectedLang}
         isOpen={isDiagnosticOpen}

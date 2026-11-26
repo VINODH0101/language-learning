@@ -9,8 +9,6 @@ import { ProviderMetadata, ValidationError, UnsupportedLanguageError } from '../
 import { KaikkiEntrySchema } from '../../validation/schemas';
 import { normalizeDictionary } from '../../normalization/responseNormalizers';
 import { NormalizedDictionaryEntry } from '../../../integrations/external-apis/core/types';
-import { esVocabulary, ptVocabulary } from '../../../data/seedData';
-import { trilingualDictionary } from '../../../data/translationData';
 
 export class KaikkiProvider extends BaseProvider<{ word: string; language: string }, NormalizedDictionaryEntry> {
   public readonly metadata: ProviderMetadata = {
@@ -107,71 +105,5 @@ export class KaikkiProvider extends BaseProvider<{ word: string; language: strin
         sourceUrl: `https://${input.language}.wiktionary.org/wiki/${encodeURIComponent(input.word)}`,
       }
     );
-  }
-
-  protected getFallback(input: { word: string; language: string }): NormalizedDictionaryEntry {
-    const q = input.word.trim().toLowerCase();
-    const lang = input.language.toLowerCase();
-
-    if (lang === 'es') {
-      const esMatch = esVocabulary.find(v => v.lemma.toLowerCase() === q);
-      if (esMatch) {
-        return {
-          word: esMatch.lemma,
-          language: 'es',
-          phonetic: esMatch.phonetic_ipa,
-          meanings: [
-            {
-              partOfSpeech: esMatch.part_of_speech,
-              definitions: [esMatch.definition_target, esMatch.definition_en].filter(Boolean),
-              examples: [esMatch.example_sentence_target].filter(Boolean),
-            },
-          ],
-          provider: 'seed_fallback',
-        };
-      }
-    }
-
-    if (lang === 'pt') {
-      const ptMatch = ptVocabulary.find(v => v.lemma.toLowerCase() === q);
-      if (ptMatch) {
-        return {
-          word: ptMatch.lemma,
-          language: 'pt',
-          phonetic: ptMatch.phonetic_ipa,
-          meanings: [
-            {
-              partOfSpeech: ptMatch.part_of_speech,
-              definitions: [ptMatch.definition_target, ptMatch.definition_en].filter(Boolean),
-              examples: [ptMatch.example_sentence_target].filter(Boolean),
-            },
-          ],
-          provider: 'seed_fallback',
-        };
-      }
-    }
-
-    const triMatch = trilingualDictionary.find(
-      d =>
-        d.english?.toLowerCase() === q ||
-        d.portuguese?.toLowerCase() === q ||
-        d.spanish?.toLowerCase() === q
-    );
-    if (triMatch) {
-      return {
-        word: input.word,
-        language: lang,
-        meanings: [
-          {
-            partOfSpeech: triMatch.part_of_speech,
-            definitions: [triMatch.definition_en, triMatch.definition_pt, triMatch.definition_es].filter(Boolean),
-            examples: [triMatch.example_en, triMatch.example_pt, triMatch.example_es].filter(Boolean),
-          },
-        ],
-        provider: 'trilingual_fallback',
-      };
-    }
-
-    throw new Error(`Nenhuma definição encontrada para "${input.word}" no idioma "${lang}".`);
   }
 }

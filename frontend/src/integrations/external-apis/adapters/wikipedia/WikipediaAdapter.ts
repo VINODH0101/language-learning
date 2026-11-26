@@ -14,7 +14,6 @@ import {
   ValidationError,
   ProviderUnavailableError,
 } from '../../core';
-import { CULTURAL_CATALOG } from '../../../../data/cultureData';
 
 interface RawWikiSummary {
   title: string;
@@ -156,23 +155,8 @@ export class WikipediaAdapter extends BaseApiProvider<ReadingInput, NormalizedRe
     return articles;
   }
 
-  protected getFallback(input: ReadingInput, _error: unknown): NormalizedReadingArticle[] {
-    const lang = input.language.toLowerCase();
-    
-    // Fall back to matching curated cultural catalog articles
-    const matched = CULTURAL_CATALOG.filter(c => c.content_language === lang);
-    return matched.slice(0, input.limit || 4).map(c => ({
-      id: c.id,
-      title: c.title,
-      language: c.content_language,
-      summary: c.summary,
-      contentParagraphs: c.content_paragraphs,
-      thumbnailUrl: c.image_url,
-      estimatedCefrLevel: c.cefr_level,
-      category: c.topic,
-      provider: 'culture-catalog-seed',
-      attribution: 'Polyglot C1 Open Curated Library',
-    }));
+  protected getFallback(_input: ReadingInput, _error: unknown): NormalizedReadingArticle[] {
+    return [];
   }
 
   private formatArticle(item: RawWikiSummary, lang: string): NormalizedReadingArticle {

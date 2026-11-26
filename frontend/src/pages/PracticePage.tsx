@@ -1,31 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Sparkles,
-  HelpCircle,
-  PenTool,
-  BookOpen,
-  CheckCircle2,
-  Filter,
-  Mic,
-  Headphones,
-  Camera,
-  MessageSquare,
-  Bookmark,
-  Feather,
-} from 'lucide-react';
-import { Language, VocabularyItem, ExerciseTemplate } from '../types';
-import {
-  ptVocabulary,
-  esVocabulary,
-  enVocabulary,
-  exerciseTemplates,
-} from '../data/seedData';
+import { ExerciseTemplate, Language, VocabularyItem } from '../types';
+import { contentAccess } from '../services/contentAccess';
+import { VocabularyService } from '../services/vocabularyService';
 import { StorageService } from '../services/storage';
 import { getMistakes } from '../services/localDb';
 import { useI18n } from '../i18n/i18nContext';
 
 // Practice feature modules
-import { PracticeCategory, PracticeSubMode, VocabDeckPartition } from '../features/practice/types';
+import { PracticeSubMode, VocabDeckPartition } from '../features/practice/types';
+import {
+  getPracticeModeCount,
+  getPracticeModeMeta,
+} from '../features/practice/practiceModes';
 import { practiceVocabService } from '../features/practice/services/practiceVocabService';
 import { PracticeHeader } from '../features/practice/components/PracticeHeader';
 import { PracticeDashboardSummary } from '../features/practice/components/PracticeDashboardSummary';
@@ -58,8 +44,7 @@ export const PracticePage: React.FC = () => {
     }
   });
 
-  // Categorized navigation state
-  const [category, setCategory] = useState<PracticeCategory>('all');
+  // One flat activity selection — no category + sub-mode double navigation.
   const [subMode, setSubMode] = useState<PracticeSubMode>('srs');
 
   // Vocabulary Deck Partitions
@@ -72,6 +57,7 @@ export const PracticePage: React.FC = () => {
   });
 
   const [mistakeCount, setMistakeCount] = useState<number>(0);
+  const [aiExercises, setAiExercises] = useState<ExerciseTemplate[]>([]);
 
   // Load vocabulary deck partition and mistake count on language change
   const refreshData = async () => {
@@ -83,6 +69,13 @@ export const PracticePage: React.FC = () => {
       setMistakeCount(mistakes.length);
     } catch {
       setMistakeCount(0);
+    }
+
+    try {
+      const publishedPractice = await contentAccess.getPublishedPracticeExercises(selectedLang);
+      setAiExercises(publishedPractice);
+    } catch {
+      setAiExercises([]);
     }
   };
 
@@ -97,7 +90,7 @@ export const PracticePage: React.FC = () => {
   const dailyTarget = settings.study_mode === 'compact' ? 10 : 20;
 
   // Active deck selection:
-  // If cards are due, review due cards; otherwise provide all available words so new learners can start immediately.
+  // If cards are due, review due cards; otherwise provide all available words from Content Engine / Open APIs.
   const activeDeck: VocabularyItem[] = useMemo(() => {
     if (deckPartition.due.length > 0) {
       return deckPartition.due;
@@ -105,18 +98,30 @@ export const PracticePage: React.FC = () => {
     if (deckPartition.all.length > 0) {
       return deckPartition.all;
     }
-    // Fallback seed vocabulary
-    return selectedLang === 'pt'
-      ? ptVocabulary
-      : selectedLang === 'es'
-      ? esVocabulary
-      : enVocabulary;
+    return VocabularyService.getVocabulary({ target_language: selectedLang }).map(v => ({
+      id: v.id,
+      language: v.target_language,
+      lemma: v.lemma,
+      part_of_speech: v.part_of_speech,
+      cefr_level: v.cefr_level,
+      definition_target:
+        v.definitions[selectedLang] || v.definitions.en || v.translations.en || v.lemma,
+      definition_en: v.definitions.en || v.translations.en || '',
+      definition_pt: v.definitions.pt || v.translations.pt,
+      definition_es: v.definitions.es || v.translations.es,
+      phonetic_ipa: v.phonetic_ipa,
+      regional_tags: ['all'],
+      example_sentence_target: v.example_sentence_target,
+      example_sentence_en: v.example_sentence_translations.en || '',
+      collocations: v.collocations || [],
+      attribution: v.attribution,
+    }));
   }, [deckPartition, selectedLang]);
 
-  // Exercise templates filtered strictly by target language
+  // Exercise templates filtered strictly from published AI Content Engine exercises
   const langTemplates = useMemo(
-    () => exerciseTemplates.filter(e => e.language === selectedLang),
-    [selectedLang]
+    () => aiExercises.filter(e => e.language === selectedLang),
+    [selectedLang, aiExercises]
   );
 
   const multipleChoiceTemplates = useMemo(
@@ -132,165 +137,157 @@ export const PracticePage: React.FC = () => {
     [langTemplates]
   );
 
-  // Navigation handlers
-  const handleSelectCategory = (newCat: PracticeCategory, newSub?: PracticeSubMode) => {
-    setCategory(newCat);
-    if (newSub) {
-      setSubMode(newSub);
-    } else {
-      // Default sub-mode per category
-      if (newCat === 'vocabulary') setSubMode('srs');
-      else if (newCat === 'exercises') setSubMode('multiple_choice');
-      else if (newCat === 'receptive') setSubMode('listening');
-      else if (newCat === 'productive') setSubMode('speaking');
-      else if (newCat === 'tools') setSubMode('ocr');
-    }
+  const counts = {
+    srsDue: deckPartition.due.length,
+    srsTotal: deckPartition.all.length,
+    phrasebook: deckPartition.savedPhrasebook.length,
+    multipleChoice: multipleChoiceTemplates.length,
+    cloze: clozeTemplates.length,
+    mistakes: mistakeCount,
   };
 
-  const handleSelectSubMode = (newSub: PracticeSubMode) => {
-    setSubMode(newSub);
-  };
-
-  const handleQuickStart = () => {
-    setCategory('vocabulary');
-    setSubMode('srs');
-  };
+  const activeMode = getPracticeModeMeta(subMode);
+  const ActiveModeIcon = activeMode.icon;
+  const activeModeCount = getPracticeModeCount(activeMode, counts);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* 1. Practice Header with Language Matrix & Variety Pill */}
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* 1. Editorial header with the language track switcher */}
       <PracticeHeader
         selectedLanguage={selectedLang}
         regionalVariety={track.regional_variety}
         onSelectLanguage={setSelectedLang}
       />
 
-      {/* 2. Practice Dashboard Summary Banner */}
+      {/* 2. One clear focus for today */}
       <PracticeDashboardSummary
-        language={selectedLang}
         cefrLevel={track.current_cefr_level || 'B1'}
-        dueCount={deckPartition.due.length}
+        dueCount={counts.srsDue}
         newCount={deckPartition.newWords.length}
         todayReviewed={todayReviewed}
         dailyTarget={dailyTarget}
-        onQuickStart={handleQuickStart}
-        onSelectCategory={handleSelectCategory}
+        onQuickStart={() => setSubMode('srs')}
       />
 
-      {/* 3. Categorized Practice Navigation */}
-      <PracticeCategoryNav
-        selectedCategory={category}
-        selectedSubMode={subMode}
-        language={selectedLang}
-        counts={{
-          srsDue: deckPartition.due.length,
-          srsTotal: deckPartition.all.length,
-          phrasebook: deckPartition.savedPhrasebook.length,
-          multipleChoice: multipleChoiceTemplates.length,
-          cloze: clozeTemplates.length,
-          mistakes: mistakeCount,
-        }}
-        onSelectCategory={handleSelectCategory}
-        onSelectSubMode={handleSelectSubMode}
-      />
+      {/* 3. Activity menu + active practice */}
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 items-start">
+        <PracticeCategoryNav
+          selectedMode={subMode}
+          language={selectedLang}
+          counts={counts}
+          onSelectMode={setSubMode}
+        />
 
-      {/* 4. Active Practice Viewport */}
-      <div className="pt-2">
-        {/* Vocabulary Cluster */}
-        {subMode === 'srs' && (
-          <FlashcardDeck
-            vocabularyList={activeDeck}
-            dailyTarget={dailyTarget}
-            onReviewFinished={refreshData}
-          />
-        )}
+        <section
+          aria-label={t('practice:stage_aria', 'Active practice activity')}
+          className="min-w-0 space-y-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 flex items-center justify-center shrink-0">
+                <ActiveModeIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="font-serif text-xl font-bold text-stone-900 leading-tight">
+                  {t(activeMode.labelKey, activeMode.labelFallback)}
+                </h2>
+                <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">
+                  {t(activeMode.descriptionKey, activeMode.descriptionFallback)}
+                </p>
+              </div>
+            </div>
 
-        {subMode === 'phrasebook' && (
-          <SavedPhrasebookPracticeCard language={selectedLang} />
-        )}
+            {activeModeCount && (
+              <span
+                className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold border ${
+                  activeModeCount.urgent
+                    ? 'bg-amber-50 text-amber-800 border-amber-200/80'
+                    : 'bg-white text-stone-500 border-stone-200'
+                }`}
+              >
+                {activeModeCount.value}
+              </span>
+            )}
+          </div>
 
-        {subMode === 'daily_poetry_vocab' && (
-          <DailyPoetryPracticeCard language={selectedLang} onAddedToDeck={refreshData} />
-        )}
+          {/* Legacy activity modules are rendered on the light editorial theme here. */}
+          <div className="practice-stage">
+            {subMode === 'srs' && (
+              <FlashcardDeck
+                vocabularyList={activeDeck}
+                dailyTarget={dailyTarget}
+                onReviewFinished={refreshData}
+              />
+            )}
 
-        {/* Exercises Cluster */}
-        {subMode === 'multiple_choice' && (
-          <ExerciseSection
-            exercises={multipleChoiceTemplates.map(t => ({
-              id: t.id,
-              exercise_type: t.exercise_type,
-              prompt: t.prompt,
-              context_passage: t.context_passage,
-              options: [t.acceptable_solutions[0], ...t.distractors.map(d => d.text)].sort(),
-              hint: t.hint,
-              distractor_explanations: Object.fromEntries(
-                t.distractors.map(d => [d.text, d.why_incorrect])
-              ),
-            }))}
-            answerKeys={multipleChoiceTemplates.map(t => ({
-              exercise_id: t.id,
-              acceptable_solutions: t.acceptable_solutions,
-              explanation: t.explanation,
-              distractor_feedback: Object.fromEntries(
-                t.distractors.map(d => [d.text, d.why_incorrect])
-              ),
-            }))}
-            language={selectedLang}
-          />
-        )}
+            {subMode === 'phrasebook' && (
+              <SavedPhrasebookPracticeCard language={selectedLang} />
+            )}
 
-        {subMode === 'cloze' && (
-          <ExerciseSection
-            exercises={clozeTemplates.map(t => ({
-              id: t.id,
-              exercise_type: t.exercise_type,
-              prompt: t.prompt,
-              context_passage: t.context_passage,
-              hint: t.hint,
-            }))}
-            answerKeys={clozeTemplates.map(t => ({
-              exercise_id: t.id,
-              acceptable_solutions: t.acceptable_solutions,
-              explanation: t.explanation,
-            }))}
-            language={selectedLang}
-          />
-        )}
+            {subMode === 'daily_poetry_vocab' && (
+              <DailyPoetryPracticeCard language={selectedLang} onAddedToDeck={refreshData} />
+            )}
 
-        {subMode === 'mistakes' && (
-          <MistakeNotebook language={selectedLang} />
-        )}
+            {subMode === 'multiple_choice' && (
+              <ExerciseSection
+                exercises={multipleChoiceTemplates.map(t => ({
+                  id: t.id,
+                  exercise_type: t.exercise_type,
+                  prompt: t.prompt,
+                  context_passage: t.context_passage,
+                  options: [t.acceptable_solutions[0], ...t.distractors.map(d => d.text)].sort(),
+                  hint: t.hint,
+                  distractor_explanations: Object.fromEntries(
+                    t.distractors.map(d => [d.text, d.why_incorrect])
+                  ),
+                }))}
+                answerKeys={multipleChoiceTemplates.map(t => ({
+                  exercise_id: t.id,
+                  acceptable_solutions: t.acceptable_solutions,
+                  explanation: t.explanation,
+                  distractor_feedback: Object.fromEntries(
+                    t.distractors.map(d => [d.text, d.why_incorrect])
+                  ),
+                }))}
+                language={selectedLang}
+              />
+            )}
 
-        {subMode === 'false_friends' && (
-          <FalseFriendsTrainer language={selectedLang} />
-        )}
+            {subMode === 'cloze' && (
+              <ExerciseSection
+                exercises={clozeTemplates.map(t => ({
+                  id: t.id,
+                  exercise_type: t.exercise_type,
+                  prompt: t.prompt,
+                  context_passage: t.context_passage,
+                  hint: t.hint,
+                }))}
+                answerKeys={clozeTemplates.map(t => ({
+                  exercise_id: t.id,
+                  acceptable_solutions: t.acceptable_solutions,
+                  explanation: t.explanation,
+                }))}
+                language={selectedLang}
+              />
+            )}
 
-        {/* Receptive Cluster */}
-        {subMode === 'listening' && (
-          <ListeningStudio language={selectedLang} />
-        )}
+            {subMode === 'mistakes' && <MistakeNotebook language={selectedLang} />}
 
-        {subMode === 'reading' && (
-          <ReadingStudio language={selectedLang} />
-        )}
+            {subMode === 'false_friends' && <FalseFriendsTrainer language={selectedLang} />}
 
-        {/* Productive Cluster */}
-        {subMode === 'speaking' && (
-          <SpeakingCoach language={selectedLang} />
-        )}
+            {subMode === 'listening' && <ListeningStudio language={selectedLang} />}
 
-        {subMode === 'conversation' && (
-          <ConversationStudio language={selectedLang} />
-        )}
+            {subMode === 'reading' && <ReadingStudio language={selectedLang} />}
 
-        {subMode === 'proofreading' && (
-          <WritingCoach language={selectedLang} />
-        )}
+            {subMode === 'speaking' && <SpeakingCoach language={selectedLang} />}
 
-        {/* Tools Cluster */}
-        {subMode === 'ocr' && (
-          <ScanAndLearn language={selectedLang} />
-        )}
+            {subMode === 'conversation' && <ConversationStudio language={selectedLang} />}
+
+            {subMode === 'proofreading' && <WritingCoach language={selectedLang} />}
+
+            {subMode === 'ocr' && <ScanAndLearn language={selectedLang} />}
+          </div>
+        </section>
       </div>
     </div>
   );

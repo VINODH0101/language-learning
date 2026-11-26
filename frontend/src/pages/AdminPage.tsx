@@ -1,7 +1,7 @@
 /**
  * Lexilume — Admin Page
  * 
- * Gatekeeper & Orchestrator for Administrative Operations & Workbench.
+ * Gatekeeper & Orchestrator for Administrative Operations & Editorial Publishing Desk.
  * 
  * Security:
  * - Checks authService.getState().role === 'admin'.
@@ -15,12 +15,22 @@ import { useI18n } from '../i18n/i18nContext';
 import { authService } from '../services/auth';
 import { Button } from '../components/common/Button';
 import { AdminWorkbench } from '../features/admin/AdminWorkbench';
+import {
+  AdminWorkbenchTab,
+  DEFAULT_ADMIN_DESTINATION,
+} from '../features/admin/adminNavigation';
 
 interface AdminPageProps {
   onNavigateTab: (tab: any) => void;
+  activeAdminTab?: AdminWorkbenchTab;
+  onSelectAdminTab?: (tab: AdminWorkbenchTab) => void;
 }
 
-export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
+export const AdminPage: React.FC<AdminPageProps> = ({
+  onNavigateTab,
+  activeAdminTab,
+  onSelectAdminTab,
+}) => {
   const { t } = useI18n();
   const authState = authService.getState();
 
@@ -28,11 +38,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
   if (authState.role !== 'admin') {
     return (
       <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-rose-950/70 border border-rose-800 text-rose-400 flex items-center justify-center mx-auto shadow-lg">
+        <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center mx-auto shadow-sm">
           <ShieldAlert className="w-9 h-9" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-100">{t('admin_unauthorized_title')}</h1>
-        <p className="text-sm text-slate-400 leading-relaxed max-w-md mx-auto">
+        <h1 className="text-2xl font-serif font-bold text-stone-900">{t('admin_unauthorized_title')}</h1>
+        <p className="text-sm text-stone-600 leading-relaxed max-w-md mx-auto">
           {t('admin_unauthorized_desc')}
         </p>
         <div className="pt-2">
@@ -50,8 +60,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateTab }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      <AdminWorkbench initialTab="overview" onNavigateTab={onNavigateTab} />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <AdminWorkbench
+        initialTab={DEFAULT_ADMIN_DESTINATION}
+        activeTab={activeAdminTab}
+        onSelectTab={onSelectAdminTab}
+        onNavigateTab={onNavigateTab}
+      />
     </div>
   );
 };

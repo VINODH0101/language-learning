@@ -3,6 +3,8 @@ import { X, FileDown, Check, Settings, Sparkles, AlertCircle } from 'lucide-reac
 import { PdfExportConfig, VocabularyTopic } from '../../types/vocabulary';
 import { Language, CEFRLevel } from '../../types';
 import { PdfService } from '../../services/pdfService';
+import { useI18n } from '../../i18n/i18nContext';
+import { getLanguageName } from '../../lib/languages/languageMatrix';
 import { toast } from 'sonner';
 
 interface DownloadPdfDialogProps {
@@ -20,6 +22,7 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
   initialExplanationLang = 'en',
   initialCefr = 'A1',
 }) => {
+  const { interfaceLanguage } = useI18n();
   const [targetLang, setTargetLang] = useState<Language>(initialTargetLang);
   const [explanationLang, setExplanationLang] = useState<Language>(initialExplanationLang);
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel | 'all'>(initialCefr);
@@ -78,40 +81,38 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
     }
   };
 
-  const getLangName = (lang: string) => {
-    if (lang === 'pt') return 'Português';
-    if (lang === 'es') return 'Español';
-    return 'English';
-  };
+  const getLangName = (lang: string) =>
+    getLanguageName(lang as any, interfaceLanguage as any);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-stone-900/40 backdrop-blur-sm overflow-y-auto animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]"
+        className="relative w-full max-w-xl bg-[#FDFBF7] border border-stone-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90 sticky top-0 z-10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-white sticky top-0 z-10">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center">
               <FileDown className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-100">
+              <h2 className="font-serif text-base sm:text-lg font-bold text-stone-900">
                 Personalizar & Baixar Recurso em PDF
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-stone-500">
                 Gere guias de estudo offline com anotações e exercícios
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+            className="p-2 text-stone-500 hover:text-stone-900 rounded-xl hover:bg-stone-100 transition min-h-[42px] min-w-[42px] flex items-center justify-center cursor-pointer"
             aria-label="Fechar"
           >
             <X className="w-5 h-5" />
@@ -123,11 +124,11 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
           {/* Language Pair Settings */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-slate-300 font-semibold block">Idioma Alvo (Estudo)</label>
+              <label className="text-stone-700 font-semibold block">Idioma Alvo (Estudo)</label>
               <select
                 value={targetLang}
                 onChange={e => setTargetLang(e.target.value as Language)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
+                className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-stone-900 focus:outline-none focus:border-stone-500 min-h-[42px] cursor-pointer"
               >
                 <option value="pt">Português (PT)</option>
                 <option value="es">Español (ES)</option>
@@ -136,11 +137,11 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-slate-300 font-semibold block">Idioma de Explicação</label>
+              <label className="text-stone-700 font-semibold block">Idioma de Explicação</label>
               <select
                 value={explanationLang}
                 onChange={e => setExplanationLang(e.target.value as Language)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
+                className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-stone-900 focus:outline-none focus:border-stone-500 min-h-[42px] cursor-pointer"
               >
                 <option value="en">English (EN)</option>
                 <option value="pt">Português (PT)</option>
@@ -152,11 +153,11 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
           {/* Resource Type & Level */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-slate-300 font-semibold block">Tipo de Conteúdo</label>
+              <label className="text-stone-700 font-semibold block">Tipo de Conteúdo</label>
               <select
                 value={resourceType}
                 onChange={e => setResourceType(e.target.value as any)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
+                className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-stone-900 focus:outline-none focus:border-stone-500 min-h-[42px] cursor-pointer"
               >
                 <option value="top_200">Top 200 Palavras Essenciais</option>
                 <option value="sentences">Frases do Cotidiano e Diálogos</option>
@@ -166,11 +167,11 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-slate-300 font-semibold block">Nível CEFR</label>
+              <label className="text-stone-700 font-semibold block">Nível CEFR</label>
               <select
                 value={cefrLevel}
                 onChange={e => setCefrLevel(e.target.value as any)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
+                className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-stone-900 focus:outline-none focus:border-stone-500 min-h-[42px] cursor-pointer"
               >
                 <option value="all">Todos os Níveis (A1–C1)</option>
                 <option value="A1">A1 — Principiante</option>
@@ -183,74 +184,76 @@ export const DownloadPdfDialog: React.FC<DownloadPdfDialogProps> = ({
           </div>
 
           {/* Content Inclusions Toggles */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
-            <span className="text-slate-300 font-semibold block">Elementos a Incluir no Documento:</span>
+          <div className="space-y-3 pt-2 border-t border-stone-200">
+            <span className="text-stone-700 font-semibold block">Elementos a Incluir no Documento:</span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer hover:bg-slate-800">
+              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-stone-200 cursor-pointer hover:bg-stone-50">
                 <input
                   type="checkbox"
                   checked={includeTranslations}
                   onChange={e => setIncludeTranslations(e.target.checked)}
-                  className="rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                  className="rounded border-stone-300 text-stone-900 focus:ring-stone-500 w-4 h-4"
                 />
-                <span className="text-slate-200">Traduções das Palavras</span>
+                <span className="text-stone-800">Traduções das Palavras</span>
               </label>
 
-              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer hover:bg-slate-800">
+              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-stone-200 cursor-pointer hover:bg-stone-50">
                 <input
                   type="checkbox"
                   checked={includeDefinitions}
                   onChange={e => setIncludeDefinitions(e.target.checked)}
-                  className="rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                  className="rounded border-stone-300 text-stone-900 focus:ring-stone-500 w-4 h-4"
                 />
-                <span className="text-slate-200">Definições Explicativas</span>
+                <span className="text-stone-800">Definições Explicativas</span>
               </label>
 
-              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer hover:bg-slate-800">
+              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-stone-200 cursor-pointer hover:bg-stone-50">
                 <input
                   type="checkbox"
                   checked={includeExamples}
                   onChange={e => setIncludeExamples(e.target.checked)}
-                  className="rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                  className="rounded border-stone-300 text-stone-900 focus:ring-stone-500 w-4 h-4"
                 />
-                <span className="text-slate-200">Frases de Exemplo e Tradução</span>
+                <span className="text-stone-800">Frases de Exemplo e Tradução</span>
               </label>
 
-              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer hover:bg-slate-800">
+              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-stone-200 cursor-pointer hover:bg-stone-50">
                 <input
                   type="checkbox"
                   checked={includePracticeQuiz}
                   onChange={e => setIncludePracticeQuiz(e.target.checked)}
-                  className="rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                  className="rounded border-stone-300 text-stone-900 focus:ring-stone-500 w-4 h-4"
                 />
-                <span className="text-slate-200">Teste com Gabarito de Respostas</span>
+                <span className="text-stone-800">Teste com Gabarito de Respostas</span>
               </label>
             </div>
           </div>
 
           {/* Live Summary Preview */}
-          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-800/50 space-y-1">
-            <span className="text-[11px] uppercase tracking-wider font-bold text-indigo-400">Resumo da Configuração:</span>
-            <p className="text-xs text-slate-200">
-              Gerando guia de <strong>{getLangName(targetLang)}</strong> com explicações em <strong>{getLangName(explanationLang)}</strong> ({cefrLevel.toUpperCase()}). Inclui formatação A4, quebras de página automáticas e licença CC-BY-SA 4.0.
+          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1">
+            <span className="text-[11px] uppercase tracking-wider font-bold text-amber-800">Resumo da Configuração:</span>
+            <p className="text-xs text-stone-700">
+              Gerando guia de <strong>{getLangName(targetLang)}</strong> com explicações em <strong>{getLangName(explanationLang)}</strong> ({cefrLevel.toUpperCase()}). Inclui formatação A4 e licença CC-BY-SA 4.0.
             </p>
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-800 bg-slate-900/90">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-stone-200 bg-white">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs sm:text-sm font-semibold transition min-h-[44px] cursor-pointer"
+            className="px-4 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-semibold transition min-h-[42px] cursor-pointer"
           >
             Cancelar
           </button>
 
           <button
+            type="button"
             onClick={handleDownload}
             disabled={isGenerating}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-md transition min-h-[44px] cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition min-h-[42px] cursor-pointer disabled:opacity-50"
           >
             <FileDown className="w-4 h-4" />
             <span>{isGenerating ? 'Gerando PDF...' : 'Baixar Arquivo PDF'}</span>

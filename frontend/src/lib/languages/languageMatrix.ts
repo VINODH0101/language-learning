@@ -602,8 +602,9 @@ export function getLanguageName(
 ): string {
   const meta = LANGUAGE_METADATA[lang];
   if (!meta) return lang;
-  if (interfaceLang === 'pt') return meta.namePt;
-  if (interfaceLang === 'es') return meta.nameEs;
+  // Regional variants (pt-BR / pt-PT, es-*) must localize their base language.
+  if (interfaceLang.startsWith('pt')) return meta.namePt;
+  if (interfaceLang.startsWith('es')) return meta.nameEs;
   return meta.nameEn;
 }
 
@@ -616,7 +617,8 @@ export function getRegionalVarietyLabel(
 ): string {
   const meta = REGIONAL_VARIETY_METADATA[variety];
   if (!meta) return variety;
-  if (interfaceLang === 'pt') return meta.labelPt;
-  if (interfaceLang === 'es') return meta.labelEs;
+  // Regional variants (pt-BR / pt-PT, es-*) must localize their base language.
+  if (interfaceLang.startsWith('pt')) return meta.labelPt;
+  if (interfaceLang.startsWith('es')) return meta.labelEs;
   return meta.labelEn;
 }

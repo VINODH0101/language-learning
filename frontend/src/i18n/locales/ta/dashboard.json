@@ -67,5 +67,10 @@
   "curriculum_units_completed": "{{completed}} of {{total}} curriculum units completed",
   "vocab_terms_count": "{{count}} terms",
   "cefr_level": "CEFR",
-  "streak": "Streak"
+  "streak": "Streak",
+  "err_edition": "இன்றைய பதிப்பை ஏற்ற முடியவில்லை",
+  "err_continue": "தொடர் கற்றல் முன்னேற்றத்தை ஏற்ற முடியவில்லை",
+  "err_vocab": "சொல்லகராதி புள்ளிவிவரங்களை ஏற்ற முடியவில்லை",
+  "err_recent": "சமீபத்திய செயல்பாடுகளை ஏற்ற முடியவில்லை",
+  "culture_preview_empty": "இன்னும் கலாச்சாரக் கட்டுரைகள் ஏற்றப்படவில்லை. விக்கிப்பீடியா மற்றும் AI உள்ளடக்க இயந்திரத்திலிருந்து பெற நாடுகளை ஆராய்க திறக்கவும்."
 }

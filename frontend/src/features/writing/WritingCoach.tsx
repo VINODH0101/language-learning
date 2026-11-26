@@ -50,12 +50,6 @@ export const WritingCoach: React.FC<WritingCoachProps> = ({
   const [selectedMatch, setSelectedMatch] = useState<NormalizedProofreadMatch | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const sampleTexts: Record<string, string> = {
-    pt: 'Nós foi ao mercado e comprou duas maçãs maçãs ontem, mas esqueci a carteira.',
-    es: 'Yo sabo que los ninos juega en el parque todas las tardes.',
-    en: 'She do not knows the the right answer for this difficult question.',
-  };
-
   const handleAnalyze = async () => {
     if (!originalText.trim()) {
       setErrorMsg('Por favor, digite ou cole um texto para análise.');
@@ -164,18 +158,6 @@ export const WritingCoach: React.FC<WritingCoachProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setOriginalText(sampleTexts[language] || sampleTexts.pt);
-              setProofreadResult(null);
-              setAiExplanation(null);
-            }}
-            icon={<Lightbulb className="w-3.5 h-3.5" />}
-          >
-            Carregar Exemplo
-          </Button>
           <Button
             variant="outline"
             size="sm"

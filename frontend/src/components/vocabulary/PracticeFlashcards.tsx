@@ -20,7 +20,7 @@ export const PracticeFlashcards: React.FC<PracticeFlashcardsProps> = ({
 
   if (deck.length === 0) {
     return (
-      <div className="text-center py-12 text-slate-400">
+      <div className="bg-white border border-dashed border-stone-300 rounded-2xl text-center py-12 text-stone-500 text-sm max-w-lg mx-auto">
         Nenhum cartão disponível para os filtros atuais.
       </div>
     );
@@ -58,21 +58,22 @@ export const PracticeFlashcards: React.FC<PracticeFlashcardsProps> = ({
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-5">
       {/* Top Deck Stats & Controls */}
-      <div className="flex items-center justify-between text-xs text-slate-400">
+      <div className="flex items-center justify-between text-xs text-stone-500">
         <span>
-          Cartão <strong className="text-slate-100">{currentIndex + 1}</strong> de {deck.length}
+          Cartão <strong className="text-stone-900">{currentIndex + 1}</strong> de {deck.length}
         </span>
 
         <div className="flex items-center gap-3">
-          <span className="text-emerald-400 font-semibold">
+          <span className="text-emerald-700 font-semibold">
             {masteredIds.size} Dominados
           </span>
 
           <button
+            type="button"
             onClick={handleShuffle}
-            className="flex items-center gap-1 hover:text-slate-200 transition cursor-pointer p-1 rounded"
+            className="flex items-center gap-1 hover:text-stone-900 transition cursor-pointer p-1.5 rounded-lg hover:bg-stone-100"
             title="Embaralhar Cartões"
           >
             <Shuffle className="w-3.5 h-3.5" />
@@ -84,78 +85,74 @@ export const PracticeFlashcards: React.FC<PracticeFlashcardsProps> = ({
       {/* Flip Card Viewport */}
       <div
         onClick={() => setIsFlipped(!isFlipped)}
-        className="min-h-[280px] sm:min-h-[320px] bg-slate-900 border-2 border-indigo-500/60 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl cursor-pointer hover:border-indigo-400 transition transform hover:-translate-y-0.5 select-none"
+        className="min-h-[280px] sm:min-h-[320px] bg-white border-2 border-stone-200 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm cursor-pointer hover:border-amber-300 transition select-none"
       >
-        {/* Card Header */}
         <div className="flex items-center justify-between">
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 uppercase">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase">
             {current.target_language} • {current.cefr_level}
           </span>
 
-          <span className="flex items-center gap-1 text-xs text-slate-400 font-medium">
-            <RotateCw className="w-3 h-3 text-indigo-400" />
+          <span className="flex items-center gap-1 text-xs text-stone-500 font-medium">
+            <RotateCw className="w-3 h-3 text-amber-700" />
             <span>{isFlipped ? 'Frente' : 'Toque para Virar'}</span>
           </span>
         </div>
 
-        {/* Card Body */}
         {!isFlipped ? (
-          /* FRONT SIDE */
           <div className="text-center space-y-3 my-auto py-6">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-100 tracking-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 tracking-tight">
               {current.lemma}
             </h2>
 
             {current.phonetic_ipa && (
-              <p className="text-sm font-mono text-indigo-300 bg-slate-800/80 inline-block px-3 py-1 rounded-full border border-slate-700">
+              <p className="text-sm font-mono text-stone-700 bg-stone-100 inline-block px-3 py-1 rounded-full border border-stone-200">
                 {current.phonetic_ipa}
               </p>
             )}
 
-            <p className="text-xs text-slate-400 capitalize">
-              {current.part_of_speech} • Tema: {current.topic.replace('_', ' ')}
+            <p className="text-xs text-stone-500 capitalize">
+              {current.part_of_speech} • {current.topic.replace('_', ' ')}
             </p>
           </div>
         ) : (
-          /* BACK SIDE */
           <div className="space-y-4 my-auto py-3 animate-fadeIn">
-            <div className="text-center border-b border-slate-800 pb-3">
-              <span className="text-xs uppercase font-bold text-slate-400 block">Significado:</span>
-              <h3 className="text-2xl font-bold text-indigo-300 mt-1">{translation}</h3>
+            <div className="text-center border-b border-stone-200 pb-3">
+              <span className="text-xs uppercase font-bold text-stone-500 block">Significado:</span>
+              <h3 className="font-serif text-2xl font-bold text-amber-800 mt-1">{translation}</h3>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed text-center">
+            <p className="text-xs sm:text-sm text-stone-700 leading-relaxed text-center">
               {definition}
             </p>
 
-            <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 space-y-1">
-              <p className="text-xs font-semibold text-slate-100 italic">
+            <div className="p-3 bg-[#FAF9F6] rounded-xl border border-stone-200 space-y-1">
+              <p className="font-serif text-xs font-semibold text-stone-900 italic">
                 "{current.example_sentence_target}"
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-stone-500">
                 → {exampleTrans}
               </p>
             </div>
           </div>
         )}
 
-        {/* Card Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800/60">
+        <div className="flex items-center justify-between pt-2 border-t border-stone-100">
           <div onClick={e => e.stopPropagation()}>
             <AudioButton text={current.lemma} language={current.target_language} />
           </div>
 
-          <span className="text-[11px] text-slate-500">
-            {isFlipped ? 'Explicação em ' + explanationLanguage.toUpperCase() : 'Recuperação ativa'}
+          <span className="text-[11px] text-stone-500">
+            {isFlipped ? explanationLanguage.toUpperCase() : 'Recuperação ativa'}
           </span>
         </div>
       </div>
 
-      {/* Navigation & Learning Actions */}
-      <div className="flex items-center justify-between gap-3">
+      {/* Controls */}
+      <div className="flex items-center justify-between gap-2.5">
         <button
+          type="button"
           onClick={handlePrev}
-          className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+          className="p-3 rounded-xl bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 transition min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
           aria-label="Cartão Anterior"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -163,24 +160,27 @@ export const PracticeFlashcards: React.FC<PracticeFlashcardsProps> = ({
 
         <div className="flex items-center gap-2 flex-1">
           <button
+            type="button"
             onClick={() => handleNext()}
-            className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold border border-slate-700 transition min-h-[44px] cursor-pointer"
+            className="flex-1 py-3 px-4 rounded-xl bg-white hover:bg-stone-50 text-stone-800 text-xs sm:text-sm font-semibold border border-stone-200 transition min-h-[44px] cursor-pointer"
           >
             Ainda Aprendendo
           </button>
 
           <button
+            type="button"
             onClick={() => handleMarkMastered(current.id)}
-            className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-md transition min-h-[44px] cursor-pointer flex items-center justify-center gap-1.5"
+            className="flex-1 py-3 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition min-h-[44px] cursor-pointer flex items-center justify-center gap-1.5"
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>Já Dominei</span>
           </button>
         </div>
 
         <button
+          type="button"
           onClick={handleNext}
-          className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+          className="p-3 rounded-xl bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 transition min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
           aria-label="Próximo Cartão"
         >
           <ChevronRight className="w-5 h-5" />

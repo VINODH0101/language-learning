@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { CountryProvider, NormalizedCountry, FALLBACK_COUNTRIES } from '../../../services/providers/countries/countryProvider';
 import { WeatherProvider, WMO_WEATHER_CODES } from '../../../services/providers/weather/weatherProvider';
-import { CULTURAL_CATALOG } from '../../../data/cultureData';
+import { CultureService } from '../../../services/cultureService';
+import { CulturalArticle } from '../../../types/culture';
 import { Button } from '../../../components/common/Button';
 import { useI18n } from '../../../i18n/i18nContext';
 import { Language } from '../../../types';
@@ -66,6 +67,24 @@ export const GlobalCountryDiscovery: React.FC<GlobalCountryDiscoveryProps> = ({
   });
 
   const [weather, setWeather] = useState<{ temp: number; desc: string; icon: string } | null>(null);
+  const [liveCultureArticles, setLiveCultureArticles] = useState<CulturalArticle[]>(() =>
+    CultureService.getAllArticles()
+  );
+
+  // Load live cultural articles (Content Engine + Wikipedia)
+  useEffect(() => {
+    let cancelled = false;
+    CultureService.loadLiveArticles(targetLanguage)
+      .then(articles => {
+        if (!cancelled) {
+          setLiveCultureArticles(articles.length > 0 ? articles : CultureService.getAllArticles());
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [targetLanguage]);
 
   // Load countries catalog
   useEffect(() => {
@@ -144,9 +163,13 @@ export const GlobalCountryDiscovery: React.FC<GlobalCountryDiscoveryProps> = ({
       });
   }, [selectedCountryCode, interfaceLanguage]);
 
-  // Cultural content filtered dynamically by interface language
-  const matchingArticles = CULTURAL_CATALOG.filter(a => a.content_language === interfaceLanguage);
-  const explorePreviewArticles = (matchingArticles.length > 0 ? matchingArticles : CULTURAL_CATALOG).slice(0, 3);
+  // Cultural content filtered dynamically from live articles (Content Engine + Wikipedia)
+  const matchingArticles = liveCultureArticles.filter(
+    a => a.content_language === targetLanguage || a.content_language === interfaceLanguage
+  );
+  const explorePreviewArticles = (
+    matchingArticles.length > 0 ? matchingArticles : liveCultureArticles
+  ).slice(0, 3);
 
   // Format population with reference year 2023
   const formattedPopulation = selectedCountry.population
@@ -308,6 +331,21 @@ export const GlobalCountryDiscovery: React.FC<GlobalCountryDiscoveryProps> = ({
           </button>
         </div>
 
+        {explorePreviewArticles.length === 0 ? (
+          <div className="p-6 rounded-xl bg-slate-950/40 border border-dashed border-slate-800 text-center space-y-2">
+            <p className="text-xs text-slate-400">
+              {t('dashboard:culture_preview_empty', 'No live cultural articles loaded yet. Open Explore Countries to fetch from Wikipedia & AI Content Engine.')}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs cursor-pointer"
+              onClick={onExploreAll}
+            >
+              {t('dashboard:world_open_btn', 'Explore Countries')}
+            </Button>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {explorePreviewArticles.map(art => (
             <div
@@ -343,6 +381,7 @@ export const GlobalCountryDiscovery: React.FC<GlobalCountryDiscoveryProps> = ({
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

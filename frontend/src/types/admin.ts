@@ -12,7 +12,18 @@ export type AdminPillarTab =
   | 'operations'
   | 'audit';
 
-export type ContentReviewType = 'vocabulary' | 'reading' | 'exercise' | 'dialogue';
+export type ContentReviewType =
+  | 'vocabulary'
+  | 'reading'
+  | 'exercise'
+  | 'dialogue'
+  | 'story'
+  | 'conversation'
+  | 'poetry'
+  | 'grammar'
+  | 'academic_essay'
+  | 'cultural_article'
+  | 'practice';
 export type ContentReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export interface PendingContentItem {

@@ -48,31 +48,6 @@ export const ScanAndLearn: React.FC<ScanAndLearnProps> = ({ language }) => {
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | undefined>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sample texts for fast demonstration without camera
-  const sampleImages = [
-    {
-      name: 'Cardápio / Menu (PT)',
-      text: 'Entradas Tradicionais:\n- Pastéis de bacalhau artesanais com azeitonas galegas.\n- Caldo verde minhoto com chouriço de fumeiro.\nPratos Principais:\n- Polvo à lagareiro assado no forno a lenha com batatas a murro.',
-      confidence: 94,
-      script: 'Latin Script',
-      lang: 'pt',
-    },
-    {
-      name: 'Cartaz Cultural (ES)',
-      text: 'Exposición de Arte Contemporáneo Hispánico:\nHorario: De martes a sábado de 10:00 a 20:00.\nEntrada gratuita para estudiantes y residentes.\nLugar: Palacio de Bellas Artes.',
-      confidence: 91,
-      script: 'Latin Script',
-      lang: 'es',
-    },
-    {
-      name: 'Notice Board (EN)',
-      text: 'Public Notice:\nPlease retain your entry ticket until you depart the facility. Unauthorized parking in designated delivery zones will result in immediate towing.',
-      confidence: 96,
-      script: 'Latin Script',
-      lang: 'en',
-    },
-  ];
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -115,21 +90,6 @@ export const ScanAndLearn: React.FC<ScanAndLearnProps> = ({ language }) => {
     }
   };
 
-  const handleApplySample = (sample: typeof sampleImages[0]) => {
-    setImagePreview('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" fill="%231e293b"><rect width="100%" height="100%" fill="%230f172a"/><text x="20" y="50" fill="%2338bdf8" font-size="16" font-family="sans-serif">Imagem de Teste Digitalizada</text></svg>');
-    const scriptInfo = OcrService.detectScript(sample.text);
-    const result: OcrResult = {
-      text: sample.text,
-      confidence: sample.confidence,
-      detectedScript: sample.script || scriptInfo.script,
-      detectedLanguage: sample.lang,
-      isLowConfidence: sample.confidence < 60,
-      words: sample.text.split(/\s+/).map(w => ({ text: w, confidence: sample.confidence })),
-    };
-    setOcrResult(result);
-    setEditableText(sample.text);
-  };
-
   const handleCopyText = () => {
     if (!editableText) return;
     navigator.clipboard.writeText(editableText);
@@ -158,21 +118,6 @@ export const ScanAndLearn: React.FC<ScanAndLearnProps> = ({ language }) => {
             </div>
           </div>
 
-          {/* Quick Sample Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">
-              Exemplos:
-            </span>
-            {sampleImages.map((s, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleApplySample(s)}
-                className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition cursor-pointer"
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Capture / Upload Zone */}

@@ -38,7 +38,7 @@ export const PracticeQuiz: React.FC<PracticeQuizProps> = ({
 
   if (entries.length < 2 || !current) {
     return (
-      <div className="text-center py-12 text-slate-400">
+      <div className="bg-white border border-dashed border-stone-300 rounded-2xl text-center py-12 text-stone-500 text-sm max-w-lg mx-auto">
         São necessários pelo menos 2 vocábulos para gerar o teste prático.
       </div>
     );
@@ -73,21 +73,22 @@ export const PracticeQuiz: React.FC<PracticeQuizProps> = ({
   if (isCompleted) {
     const accuracy = Math.round((score / entries.length) * 100);
     return (
-      <div className="max-w-md mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-5 shadow-2xl animate-fadeIn">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400 mx-auto">
-          <Award className="w-8 h-8 text-amber-400" />
+      <div className="max-w-md mx-auto bg-white border border-stone-200 rounded-2xl p-8 text-center space-y-5 shadow-xs animate-fadeIn">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 mx-auto">
+          <Award className="w-7 h-7" />
         </div>
 
         <div className="space-y-1.5">
-          <h2 className="text-2xl font-bold text-slate-100">Teste Concluído!</h2>
-          <p className="text-sm text-slate-400">
-            Você acertou <strong className="text-indigo-300 font-bold">{score}</strong> de {entries.length} questões ({accuracy}% de precisão).
+          <h2 className="font-serif text-2xl font-bold text-stone-900">Teste Concluído!</h2>
+          <p className="text-sm text-stone-600">
+            Você acertou <strong className="text-stone-900 font-bold">{score}</strong> de {entries.length} questões ({accuracy}% de precisão).
           </p>
         </div>
 
         <button
+          type="button"
           onClick={handleRestart}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md transition min-h-[44px] cursor-pointer"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-sm font-semibold shadow-xs transition min-h-[44px] cursor-pointer"
         >
           <RotateCcw className="w-4 h-4" />
           <span>Refazer Exercício</span>
@@ -97,28 +98,28 @@ export const PracticeQuiz: React.FC<PracticeQuizProps> = ({
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-5">
       {/* Progress & Header */}
-      <div className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-3">
+      <div className="flex items-center justify-between text-xs text-stone-500 border-b border-stone-200 pb-3">
         <span>
-          Questão <strong className="text-slate-100">{currentIndex + 1}</strong> de {entries.length}
+          Questão <strong className="text-stone-900">{currentIndex + 1}</strong> de {entries.length}
         </span>
-        <span className="font-semibold text-indigo-400">
+        <span className="font-semibold text-amber-800">
           Pontuação: {score}
         </span>
       </div>
 
       {/* Question Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5 shadow-lg">
-        <div className="text-center space-y-1">
-          <span className="text-xs uppercase font-bold text-slate-400">
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 space-y-5 shadow-xs">
+        <div className="text-center space-y-1.5">
+          <span className="text-xs uppercase font-bold text-stone-500">
             Qual a tradução correta para {explanationLanguage.toUpperCase()}?
           </span>
-          <h3 className="text-3xl font-extrabold text-slate-100 tracking-tight">
+          <h3 className="font-serif text-3xl font-bold text-stone-900 tracking-tight">
             {current.lemma}
           </h3>
-          <p className="text-xs text-slate-400 italic">
-            Exemplo: "{current.example_sentence_target}"
+          <p className="font-serif text-xs text-stone-500 italic">
+            "{current.example_sentence_target}"
           </p>
         </div>
 
@@ -126,20 +127,21 @@ export const PracticeQuiz: React.FC<PracticeQuizProps> = ({
         <div className="space-y-2.5">
           {options.map((opt, idx) => {
             const isSelected = selectedOption === opt;
-            let classes = 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700/60';
+            let classes = 'border-stone-200 bg-white text-stone-800 hover:bg-stone-50';
 
             if (isSubmitted) {
               if (opt === correctAnswer) {
-                classes = 'border-emerald-500 bg-emerald-950/40 text-emerald-200 font-bold';
+                classes = 'border-emerald-300 bg-emerald-50 text-emerald-900 font-bold';
               } else if (isSelected) {
-                classes = 'border-rose-500 bg-rose-950/40 text-rose-200';
+                classes = 'border-rose-300 bg-rose-50 text-rose-900';
               }
             } else if (isSelected) {
-              classes = 'border-indigo-500 bg-indigo-950/60 text-indigo-200 font-semibold';
+              classes = 'border-stone-900 bg-stone-100 text-stone-900 font-semibold';
             }
 
             return (
               <button
+                type="button"
                 key={idx}
                 onClick={() => !isSubmitted && setSelectedOption(opt)}
                 disabled={isSubmitted}
@@ -147,25 +149,25 @@ export const PracticeQuiz: React.FC<PracticeQuizProps> = ({
               >
                 <span>{opt}</span>
                 {isSubmitted && opt === correctAnswer && (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                 )}
                 {isSubmitted && isSelected && opt !== correctAnswer && (
-                  <XCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                  <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* Feedback / Action */}
         {!isSubmitted ? (
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={!selectedOption}
-            className={`w-full py-3.5 px-4 rounded-xl text-sm font-bold transition min-h-[44px] cursor-pointer shadow-md ${
+            className={`w-full py-3.5 px-4 rounded-xl text-sm font-semibold transition min-h-[44px] cursor-pointer ${
               selectedOption
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                ? 'bg-stone-900 hover:bg-stone-800 text-white shadow-xs'
+                : 'bg-stone-100 text-stone-400 cursor-not-allowed border border-stone-200'
             }`}
           >
             Confirmar Resposta
@@ -175,21 +177,22 @@ export const PracticeQuiz: React.FC<PracticeQuizProps> = ({
             <div
               className={`p-3.5 rounded-xl border text-xs sm:text-sm leading-relaxed ${
                 selectedOption === correctAnswer
-                  ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-300'
-                  : 'bg-rose-950/30 border-rose-800/60 text-rose-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-rose-50 border-rose-200 text-rose-900'
               }`}
             >
               <p className="font-bold">
                 {selectedOption === correctAnswer ? 'Correto! Excelente associação.' : 'Incorreto.'}
               </p>
-              <p className="mt-1 text-slate-300">
+              <p className="mt-1 text-stone-700">
                 {current.definitions[explanationLanguage] || current.definitions['en']}
               </p>
             </div>
 
             <button
+              type="button"
               onClick={handleNext}
-              className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md transition min-h-[44px] cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-sm font-semibold shadow-xs transition min-h-[44px] cursor-pointer"
             >
               {currentIndex + 1 < entries.length ? 'Próxima Questão' : 'Ver Resultados'}
             </button>

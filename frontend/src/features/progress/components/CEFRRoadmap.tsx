@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  CheckCircle2,
-  Sparkles,
-  Lock,
-  ChevronDown,
-  ChevronRight,
-  BookOpen,
-  Info,
-} from 'lucide-react';
+import { CheckCircle2, Sparkles, Circle, BookOpen } from 'lucide-react';
 import { CurriculumNode, CEFRLevel, Language } from '../../../types';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
@@ -24,11 +16,11 @@ interface CEFRRoadmapProps {
 const CEFR_LEVELS_ORDER: readonly CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1'];
 
 const LEVEL_DESCRIPTIONS: Record<CEFRLevel, string> = {
-  A1: 'Beginner / Breakthrough — Essential greetings, basic verbs, foundational phrases',
-  A2: 'Elementary / Waystage — Narrative past tense, everyday descriptions, basic travel',
-  B1: 'Intermediate / Threshold — Subjunctive hypotheses, opinion expression, complex connectors',
-  B2: 'Upper Intermediate / Vantage — Abstract reasoning, nuanced idioms, professional discussions',
-  C1: 'Advanced / Effective Operational Proficiency — Complex literary prose, idiomatic mastery, native fluidity',
+  A1: 'Breakthrough — Essential greetings, basic verbs, everyday survival phrases',
+  A2: 'Elementary — Past tense narratives, routine descriptions, practical travel',
+  B1: 'Threshold — Hypotheses, expressing opinions, connected narratives',
+  B2: 'Vantage — Abstract reasoning, idiomatic nuance, professional register',
+  C1: 'Proficiency — Complex literary prose, formal argumentation, native fluidity',
 };
 
 export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
@@ -40,24 +32,23 @@ export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
   const { t } = useI18n();
   const [activeTabLevel, setActiveTabLevel] = useState<CEFRLevel>('A1');
 
-  // If no published nodes exist for this language track, display honest curation state
   if (curriculum.length === 0) {
     return (
       <Card
-        title={t('progress:roadmap_title', 'Curriculum Progression Roadmap')}
+        title={t('progress:roadmap_title', 'CEFR Progression Roadmap & Milestone Units')}
         subtitle={t('progress:roadmap_subtitle', 'Structured competency progression from A1 to C1')}
       >
-        <div className="text-center py-12 px-4 rounded-2xl bg-slate-950/40 border border-slate-800/80">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-950/60 border border-indigo-800/60 flex items-center justify-center text-indigo-400 mb-3">
-            <BookOpen className="w-6 h-6" />
+        <div className="text-center py-10 px-4 rounded-xl bg-[#FAF9F6] border border-dashed border-stone-200">
+          <div className="w-11 h-11 mx-auto rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 mb-3">
+            <BookOpen className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-slate-200">
+          <h3 className="font-serif text-base font-bold text-stone-900">
             {t('progress:curriculum_curating_title', 'Curriculum Units Under Active Curation')}
           </h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto mt-1.5 leading-relaxed">
+          <p className="text-xs text-stone-500 max-w-md mx-auto mt-1.5 leading-relaxed">
             {t(
               'progress:curriculum_curating_desc',
-              'The open educational curriculum for this language track is currently being compiled according to CEFR standards. Daily literature and vocabulary features remain fully accessible.'
+              'The open educational curriculum for this track is being compiled to CEFR standards. Daily reading and vocabulary practice remain available.'
             )}
           </p>
         </div>
@@ -65,7 +56,6 @@ export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
     );
   }
 
-  // Group curriculum nodes by CEFR level
   const nodesByLevel = CEFR_LEVELS_ORDER.reduce<Record<CEFRLevel, CurriculumNode[]>>(
     (acc, lvl) => {
       acc[lvl] = curriculum.filter(n => n.cefr_level === lvl);
@@ -83,14 +73,14 @@ export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
 
   return (
     <Card
-      title={`${t('progress:roadmap_title', 'Curriculum Progression Roadmap')} (${selectedLanguage.toUpperCase()})`}
+      title={`${t('progress:roadmap_title', 'CEFR Progression Roadmap & Milestone Units')} (${selectedLanguage.toUpperCase()})`}
       subtitle={t(
         'progress:roadmap_subtitle',
-        'Sequential competency nodes from A1 to C1 with objective-based completion tracking'
+        'Select a CEFR milestone to inspect completed and upcoming competency units'
       )}
     >
-      {/* CEFR Level Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 border-b border-slate-800">
+      {/* CEFR Level Filter Pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 border-b border-stone-200 no-scrollbar">
         {CEFR_LEVELS_ORDER.map(lvl => {
           const nodes = nodesByLevel[lvl];
           const completedCount = nodes.filter(n => completedNodeIds.includes(n.id)).length;
@@ -99,17 +89,19 @@ export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
           return (
             <button
               key={lvl}
+              type="button"
               onClick={() => setActiveTabLevel(lvl)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              aria-pressed={isSelected}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer min-h-[38px] border ${
                 isSelected
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
+                  : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100 hover:text-stone-900'
               }`}
             >
               <span>{lvl}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                  isSelected ? 'bg-indigo-700/80 text-indigo-100' : 'bg-slate-900/80 text-slate-400'
+                  isSelected ? 'bg-amber-500/20 text-amber-200' : 'bg-white text-stone-500 border border-stone-200'
                 }`}
               >
                 {completedCount}/{nodes.length}
@@ -119,37 +111,41 @@ export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
         })}
       </div>
 
-      {/* Selected Level Summary Header */}
-      <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Selected Level Summary Bar */}
+      <div className="bg-[#FAF9F6] p-4 rounded-xl border border-stone-200 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-100">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-serif text-base font-bold text-stone-900">
               {activeTabLevel} — {LEVEL_DESCRIPTIONS[activeTabLevel].split('—')[0].trim()}
             </span>
-            <Badge variant={levelPct === 100 ? 'emerald' : 'indigo'} size="sm">
+            <Badge variant={levelPct === 100 ? 'emerald' : 'amber'} size="sm">
               {levelPct}% {t('common:completed', 'Completed')}
             </Badge>
           </div>
-          <p className="text-xs text-slate-400 mt-1 max-w-xl">
+          <p className="text-xs text-stone-600 mt-1 max-w-xl leading-relaxed">
             {LEVEL_DESCRIPTIONS[activeTabLevel]}
           </p>
         </div>
 
-        <div className="sm:text-right shrink-0">
-          <span className="text-xs font-mono font-bold text-slate-300 block">
+        <div className="sm:text-right shrink-0 w-full sm:w-40">
+          <span className="text-xs font-mono font-bold text-stone-700 block">
             {selectedLevelCompleted} / {selectedLevelTotal} {t('progress:units_label', 'Units')}
           </span>
-          <ProgressBar progress={levelPct} className="w-32 mt-1.5" variant={levelPct === 100 ? 'emerald' : 'indigo'} />
+          <ProgressBar
+            progress={levelPct}
+            className="w-full mt-1.5"
+            variant={levelPct === 100 ? 'emerald' : 'bronze'}
+          />
         </div>
       </div>
 
-      {/* Nodes List */}
+      {/* Units List */}
       {selectedLevelNodes.length === 0 ? (
-        <div className="text-center py-8 text-xs text-slate-500 italic">
-          {t('progress:no_units_at_level', 'No units published for this CEFR level yet.')}
+        <div className="text-center py-8 text-xs text-stone-500 italic">
+          {t('progress:no_units_at_level', 'No curriculum units found at this CEFR level.')}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {selectedLevelNodes.map((node, idx) => {
             const isCompleted = completedNodeIds.includes(node.id);
             const isCurrent =
@@ -158,28 +154,28 @@ export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
             return (
               <div
                 key={node.id}
-                className={`flex items-start justify-between p-4 rounded-2xl border transition-all ${
+                className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all gap-3 ${
                   isCompleted
-                    ? 'bg-emerald-950/20 border-emerald-800/40 hover:border-emerald-700/60'
+                    ? 'bg-emerald-50/60 border-emerald-200'
                     : isCurrent
-                    ? 'bg-indigo-950/30 border-indigo-700/70 shadow-sm'
-                    : 'bg-slate-800/30 border-slate-800/80 opacity-70 hover:opacity-90'
+                    ? 'bg-amber-50/70 border-amber-300 shadow-xs'
+                    : 'bg-white border-stone-200 hover:border-stone-300'
                 }`}
               >
-                <div className="flex items-start gap-3.5">
+                <div className="flex items-start gap-3 min-w-0">
                   <div className="mt-0.5 shrink-0">
                     {isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     ) : isCurrent ? (
-                      <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+                      <Sparkles className="w-5 h-5 text-amber-600" />
                     ) : (
-                      <Lock className="w-5 h-5 text-slate-500" />
+                      <Circle className="w-5 h-5 text-stone-300" />
                     )}
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs sm:text-sm font-bold text-slate-200">
+                      <span className="text-xs sm:text-sm font-bold text-stone-900">
                         {node.sequence_order}. {node.title}
                       </span>
                       <Badge variant="slate" size="sm">
@@ -191,32 +187,27 @@ export const CEFRRoadmap: React.FC<CEFRRoadmapProps> = ({
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-stone-600 mt-1 leading-relaxed">
                       {node.can_do_statement}
                     </p>
-                    {node.description && (
-                      <p className="text-[11px] text-slate-500 mt-0.5 italic">
-                        {node.description}
-                      </p>
-                    )}
                   </div>
                 </div>
 
-                <div className="shrink-0 text-right ml-4">
+                <div className="shrink-0 sm:ml-4 self-start sm:self-center">
                   <span
-                    className={`text-[11px] font-mono px-2 py-1 rounded-lg ${
+                    className={`inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${
                       isCompleted
-                        ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50'
+                        ? 'bg-white text-emerald-800 border-emerald-200'
                         : isCurrent
-                        ? 'bg-indigo-950/80 text-indigo-300 border border-indigo-700/60'
-                        : 'text-slate-500'
+                        ? 'bg-stone-900 text-amber-200 border-stone-900'
+                        : 'bg-stone-50 text-stone-500 border-stone-200'
                     }`}
                   >
                     {isCompleted
                       ? t('common:completed', 'Completed')
                       : isCurrent
-                      ? t('common:active', 'Active Unit')
-                      : t('common:upcoming', 'Locked')}
+                      ? t('common:active', 'Up Next')
+                      : t('common:upcoming', 'Upcoming')}
                   </span>
                 </div>
               </div>
